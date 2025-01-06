@@ -1,0 +1,285 @@
+---
+title: "Modeling Basics"
+format: docx
+---
+
+## What is Statistical Learning?
+
+> **Statistical Learning** - Statistical learning refers to a vast set of tools for understanding data. (James et al., 2021, p. 1)
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+
+
+Is there a difference between *machine* learning and *statistical* learning?
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+### Goals of statistical learning:
+
+- Inference
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+- Prediction/Classification
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+- Pattern Finding
+
+\newpage
+
+### Types of statistical learning:
+
+#### Supervised Learning
+
+Consider a [data set](https://archive.ics.uci.edu/dataset/560/seoul+bike+sharing+demand) on bike sharing (UCI, 2020) [available for download](https://www4.stat.ncsu.edu/online/datasets/SeoulBikeData.csv) in `.csv` format.
+
+```{r, message = FALSE}
+library(tidyverse)
+bike_share <- read_csv("https://www4.stat.ncsu.edu/online/datasets/SeoulBikeData.csv",
+                       local = locale(encoding = "latin1"))
+print(bike_share |> select(`Rented Bike Count`, everything()), n = 5)
+```
+
+Let's introduce some common notation and ideas for applying a basic statistical learning method to predict the `Rented Bike Count`.
+
+- $n$ = Sample size = `r nrow(bike_share)`
+- $i$ - usually used to reference a particular *observation* (or row)
+- $Y$ = **response variable** = `Rented Bike Count`
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+- $j$ - index usually used to denote a particular *predictor* (or column that isn't the response variable)
+- $X_j$ = **predictor variable** = `Temperature(°C)` (for instance)
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+- $p$ = Number of predictors = `r ncol(bike_share)-1`
+- $X = \left(X_1, X_2, ..., X_p\right)$ = set of predictor variables (sometimes we'll include an intercept column if this is used as a *design matrix*)
+
+- Considering $(Y, X)$ together is essentially what our data frame in R (or python) looks like
+
+We then try to model our response variable as a some function of the predictors!
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+##### Simple Linear Regression (SLR)
+
+Perhaps the most simplistic model is the simple linear regression (SLR) model.
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+```{r, message = FALSE, out.width='450px', fig.cap="Scatterplot with fitted SLR model overlayed", fig.alt = "A scatterplot between temperature on the x-axis and rented bike count on the y-axis. The plots shows a general upward trend with more spread in the rented bike count as the temperature increases. The overlayed SLR line has a positive slope and shows a strong linear relationship. The line does not fit the data well for temperatures below -10 degrees as it predicts a negative rented bike count in that region."}
+bike_share |>
+  ggplot(aes(x = `Temperature(°C)`, y = `Rented Bike Count`)) +
+  geom_point(size = 0.5) +
+  geom_smooth(method = "lm")
+```
+
+- If we are interested in inference, we likely want to understand which predictors are important for understanding our response and what that relationship looks like (or can be approximated by at least).
+
+```{r}
+SLR_fit <- lm(`Rented Bike Count` ~ `Temperature(°C)`, data = bike_share)
+summary(SLR_fit)
+```
+
+
+- If we are interested in prediction, we want to understand how well our model predicts the response. 
+
+    - If the response is quantitative, 
+    
+    - If the response is categorical, 
+
+```{r}
+predict(SLR_fit, newdata = tibble(`Temperature(°C)` = c(0, 30)), se.fit = TRUE, interval = "prediction")
+```
+
+Either way, we must pick a method for modeling the response and **fit** or **estimate** that model! Some models are generally better for inference and some generally are better for prediction. We have to understand our goals and then consider what makes sense for our problem.
+
+- To **fit** the model we can usually think about optimizing some **loss function**.
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+##### Parametric vs Non-Parametric Models
+
+The SLR model is an example of a **parametric model**. A parametric model generally imposes some kind of structure on the relationship between $Y$ and an $X_j$. 
+
+```{r, message = FALSE, out.width='450px', fig.cap="Scatterplot with fitted quartic polynomial regression model overlayed", fig.alt = "A scatterplot between temperature on the x-axis and rented bike count on the y-axis. The plots shows a general upward trend with more spread in the rented bike count as the temperature increases. The overlayed fourth degree fitted line follows the bulk of the data. For temperatures at the lower range (-20 degrees) the line starts off near zero, slowly increasing until around 10 degrees where it increases more rapidly. Around 25 degrees the line begins to decrease with a sharp downturn near 35 degrees."}
+bike_share |>
+  ggplot(aes(x = `Temperature(°C)`, y = `Rented Bike Count`)) +
+  geom_point(size = 0.5) +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 4))
+```
+
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+There is a tradeoff between simplicity of the model (easier interpretation) and complexity (a larger number of parameters). With a model that is too complex we may **overfit** to the data we fit (or **train**) our model on. 
+
+A **non-parametric model** seeks to find an estimate of $Y$ that is 'close' without being 'too wiggly' or 'too rough'. These models typically require more observations to be accurate and can also suffer from overfitting.
+
+###### k Nearest Neighbors (kNN)
+
+An example of a simplistic non-parametric model is the k Nearest Neighbors (kNN) model. In this model, for any point of interest, we determine a way to find the $k$ closest observations in the data used to fit the model. When doing a regression task, we then usually use the mean of the response values for those $k$ observations as our prediction.
+
+```{r}
+bike_share[1:10, ] |>
+  select(`Rented Bike Count`, `Temperature(°C)`) |>
+  arrange(`Temperature(°C)`)
+```
+```{r, message = FALSE, out.width='450px', fig.cap="Scatterplot with fitted kNN model with k = 200 overlayed", fig.alt = "A scatterplot between temperature on the x-axis and rented bike count on the y-axis. The plots shows a general upward trend with more spread in the rented bike count as the temperature increases. The overlayed kNN model follows the middle of the data closely, wiggling quite a bit for larger values of temperature - indicating the model may be a bit too flexible there."}
+library(kknn)
+knn_fit <- kknn(`Rented Bike Count` ~ `Temperature(°C)`, train = bike_share, test = bike_share, k = 200)
+knn_estimates <- mutate(bike_share, knn_est = fitted(knn_fit)) |>
+  arrange(knn_est)
+knn_estimates |>
+  ggplot(aes(x = `Temperature(°C)`, y = `Rented Bike Count`)) +
+  geom_point(size = 0.5) +
+  geom_line(aes(y = knn_est), color = "blue", linewidth = 2)
+```
+
+
+Of course the *optimal* value of $k$ isn't clear! This $k$ is referred to as a **tuning parameter**. We'll discuss how to use our data to choose the value shortly.
+
+##### Curse of Dimensionality
+
+You might think that we should just always use a non-parametric model since they are more flexible and can adjust to fit the data more easily. 
+
+- First, parametric models will often perform pretty well and be much more interpretable while also lending themselves to inference more easily. 
+- Second, we have to concern ourselves with the **curse of dimensionality** (Bellman, 1961)
+
+    + This curse takes many forms... but the main idea is that as we increase our number of dimensions in the predictor space, we need more and more observations to have the same idea about how the response may act at that combination of the predictors
+    
+As an example, consider having one quantitative predictor that takes on values between 0 and 1. Suppose we have 20 observations of this predictor.
+
+```{r}
+set.seed(10)
+first_variable <- runif(20)
+sort(first_variable)
+```
+
+You might say these 20 points cover the range from 0 to 1 pretty well. We'd be happy finding neighbors that are 'close' that our prediction could 'borrow' strength from.
+
+However, consider having a second predictor but still only 20 observations.
+
+```{r, message = FALSE, out.width='450px', fig.cap="Scatterplot showing 20 randomly created pairs of points. Both variables taking on the range 0 to 1.", fig.alt = "A scatterplot is shown of 20 randomly generated values between 0 and 1 and 20 other randomly generated values between 0 and 1. No real pattern exists but large gaps exist between some points indicating that there aren't as many close values in two dimensions as compared to one dimension."}
+second_variable <- runif(20)
+plot(x = first_variable, y = second_variable, 
+     xlim = c(0,1),
+     ylim = c(0,1))
+```
+
+Now we see a lot more space where we don't have a lot of information. Imagine we now go to three dimensions! The number of observations we need to 'fill' the corresponding predictor space reasonably well increases greatly!
+
+##### Considerations when Prediction is our Goal
+
+Ideally, our model is good at predicting for observations it **was not trained on**! 
+
+Need to have a metric
+
+Need a data set to test on
+
+Train vs test split
+
+Tuning parameter issue, CV can help
+
+
+\pagebreak
+
+
+#### Unsupervised Learning
+
+Consider a data set on Graft-versus-Host-Disease (GvHD) from the `mclust` package in R (Srucca, et al., 2023) (see `?GvHD` after installing and loading the `mclust` package in R). Information about the data:
+
+> Two samples of this flow cytometry data, one from a patient with the GvHD, and the other from a control patient. The GvHD positive and control samples consist of 9083 and 6809 observations, respectively. Both samples include four biomarker variables, namely, CD4, CD8b, CD3, and CD8. The objective of the analysis is to identify CD3+ CD4+ CD8b+ cell sub-populations present in the GvHD positive sample.
+
+Let's just consider the patient with GvHD. 
+
+```{r, message = FALSE}
+#install.packages(mclust) #install on your machine if you don't have this package
+library(mclust)
+library(dplyr)
+print(as_tibble(GvHD.pos), n = 5)
+```
+
+Here we don't have a $y$ (response) variable. This makes the problem inherently more difficult! 
+
+- May just be to group similar observations together. 
+
+    - If we can group them, can the groups be put into some kind of framework for interpretation? (Requires subject matter expertise!)
+
+- May want to do dimension reduction!
+
+    - Perhaps to find a better way to visualize the data.
+    - To deal with collinearity amongst the variables.
+
+
+\pagebreak
+
+#### Semi-supervised Learning
+
+In some data sets we have only part of our data set with a response variable (or label) associated. In this case, we often use the observations with responses to some how predict the missing responses. However, analysis of this type of data will depend on your goals. We won't look into this situation in our course!
+
+
+
+\newpage
+
+### Concept Map of Statistical Learning
+
+
+
+### References
+
+- James, G., Witten, D., Hastie, T., and Tibshirani, R., *An Introduction to Statistical Learning*, second edition, 2021.
+- Seoul Bike Sharing Demand [Dataset]. (2020). UCI Machine Learning Repository. https://doi.org/10.24432/C5F62R.
+- Scrucca L, Fraley C, Murphy TB, Raftery AE (2023).  _Model-Based Clustering, Classification, and Density Estimation Using mclust in R_. Chapman and Hall/CRC. ISBN   978-1032234953, doi:10.1201/9781003277965 <https://doi.org/10.1201/9781003277965>, <https://mclust-org.github.io/book/>.
+- Bellman, Richard Ernest (1961). Adaptive control processes: a guided tour. Princeton University Press. ISBN 9780691079011
+- Hastie, T., Tibshirani, R., and Friedman, J., *The Elements of Statistical Learning*, second edition, 2009.
