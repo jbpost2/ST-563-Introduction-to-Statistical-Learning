@@ -221,16 +221,47 @@ Now we see a lot more space where we don't have a lot of information. Imagine we
 
 ##### Considerations when Prediction is our Goal
 
-Ideally, our model is good at predicting for observations it **was not trained on**! 
+The biggest idea to understand when prediction is our goal is that we want our model to be good at predicting for observations it **was not trained on**! 
 
-Need to have a metric
+First, we need to understand what it means to predict well.
 
-Need a data set to test on
+- We define a **model metric** that determines our model performance.
 
-Train vs test split
+    + For the regression task,
+    
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
 
-Tuning parameter issue, CV can help
+    + For the classification task,
+    
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
+    
+Second, if we train (or fit) our model on the entire data set, we don't have any data to test on! 
 
+- One way to get around this is to do data splitting. That is, we split our data into a training and test set.
+
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+We mentioned that many models require us to determine a **tuning parameter** value. We don't want to use our test set in this process! There are a few major options to turn to:
+
+- Split the training data further into an *internal training* set and a *validation set*.
+
+- Use cross-validation on the training set to determine an appropriate tuning parameter value 
+
+```{r, echo = FALSE, out.width='450px', fig.cap="Training/Test set idea with five fold cross-validation on the training set visualization", fig.alt = "The full data set is depicted being split into two parts: a training and test set. The training set is shown to then be split into five distinct folds (or sets). Four of the folds are used for training and the fifth used for testing. The fold that acts as a test set rotates until all folds are used as the test set once."}
+knitr::include_graphics("img/grid_search_cross_validation.png")
+```
+
+- Using bootstrap resampling
 
 \pagebreak
 
