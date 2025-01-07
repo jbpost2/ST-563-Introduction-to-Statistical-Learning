@@ -95,19 +95,29 @@ We then try to model our response variable as a some function of the predictors!
 &nbsp;  
 &nbsp;  
 &nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 ##### Simple Linear Regression (SLR)
 
 Perhaps the most simplistic model is the simple linear regression (SLR) model.
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+\newpage
 
-```{r, message = FALSE, out.width='450px', fig.cap="Scatterplot with fitted SLR model overlayed", fig.alt = "A scatterplot between temperature on the x-axis and rented bike count on the y-axis. The plots shows a general upward trend with more spread in the rented bike count as the temperature increases. The overlayed SLR line has a positive slope and shows a strong linear relationship. The line does not fit the data well for temperatures below -10 degrees as it predicts a negative rented bike count in that region."}
+```{r, message = FALSE, out.width='350px', fig.cap="Scatterplot with fitted SLR model overlayed", fig.alt = "A scatterplot between temperature on the x-axis and rented bike count on the y-axis. The plots shows a general upward trend with more spread in the rented bike count as the temperature increases. The overlayed SLR line has a positive slope and shows a strong linear relationship. The line does not fit the data well for temperatures below -10 degrees as it predicts a negative rented bike count in that region."}
 bike_share |>
   ggplot(aes(x = `Temperature(°C)`, y = `Rented Bike Count`)) +
   geom_point(size = 0.5) +
@@ -116,11 +126,14 @@ bike_share |>
 
 - If we are interested in inference, we likely want to understand which predictors are important for understanding our response and what that relationship looks like (or can be approximated by at least).
 
+    + This requires many assumptions we'd need to check but can easily be fit in your favorite statistical software. 
+    
 ```{r}
 SLR_fit <- lm(`Rented Bike Count` ~ `Temperature(°C)`, data = bike_share)
-summary(SLR_fit)
+summary(SLR_fit)$coefficients
 ```
 
+\newpage
 
 - If we are interested in prediction, we want to understand how well our model predicts the response. 
 
@@ -136,14 +149,7 @@ Either way, we must pick a method for modeling the response and **fit** or **est
 
 - To **fit** the model we can usually think about optimizing some **loss function**.
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+\newpage
 
 ##### Parametric vs Non-Parametric Models
 
@@ -161,21 +167,28 @@ bike_share |>
 &nbsp;  
 &nbsp;  
 &nbsp;  
+&nbsp;  
+&nbsp;  
 
 There is a tradeoff between simplicity of the model (easier interpretation) and complexity (a larger number of parameters). With a model that is too complex we may **overfit** to the data we fit (or **train**) our model on. 
 
 A **non-parametric model** seeks to find an estimate of $Y$ that is 'close' without being 'too wiggly' or 'too rough'. These models typically require more observations to be accurate and can also suffer from overfitting.
+
+\newpage
 
 ###### k Nearest Neighbors (kNN)
 
 An example of a simplistic non-parametric model is the k Nearest Neighbors (kNN) model. In this model, for any point of interest, we determine a way to find the $k$ closest observations in the data used to fit the model. When doing a regression task, we then usually use the mean of the response values for those $k$ observations as our prediction.
 
 ```{r}
-bike_share[1:10, ] |>
+bike_share[1:6, ] |>
   select(`Rented Bike Count`, `Temperature(°C)`) |>
   arrange(`Temperature(°C)`)
 ```
-```{r, message = FALSE, out.width='450px', fig.cap="Scatterplot with fitted kNN model with k = 200 overlayed", fig.alt = "A scatterplot between temperature on the x-axis and rented bike count on the y-axis. The plots shows a general upward trend with more spread in the rented bike count as the temperature increases. The overlayed kNN model follows the middle of the data closely, wiggling quite a bit for larger values of temperature - indicating the model may be a bit too flexible there."}
+
+- Again, our statistical software takes care of computations for us...
+
+```{r, message = FALSE, out.width='350px', fig.cap="Scatterplot with fitted kNN model with k = 200 overlayed", fig.alt = "A scatterplot between temperature on the x-axis and rented bike count on the y-axis. The plots shows a general upward trend with more spread in the rented bike count as the temperature increases. The overlayed kNN model follows the middle of the data closely, wiggling quite a bit for larger values of temperature - indicating the model may be a bit too flexible there."}
 library(kknn)
 knn_fit <- kknn(`Rented Bike Count` ~ `Temperature(°C)`, train = bike_share, test = bike_share, k = 200)
 knn_estimates <- mutate(bike_share, knn_est = fitted(knn_fit)) |>
@@ -186,8 +199,12 @@ knn_estimates |>
   geom_line(aes(y = knn_est), color = "blue", linewidth = 2)
 ```
 
+Of course the *optimal* value of $k$ isn't clear! This $k$ is referred to as a **tuning parameter** (or **hyperparameter**). We'll discuss how to use our data and a model metric to choose the value of a tuning parameter shortly.
 
-Of course the *optimal* value of $k$ isn't clear! This $k$ is referred to as a **tuning parameter**. We'll discuss how to use our data to choose the value shortly.
+```{r, echo = FALSE, out.width="400px", fig.cap = "Figure taken from James et al. (2021) p. 25.", fig.alt="Figure shows flexibility on the x-axis (low to high) and interpretability on the y-axis (low to high). In a roughly downward line from top left to bottom right we see the following methods: Subset selection, LASSO, Least Squares, Generalized Additive Models, Trees, Bagging, Boosting, Support Vector Machines, and Deep Learning."}
+knitr::include_graphics("img/flex_vs_interp.png")
+```
+
 
 ##### Curse of Dimensionality
 
@@ -201,7 +218,7 @@ You might think that we should just always use a non-parametric model since they
 As an example, consider having one quantitative predictor that takes on values between 0 and 1. Suppose we have 20 observations of this predictor.
 
 ```{r}
-set.seed(10)
+set.seed(11)
 first_variable <- runif(20)
 sort(first_variable)
 ```
@@ -217,7 +234,7 @@ plot(x = first_variable, y = second_variable,
      ylim = c(0,1))
 ```
 
-Now we see a lot more space where we don't have a lot of information. Imagine we now go to three dimensions! The number of observations we need to 'fill' the corresponding predictor space reasonably well increases greatly!
+\newpage
 
 ##### Considerations when Prediction is our Goal
 
@@ -227,14 +244,20 @@ First, we need to understand what it means to predict well.
 
 - We define a **model metric** that determines our model performance.
 
-    + For the regression task,
+    + For the regression task, common metrics include
     
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
     &nbsp;  
     &nbsp;  
     &nbsp;  
 
-    + For the classification task,
+    + For the classification task, common metrics include
     
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
     &nbsp;  
     &nbsp;  
     &nbsp;  
@@ -251,17 +274,25 @@ Second, if we train (or fit) our model on the entire data set, we don't have any
 &nbsp;  
 &nbsp;  
 
+\newpage
+
 We mentioned that many models require us to determine a **tuning parameter** value. We don't want to use our test set in this process! There are a few major options to turn to:
 
-- Split the training data further into an *internal training* set and a *validation set*.
+- Split the training data further into an **internal training** set and a **validation set** (sometimes called a **holdout set**).
 
 - Use cross-validation on the training set to determine an appropriate tuning parameter value 
 
-```{r, echo = FALSE, out.width='450px', fig.cap="Training/Test set idea with five fold cross-validation on the training set visualization", fig.alt = "The full data set is depicted being split into two parts: a training and test set. The training set is shown to then be split into five distinct folds (or sets). Four of the folds are used for training and the fifth used for testing. The fold that acts as a test set rotates until all folds are used as the test set once."}
+```{r, echo = FALSE, out.width='400px', fig.cap="Training/Test set idea with five fold cross-validation on the training set visualization", fig.alt = "The full data set is depicted being split into two parts: a training and test set. The training set is shown to then be split into five distinct folds (or sets). Four of the folds are used for training and the fifth used for testing. The fold that acts as a test set rotates until all folds are used as the test set once."}
 knitr::include_graphics("img/grid_search_cross_validation.png")
 ```
 
 - Using bootstrap resampling
+
+#### Models are Approximations
+
+Regardless of the model we choose, how we choose to fit and/or tune it, we never really assume the model is correct. We hope that the model is useful!
+
+> All models are wrong; some models are useful. (Box, Hunter, and Hunter, 2005)
 
 \pagebreak
 
@@ -281,11 +312,37 @@ library(dplyr)
 print(as_tibble(GvHD.pos), n = 5)
 ```
 
-Here we don't have a $y$ (response) variable. This makes the problem inherently more difficult! 
+Here we don't have a $Y$ (response) variable. This makes the problem inherently more difficult! 
 
-- May just be to group similar observations together. 
+```{r, echo = FALSE, message = FALSE, warning = FALSE, out.width='400px', fig.cap="Exploratory graphs of the four variables under consideration.", fig.alt = "A four by four matrix of graphs is shown. Along the rows and column the variables are shown in order from CD4, CD8b, CD3, to CD8. The graphs along the diagonal show density plots for each variable. We see that each variable is roughly bell-shaped and right skewed. The CD4 variable has a small peak prior to its main peak and the CD8 variable has a small peak in the upper range. The lower off diagonal plots show scatterplots between the variables. There is generally a positive upward relationship between all of the variables but definite groups of points seem to exist. The upper off diagonal plots show contours associated with those scatterplots. These further highlight that, for some pairs of variables, there are separate groupings of points that seem to exist."}
+library(GGally)
+ggpairs(GvHD.pos,
+         upper = list(continuous = wrap("density", alpha = 0.5), combo = "box"),
+        lower = list(continuous = wrap("points", alpha = 0.3,    size=0.1), 
+                     combo = wrap("dot", alpha = 0.4, size=0.2) )
+)
+```
+
+- May just be to group similar observations together (clustering) 
 
     - If we can group them, can the groups be put into some kind of framework for interpretation? (Requires subject matter expertise!)
+
+```{r, message = FALSE, warning = FALSE}
+clusters <- Mclust(GvHD.pos, G = 3)
+GvHD_cluster <- GvHD.pos |>
+  mutate(cluster = as.factor(clusters$classification))
+print(as_tibble(GvHD_cluster), n = 5)
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, out.width='400px', fig.cap="Exploratory graphs of the four variables under consideration with cluster groupings included.", fig.alt = "A four by four matrix of graphs is shown similar to the previous figure. However, this figure includes a coloring according to the cluster associated with each observation (1, 2, or 3). With this, the groupings of points noted earlier are now clearly placed into different clusters indicating an ability for a subject matter expert to interpret the results."}
+library(GGally)
+ggpairs(GvHD_cluster,
+         upper = list(continuous = wrap("density", alpha = 0.5), combo = "box"),
+        lower = list(continuous = wrap("points", alpha = 0.3,    size=0.1), 
+                     combo = wrap("dot", alpha = 0.4, size=0.2),
+                     mapping = ggplot2::aes(colour = cluster))
+)
+```
 
 - May want to do dimension reduction!
 
@@ -299,12 +356,10 @@ Here we don't have a $y$ (response) variable. This makes the problem inherently 
 
 In some data sets we have only part of our data set with a response variable (or label) associated. In this case, we often use the observations with responses to some how predict the missing responses. However, analysis of this type of data will depend on your goals. We won't look into this situation in our course!
 
+### Concept Map of Statistical Learning
 
 
 \newpage
-
-### Concept Map of Statistical Learning
-
 
 
 ### References
@@ -314,3 +369,4 @@ In some data sets we have only part of our data set with a response variable (or
 - Scrucca L, Fraley C, Murphy TB, Raftery AE (2023).  _Model-Based Clustering, Classification, and Density Estimation Using mclust in R_. Chapman and Hall/CRC. ISBN   978-1032234953, doi:10.1201/9781003277965 <https://doi.org/10.1201/9781003277965>, <https://mclust-org.github.io/book/>.
 - Bellman, Richard Ernest (1961). Adaptive control processes: a guided tour. Princeton University Press. ISBN 9780691079011
 - Hastie, T., Tibshirani, R., and Friedman, J., *The Elements of Statistical Learning*, second edition, 2009.
+- Box, G.E.P., Hunter, W., and Hunter, S., *Statistics for Experimenters*, second edition, 2005.
