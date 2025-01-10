@@ -1,0 +1,580 @@
+---
+title: "Introduction to R"
+format: docx
+---
+
+
+To do our statistical modeling, we need to have a software to do so. I'll demonstrate `R` code and output through the use of `quarto` documents.
+
+- `R` is a great open source language with the best statistical learning packages
+- `RStudio` is an interface for programming in `R` (or `python`)
+- `quarto` is the next generation of `R` Markdown (program that weaves word processing, code, and output) that makes it easier to use multiple languages and programmatically render documents
+
+
+## RStudio 
+
+- We can type code directly into the **console** for evaluation  
+
+```{r calc2, echo=TRUE}
+#simple math operations
+# <-- is a comment - code not evaluated
+3 + 7
+10 * exp(3) #exp is exponential function
+log(pi^2) #log is natural log by default
+mean(cars$speed)
+```
+
+-   We write our code in a 'script', `R` markdown document, or `quarto` document
+
+- Let's jump into `RStudio` and open a new `quarto` document
+
+
+## `quarto` Basics
+
+We want to make all of our data processing, modeling, visualizing, etc. steps reproducible! A first step is to use a notebook environment.
+
+We'll go through the basics of `quarto` to get you started. Much more is available on the [quarto docs page](https://quarto.org/docs/get-started/hello/rstudio.html), the [RStudio quarto integration page](https://docs.posit.co/ide/user/ide/guide/documents/quarto-project.html), and in the [R for Data Science book](https://r4ds.hadley.nz/quarto).
+
+### Markdown Idea
+
+Markdown is a simpler version of a markup language. HTML is the most commonly known markup language (HTML = Hypertext markup language). With HTML you use tags to specify things that a web browser like chrome interprets. For instance,
+
+`<h1>My first level header</h1>`\
+`<a href = "https://www.google.com">Link to a search engine.</a>`
+
+The syntax for Markdown is really easy to pick up. Below you'll find some commonly used markdown syntax:
+
+-   `# R Markdown` $\rightarrow$ First level header
+-   `## Next` $\rightarrow$ Second level header
+-   `**Knit**` or `__Knit__` $\rightarrow$ Bold font (**Knit**)
+-   `*italic*` or `_italic_` $\rightarrow$ Italic font (*italic*)
+-   `*__both__*` $\rightarrow$ Bold and italic (***both***)
+-   `<https://rstudio.github.io/cheatsheets/quarto.pdf>` $\rightarrow$ A hyperlink: <https://rstudio.github.io/cheatsheets/quarto.pdf>
+-   `[Cheat Sheet link](https://rstudio.github.io/cheatsheets/quarto.pdf)` $\rightarrow$ [Cheat Sheet link](https://rstudio.github.io/cheatsheets/quarto.pdf)
+
+Check [this site for markdown basics](https://quarto.org/docs/authoring/markdown-basics.html). (Headers can be used to easily create a table of contents (and is useful for accessibility of documents).)
+
+Where `quarto` goes beyond HTML is in the ability to weave R code into the equation!
+
+-   You can include **code chunks** in your `.qmd` file.
+-   You then render the markdown through `RStudio` (or the command line).
+-   The code runs and output is included in the final document!
+
+Let's jump into `RStudio` and create a `.qmd` file.
+
+
+## R Objects
+
+-   We store **data/info/function/etc.** in `R` objects
+-   Create an `R` object via `<-` (recommended) or `=`
+
+```{r save,echo=TRUE}
+#save for later
+avg <- (5 + 7 + 6) / 3
+#call avg object
+avg
+#strings (text) can be saved as well
+words <- c("Hello there!", "How are you?")
+words
+```
+
+-   Built-in objects exist like `letters` and `cars` don't show automatically
+
+```{r builtin, echo = TRUE}
+library(knitr) #gives access to the kable function
+letters
+head(cars, n = 3) |>
+  kable()
+```
+
+- There are many functions to help understand an `R` Object. `str()` is one of the best
+
+```{r obj1, echo = TRUE}
+str(cars)
+str(avg)
+```
+
+- This is essentially equivalent to looking at the `Environment` area in `RStudio`
+
+
+## Common Data Structures
+
+It is important to understand three types of data structures in `R`.
+
+1.  Atomic Vector (1d)
+2.  Data Frame (2d)
+3.  List (1d)
+
+
+### (Atomic) Vector 
+
+- 1D group of elements with an ordering that starts at 1
+
+```{r vectorVis, echo = FALSE, fig.align='center', out.width = '650px', fig.cap = "Visuals of Two Vectors", fig.alt = "Figure shows two vectors. One vector with the values 17, 22, 1, 3, and -3 in that order. The other has the values 'cat', 'dog', 'bird', and 'frog'. The values themselves are called elements and they have an ordering." }
+knitr::include_graphics("img/vectorVisualF.png")
+```
+
+-   **Elements** must be same the same 'type' (homogeneous). The most common types of data are:
+
+    +   logical, integer, double, and character
+
+-   `c()` "combines" values together. Simply separate the values with a comma
+
+```{r}
+#vectors (1 dimensional) objects
+#all elements of the same 'type'
+x <- c(1, 3, 10, -20, sqrt(2))
+x
+```
+
+-   Let's create another vector `y` with strings stored in it
+
+```{r}
+y <- c("cat", "dog", "bird", "floor")
+y
+```
+
+-   We can combine two vectors together using `c()` as well!
+
+```{r}
+z <- c(x, y)
+z
+```
+
+- `R` does **element-wise** math by default
+
+```{r}
+x
+x + 3
+```
+
+#### Accessing Elements of a Vector
+
+When thinking about accessing (or subsetting) a vector's elements, remember that vectors are 1D. We can place the numbers corresponding to the positions of the elements we want inside of `[]` at the end of the vector to return them.
+
+-   Return vector elements using square brackets `[]` at the end of a vector.
+
+```{r}
+letters #built-in vector
+```
+
+```{r}
+letters[1] #R starts counting at 1!
+```
+
+```{r}
+letters[26]
+```
+
+```{r }
+letters[1:4]
+```
+
+```{r}
+letters[c(5, 10, 15, 20, 25)]
+```
+
+```{r}
+x <- c(1, 2, 5)
+letters[x]
+```
+
+We'd call `x` above an *indexing vector*
+
+
+### Data Frame
+
+A 2D objects where the columns are homogenous but can be of different types
+
+```{r dfVis, echo = FALSE, out.width = "500px", fig.align= 'center', echo = FALSE, fig.cap = "Visual of a Data Frame", fig.alt = "A visual of a data frame is shown. This is a four by three rectangular object. Each column representing a variable and each row representing an observation. The values with in a column are of the same type (numeric, character, and logical, respectively). The elements are indexed by row then column. For instance, the top left element is the 1, 1 element. The bottom right element is the 4, 3 element."}
+knitr::include_graphics("img/dfVisualF.png")
+```
+
+Let's check out the 'built-in' `iris` data frame
+
+```{r}
+str(iris)
+```
+
+-   This is a 2D structure and we can access it with `[,]`
+
+```{r}
+iris[1:4, 2:4] |> #returns a data frame
+  kable()
+```
+
+```{r}
+iris[1, ] |> #returns a data frame
+  kable()
+```
+
+```{r}
+iris[1:10, 1] |> #returns a vector
+  kable()
+```
+
+We'll see easy `tidyverse` functions for dealing with `tibbles` which are special `data frames`.
+
+### List
+
+-   A vector that can have differing elements! (still **1D**)
+
+```{r, echo = FALSE, out.width = "600px", fig.align= 'center', fig.cap = "Visual of a List", fig.alt = "A visual of a list with three elements is presented. The list has an order. That is, a first, second, and third element. Each element can be any type of R object. The first element is depicted as a vector. The second element is depicted as a data frame. The third element is depicted as a different list."}
+knitr::include_graphics("img/listVisualF.png")
+```
+
+-   An ordered set of objects (ordering starts at 1)
+
+-   Useful for more complex types of data like the output of a model fit
+
+```{r}
+lm_fit <- lm(Sepal.Length ~ Sepal.Width, data = iris)
+str(lm_fit) |>
+  kable()
+```
+
+-   We can use double square brackets `[[ ]]` (or `[ ]`) to return a single list element or use the list element name after a `$`
+
+```{r }
+lm_fit[[1]] |>
+  kable()
+```
+
+```{r}
+lm_fit$coefficients |>
+  kable()
+```
+
+
+## `tidyverse`
+
+One of the big impediments to learning R in the past was the vast ecosystem of packages.
+
+-   Many ways to do the same task via competing R packages
+-   Most packages written by different people
+-   Different syntax was used in different packages
+-   Required lots of reading of help pages to understand how to use each package/function
+
+Along came the `tidyverse` collection of packages! While not the most efficient method for programming, the `tidyverse` provides a coherent ecosystem for almost all common data tasks! That is,
+
+-   (Almost) all packages have functions with the same syntax
+-   Functions are built to work together
+-   A plethora of help documentation and vignettes exists
+
+### `tidyverse` Syntax
+
+As the `tidyverse` is mostly concerned with the analysis and manipulation of data, the main data object used is a special version of a data frame called a **tibble**.
+
+```{r}
+iris_tbl <- dplyr::as_tibble(iris)
+str(iris_tbl)
+```
+
+### `tidyverse` Packages
+
+The `tidyverse` consists of a large number of packages. However, `library(tidyverse)` loads only the eight core packages (which sometimes load other packages of course). Those are ([from their website](https://www.tidyverse.org/packages/)):
+
+-   `ggplot2` - ggplot2 is a system for declaratively creating graphics, based on The Grammar of Graphics. You provide the data, tell ggplot2 how to map variables to aesthetics, what graphical primitives to use, and it takes care of the details
+-   `dplyr` - dplyr provides a grammar of data manipulation, providing a consistent set of verbs that solve the most common data manipulation challenges
+-   `tidyr` - tidyr provides a set of functions that help you get to tidy data. Tidy data is data with a consistent form: in brief, every variable goes in a column, and every column is a variable
+-   `readr` - readr provides a fast and friendly way to read rectangular data (like csv, tsv, and fwf). It is designed to flexibly parse many types of data found in the wild, while still cleanly failing when data unexpectedly changes
+- ...
+
+### Reading Data
+
+Data comes in many formats such as
+
+-   'Delimited' data: Character (such as [','](https://www4.stat.ncsu.edu/~online/datasets/scoresFull.csv) , ['\>'](https://www4.stat.ncsu.edu/~online/datasets/umps2012.txt), or \[' '\]) separated data
+-   [Excel](https://www4.stat.ncsu.edu/~online/datasets/Dry_Bean_Dataset.xlsx) data
+-   From a database
+-   From an Application Programming Interface (API)
+
+We can read delimited data using the `readr` package. Make sure `tidyverse` package is installed (this can take a while). This includes `readr`.
+
+```{r, eval=FALSE}
+install.packages("tidyverse")
+```
+
+-   Load the library into your current session
+
+```{r}
+library(tidyverse)
+```
+
+-   You can see this loads in the eight core packages mentioned previously. The warnings can easily be ignored but we should take care with the conflicts. We've overwritten some functions from `BaseR`. Recall, we can call those functions explicitly if we'd like (`stats::filter()`).
+
+- Suppose we want to read in the file called `bikeDetails.csv` available at: <https://www4.stat.ncsu.edu/~online/datasets/bikeDetails.csv>
+
+    -   We can download the file and store it locally, reading it in from there
+    -   Or, for this type of file, we can also read it directly from the web!
+
+We'll use the `read_csv()` function from the `readr` package. The inputs are:
+
+```         
+read_csv(
+  file,
+  col_names = TRUE,
+  col_types = NULL,
+  col_select = NULL,
+  id = NULL,
+  locale = default_locale(),
+  na = c("", "NA"),
+  quoted_na = TRUE,
+  quote = "\"",
+  comment = "",
+  trim_ws = TRUE,
+  skip = 0,
+  n_max = Inf,
+  guess_max = min(1000, n_max),
+  name_repair = "unique",
+  num_threads = readr_threads(),
+  progress = show_progress(),
+  show_col_types = should_show_types(),
+  skip_empty_rows = TRUE,
+  lazy = should_read_lazy()
+)
+```
+
+We really only need to specify the `file` argument but we see there are a few others that might be useful. 
+
+```{r}
+bike_details <- read_csv("https://www4.stat.ncsu.edu/~online/datasets/bikeDetails.csv")
+bike_details[1:5, ] |>
+  kable()
+```
+
+-   Functions from *readr* and their purpose
+
+| Delimiter      | Function                                                                         |
+|------------------------|-----------------------------------------------|
+| comma ','      | read_csv()                                                                       |
+| tab            | read_tsv()                                                                       |
+| space ' '      | read_table()                                                                     |
+| semi-colon ';' | read_csv2() (This uses `;` instead of commas, which is common in many countries) |
+| other          | read_delim(...,delim = ,...)                                                     |
+
+Consider the `umps.txt` file available at: <https://www4.stat.ncsu.edu/~online/datasets/umps2012.txt>
+
+-   Note that the delimiter is a `>` sign!
+-   Note that there are no column names provided:
+    -   `Year` `Month` `Day` `Home` `Away` `HPUmpire` are the appropriate column names
+
+We can use `read_delim()` to read in a generic delimited raw data file! Let's check the help:
+
+```         
+read_delim(
+  file,
+  delim = NULL,
+  quote = "\"",
+  escape_backslash = FALSE,
+  escape_double = TRUE,
+  col_names = TRUE,
+  col_types = NULL,
+  col_select = NULL,
+  id = NULL,
+  locale = default_locale(),
+  na = c("", "NA"),
+  quoted_na = TRUE,
+  comment = "",
+  trim_ws = FALSE,
+  skip = 0,
+  n_max = Inf,
+  guess_max = min(1000, n_max),
+  name_repair = "unique",
+  num_threads = readr_threads(),
+  progress = show_progress(),
+  show_col_types = should_show_types(),
+  skip_empty_rows = TRUE,
+  lazy = should_read_lazy()
+)
+```
+
+We see two arguments we need to worry about right off:
+
+-   `file` (path to file)
+
+-   `delim` the delimiter used in the raw data file
+
+    -   Single character used to separate fields within a record.
+    -   We want to specify a character string with the delimiter for this.
+
+As we don't have column names we should also consider the `col_names` argument. This is set to `TRUE` by default. The help says:
+
+> Either TRUE, FALSE or a character vector of column names.\
+> If TRUE, the first row of the input will be used as the column names, and will not be included in the data frame. If FALSE, column names will be generated automatically: X1, X2, X3 etc.\
+> If col_names is a character vector, the values will be used as the names of the columns, and the first row of the input will be read into the first row of the output data frame.\
+> Missing (NA) column names will generate a warning, and be filled in with dummy names ...1, ...2 etc. Duplicate column names will generate a warning and be made unique, see name_repair to control how this is done.
+
+-   This means we want to set the value to `FALSE` or supply a character vector with the corresponding names!
+
+```{r}
+ump_data <- read_delim("https://www4.stat.ncsu.edu/~online/datasets/umps2012.txt", 
+                       delim = ">",
+                       col_names = c("Year", "Month", "Day", "Home", "Away", "HPUmpire")
+)
+ump_data[1:5, ] |>
+  kable()
+```
+
+### Manipulating Data with `dplyr`
+
+The two major tasks we'll consider are
+
+-   Row manipulations
+
+    -   **filtering** or subsetting our observations
+
+-   Column manipulations
+
+    -   **selecting** a subset of our variables
+    -   **rename** a column
+    -   **mutating** our data frame to create a new variable
+
+`tidyverse` syntax:
+
+- `function(tibble, arguments, ...)`
+
+    -   Allows for easy 'chaining' or 'piping'!
+
+```{r, eval = FALSE}
+iris |> 
+  select(Sepal.Length, starts_with("Petal")) |>
+  filter(Sepal.Length > 5.4) |>
+  mutate(Petal.Avg = (Petal.Length+Petal.Width)/2) |>
+  kable()
+```
+
+#### Row Manipulations with `dplyr`
+
+A common task is to only grab certain types of observations (**filter rows**)
+
+```{r, echo = FALSE, fig.align='center', out.width = "500px", fig.cap = "Visual of Filtering a Data Frame", fig.alt = "A data frame with six observations (rows) and three variables (columns) is visualized. Four observations are 'filtered' out showing only two remaining observations, both having the three variables observed on them."}
+knitr::include_graphics("img/filterVisualF.png")
+```
+
+or rearrange the order of the observations (rows). The two functions from `dplyr` that help us here are
+
+-   `filter()` - subset **rows**
+
+`filter()` generally takes a `tibble` as its first argument and then a logical vector as the next (of the same length as the number of rows):
+
+-   Return observations where the number of games played is greater than 50 (the `G` column):
+
+```{r}
+library(Lahman) #install this package
+batting_tbl <- as_tibble(Batting)
+batting_tbl |>
+  filter(G > 50, yearID == 2018) |>
+  slice(1:5) |>
+  kable()
+batting_tbl |>
+  filter(G > 50, yearID %in% c(2018, 2019, 2020)) |>
+  slice(1:5) |>
+  kable()
+```
+
+-   If we want an *or* condition, we use the compound logical operator for that
+
+```{r}
+batting_tbl |>
+  filter(G > 50 | yearID %in% c(2018, 2019, 2020)) |>
+  slice(1:5) |>
+  kable()
+```
+
+#### Column Manipulations with `dplyr`
+
+We may want to subset our variables, rename them, or create new variables.
+
+##### `select()` - Subset Columns
+
+We call the subset of our variables **selecting** columns (or variables)
+
+```{r, echo = FALSE, fig.align='center', out.width = "400px", fig.cap = "Visualization of Selecting a Column", fig.alt = "A data frame with six observations (rows) and three variables (columns) is shown. One column is selected and now represents a data frame with a single column (with six rows)."}
+knitr::include_graphics("img/selectVisualF.png")
+```
+
+-   Suppose we just wanted to look at the `playerID`, `teamID`, and hits type variables: `H`, `X2B` `X3B`, and `HR` of the players in our subset
+-   We can add in a `select()` function to our chain 
+
+```{r}
+batting_tbl |>
+  filter(G > 50 | yearID %in% c(2018, 2019, 2020)) |>
+  select(playerID, teamID, H, X2B, X3B, HR) |>
+  slice(1:5) |>
+  kable()
+```
+
+-   Where we really gain here is the ability to use helper functions when selecting columns!
+
+    -   `:` to select all contiguous columns, `starts_with()`, and `ends_with()`
+
+```{r}
+batting_tbl |>
+  filter(G > 50 | yearID %in% c(2018, 2019, 2020)) |>
+  select(ends_with("ID"), G, AB, H:HR) |>
+  slice(1:5) |>
+  kable()
+```
+
+##### `rename()`
+
+ `rename()` comes in handy, especially when we have non-standard column names
+
+```{r}
+batting_tbl |>
+  filter(G > 50 | yearID %in% c(2018, 2019, 2020)) |>
+  select(playerID, teamID, H, X2B, X3B, HR) |>
+  rename("Doubles" = "X2B", "Triples" = "X3B") |>
+  slice(1:5) |>
+  kable()
+```
+
+##### `mutate()` to Create New Variables
+
+This function allows us to create one or more variables and append them to our tibble.
+
+-   For our dataset from above, suppose we wanted to create an "extra base hits" type column that is the sum of the doubles, triples, and home runs.
+
+```{r,eval=TRUE}
+batting_tbl |>
+  filter(G > 50 | yearID %in% c(2018, 2019, 2020)) |>
+  select(playerID, teamID, H, X2B, X3B, HR) |>
+  rename("Doubles" = "X2B", "Triples" = "X3B") |>
+  mutate(Extra_Base_Hits = Doubles + Triples + HR) |>
+  slice(1:5) |>
+  kable()
+```
+
+-   If we want to add more than one variable, we just separate the variable definitions with a comma.
+
+    -   Let's add a `Singles` variable representing the number of hits minus the number of extra base hits
+
+```{r}
+batting_tbl |>
+  filter(G > 50 | yearID %in% c(2018, 2019, 2020)) |>
+  select(playerID, teamID, H, X2B, X3B, HR) |>
+  rename("Doubles" = "X2B", "Triples" = "X3B") |>
+  mutate(Extra_Base_Hits = Doubles + Triples + HR,
+         Singles = H - Extra_Base_Hits) |>
+  select(playerID, teamID, Singles, Doubles:HR, H, Extra_Base_Hits) |>
+  slice(1:5) |>
+  kable()
+```
+
+## Recap!
+
+`quarto` is great for creating documents with code and text
+
+`dplyr` gives us a ton of functionality for doing common data manipulations
+
+-   `as_tibble()` - coerce a data frame to a tibble
+-   `filter()` - subset rows
+-   `select()` - subset/reorder columns
+-   `rename()` - rename columns
+-   `mutate()` - add new variables to the tibble
+
+The functionality of selecting columns described in the help for `select()` can be used in many places across the `tidyverse` and the functions `group_by()` and `if_else()` are really useful as well!
+
+-   [`dplyr` Cheat Sheet](https://rstudio.github.io/cheatsheets/html/data-transformation.html) (PDF version on the right hand side of the page)
+
