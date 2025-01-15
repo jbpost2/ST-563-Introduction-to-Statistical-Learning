@@ -1,0 +1,188 @@
+\usepackage{graphicx}
+%\usepackage{natbib}
+%\usepackage{setspace}
+%%\usepackage{amsmath}
+%%\usepackage{amssymb}
+%%\usepackage{graphicx}
+\usepackage{fancyhdr}
+%\usepackage{mathrsfs}
+%\usepackage{makeidx}
+%\usepackage{color}
+\usepackage{bm}
+%% For latex and KableExtra
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+%%%% End for kableextra
+%\usepackage{tcolorbox}
+\usepackage{lastpage}
+%\usepackage{fullpage, enumerate}
+\usepackage{amsmath}
+\usepackage{cleveref}
+\usepackage[most]{tcolorbox}
+\usepackage{comment}
+
+
+
+%\definecolor{llgray}{gray}{0.95}
+%\newcommand{\Rb}{\textbf{\color{black}{R}\ }}
+
+%\newtheorem{definition}[section]{Definition}
+%\newtheorem{theorem}[section]{Theorem}
+\renewcommand{\textfraction}{0.05}
+
+%\newtcbox{\mydefbox}[1]{colback=black!5!white,
+%#colframe=white!30!black,fonttitle=\bfseries,
+%title={#1}}
+
+
+\newcommand{\mydefbox}[2]{
+\begin{tcolorbox}[colback=black!5!white, colframe=white!30!black, title = {#1}, fonttitle=\bfseries]
+{#2}
+\end{tcolorbox}
+}
+
+
+\newcommand{\mydbldefbox}[3]{
+\begin{tcolorbox}[colback=black!5!white, colframe=white!30!black, title = {#1}, fonttitle=\bfseries]
+{#2}
+\tcblower
+{#3}
+\end{tcolorbox}
+}
+
+
+
+\newlength{\cwd}
+\setlength{\cwd}{2cm}
+
+\def\mb{\mbox}
+
+\lhead{ST 563}
+\lfoot{\scriptsize Introduction to Statistical Learning}
+\cfoot{\scriptsize Dr. Arnab Maity, NCSU Statistics}
+\rfoot{\scriptsize 5240 SAS Hall, amaity[at]ncsu.edu}
+
+%\newtheorem{definition}[section]{Definition}
+%\newtheorem{theorem}[section]{Theorem}
+
+\newcommand{\bA}{{\boldsymbol A}}
+\newcommand{\B}{{\boldsymbol B}}
+\newcommand{\bC}{{\boldsymbol C}}
+\newcommand{\D}{{\boldsymbol D}}
+\newcommand{\bR}{{\boldsymbol R}}
+\newcommand{\bS}{{\boldsymbol S}}
+\newcommand{\bU}{{\boldsymbol U}}
+\newcommand{\V}{{\boldsymbol V}}
+\newcommand{\W}{{\boldsymbol W}}
+\newcommand{\X}{{\mathbf{X}}}
+\newcommand{\Y}{{\mathbf{Y}}}
+\newcommand{\Z}{{\boldsymbol Z}}
+\newcommand{\ab}{{\boldsymbol a}}
+\newcommand{\bb}{{\boldsymbol b}}
+\newcommand{\cb}{{\boldsymbol c}}
+\newcommand{\db}{{\boldsymbol d}}
+\newcommand{\eb}{{\boldsymbol e}}
+\newcommand{\sbf}{{\boldsymbol s}}
+\newcommand{\x}{{\boldsymbol x}}
+\newcommand{\y}{{\boldsymbol y }}
+\newcommand{\z}{{\boldsymbol z}}
+
+\newcommand{\zerobf}{{\boldsymbol 0}}
+\newcommand{\mubf}{\boldsymbol{\mu}}
+\newcommand{\Sigmabf}{\boldsymbol{\Sigma}}
+
+
+\newcommand{\greekbold}[1]{\mbox{\boldmath $#1$}}
+\newcommand{\betabf}{\greekbold{\beta}}
+\newcommand{\deltabf}{\greekbold{\delta}}
+\newcommand{\etabf}{\greekbold{\eta}}
+\newcommand{\gammabf}{\greekbold{\gamma}}
+\newcommand{\nubf}{\greekbold{\nu}}
+\newcommand{\thetabf}{\greekbold{\theta}}
+\newcommand{\Gammabf}{\greekbold{\Gamma}}
+\newcommand{\Thetabf}{\greekbold{\Theta}}
+
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newcommand{\Ehat}{\widehat{\E}}
+\newcommand{\Covhat}{\widehat{\Cov}}
+\newcommand{\Prb}{\mathrm{Pr}}
+\newcommand{\spn}{\mbox{Span}}
+\newcommand{\spc}{{\mathcal S}}
+\newcommand{\tr}{\mathrm{trace}}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\indep}{\;\, \rule[0em]{.03em}{.6em} \hspace{-.25em}
+	\rule[0em]{.65em}{.03em} \hspace{-.25em}
+	\rule[0em]{.03em}{.6em}\;\,}
+\newcommand{\real}[1]{\mathrm{I \! R} \mathit{^{#1}}}
+\newcommand{\trans}{^{\mbox{\tiny {\sf T}}}}
+\newcommand{\vect}{\mathrm{vec}}
+
+
+
+
+
+\definecolor{steelblue}{rgb}{0.27, 0.51, 0.71}
+
+%https://tex.stackexchange.com/questions/369430/theorems-and-definitions-boxes-numbering-should-be-chapter-wise
+
+\newtcbtheorem[no counter]{Theorem}{}{
+        enhanced,
+        sharp corners,
+        attach boxed title to top left={
+            xshift=-1mm,
+            yshift=-5mm,
+            yshifttext=-1mm
+        },
+        top=1.5em,
+        colback=white,
+        colframe=blue!75!black,
+        fonttitle=\bfseries,
+        boxed title style={
+            sharp corners,
+            size=small,
+            colback=blue!75!black,
+            colframe=blue!75!black,
+        } 
+    }{thm}
+
+\newtcbtheorem[no counter]{Definition}{}{
+        enhanced,
+        sharp corners,
+        attach boxed title to top left={
+            xshift=-1mm,
+            yshift=-5mm,
+            yshifttext=-1mm
+        },
+        top=1.5em,
+        colback=white,
+        colframe=steelblue,
+        fonttitle=\bfseries,
+        boxed title style={
+            sharp corners,
+            size=small,
+            colback=steelblue,
+            colframe=steelblue,
+        } 
+    }{def}
+
+\newenvironment{myTheorem}[2]{ \begin{Theorem}[adjusted title=#1]{}{#2} 
+   }{\end{Theorem}}
+
+  \newenvironment{myDefinition}[2]{ \begin{Definition}[adjusted title=#1]{}{#2} 
+   }{\end{Definition}}
+
+\newcommand{\bdf}[1]{\begin{myDefinition}{#1}{}}
+\newcommand{\edf}{\end{myDefinition}}
