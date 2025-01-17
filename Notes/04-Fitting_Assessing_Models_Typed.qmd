@@ -7,7 +7,9 @@ include-in-header:
       - header.tex
 ---
 
-```{r setup, include=FALSE, message=FALSE}
+Code to read in packages used.
+
+```{r setup, warning = FALSE, message=FALSE}
 library(MASS)
 library(klaR)
 library(tufte)
@@ -40,9 +42,9 @@ The process of building a statistical model (or multiple models) roughly has the
     
     b. For each candidate value of hyperparameter(s), fit the model using the new training set, and evaluate the fitted model using the validation set using a metric of our choice. 
     
-    c. Typically, we repeat stpes `a.` and `b.` few times so that we get repeated measurements of model performance for each value of hyperparameters.^[Using a single validation set often provides highly variable estimate of model performance.] The final model performance is taken to be the average of these multiple measurements. 
+    c. Typically, we repeat stpes `a.` and `b.` few times so that we get repeated measurements of model performance for each value of hyperparameters. Using a single validation set often provides highly variable estimate of model performance. The final model performance is taken to be the average of these multiple measurements. 
     
-    d. Choose the best value of hyperparameters by optimizing^[We would maximize or minimize the model performance criterion depending on the situation. For example, we would minimize criterion like "prediction error", but maximize "classification accuracy".] the model perfromance measure obtained in step `c.`
+    d. Choose the best value of hyperparameters by optimizing the model perfromance measure obtained in step 'c'. We would maximize or minimize the model performance criterion depending on the situation. For example, we would minimize criterion like "prediction error", but maximize "classification accuracy". 
     
 3. Using the best value of hyperparameters, fit the model(s) on the entire training set and estimate the model parameters. This is (are) the *final model(s)* chosen in using the training set.
 
@@ -50,21 +52,21 @@ The process of building a statistical model (or multiple models) roughly has the
 
 5. Again, we may want to repeat steps `1.` -- `4.` a few times to get a reliable estimate of model performance of the final models. For example, we can use cross-validation here to incorporate the uncertainty due to hyperparameter tuning as well.
 
+Notes: 
 
-We should note that most model evaluation criteria focus on prediction. Thus the steps describes above are geared towards building of predictive models. After all, the model provided by the optimal value of hyperparameter, while good for prediction, may not be easily interpreted or lend itself to inference.
+- Most model evaluation criteria focus on prediction. The steps described are geared towards building of predictive models. The fitted model may not be easily interpreted or lend itself to inference.
 
-There are two points in the algorithm above that we may want to perform repeatedly: these are the inner and outer loops.
+- There are two points in the algorithm above that we may want to perform repeatedly: these are the inner and outer loops.
 
-\mydbldefbox{Inner and outler loops}{The tuning process (Step `2.`) can repeated, that is, for each candidate value of the hyperparameter(s), we may use multiple splits of the training  set rather than just one holdout set. This is the {\it inner loop}.}{The entire process can be performed repeatedly (Step `5.`) to get a better estimate of the test error. This is the {\it outer loop}.}
-
-\noindent Depending on the situation (sample size, computationa cost), we can use any of the resampling and data splitting methods in each of the loops.
+- Depending on the situation (sample size, computational cost), we can use any of the resampling and data splitting methods in each of the loops.
 
 
-# $K$-Nearest Neighbors Regression
+# Non-parametric Model: $K$-Nearest Neighbors Regression
 
-Before proceeding further, let us introduce one of the simplest nonparametric regression methods -- the $K$-Nearest Neighbors (KNN) regression. We will develop our ideas further based on this regression technique. However, these ideas will be applicable in other cases as well.
+One of the simplest nonparametric regression methods is the $K$-Nearest Neighbors (KNN) regression. We will develop our ideas further based on this regression technique. However, these ideas will be applicable in other cases as well.
 
-Assume that we have a regression model
+Assume that we have a regression task and are using our usual, generic, model: 
+
 $$
 Y = f(X) + \epsilon,
 $$
@@ -80,6 +82,8 @@ $$
 $$
 Note that the predictor $X$ can be a scalar as well as a vector, as long as there is a measure of "nearness" available.
 
+\newpage
+
 ## Distance metric
 
 We determine $K$ points nearest  to $x_0$ by computing a distance metric between $x_0$ and the $X$ values of the training data, and taking the $K$ points with smallest distance measures. 
@@ -94,9 +98,8 @@ Another popular distance metric is the $L_1$-norm, $||w - v||_1$, that is,
 $$
 d(w, v) = \sum_{i=1}^p |w_i - v_i|.
 $$
-The $L_1$-norm is used when we suspect the data might have outliers or one coordinate may have large values compared to others. This is also useful for binary predictors. The $L_1$ distance is also known as "taxicab" and "Manhattan" distance. The geometry of these distance metrics are shown (simplified) in Figure \ref{fig:dist}.  
 
-```{r dist, echo=FALSE, fig.margin = TRUE, fig.height=6, fig.width=6, fig.cap="L2-norm vs. L1-norm. Given two points (black dots), the L2-norm measures the distance of the straight line joining them (dashed line). In contrast, L1-norm measures the distance of the path that can only go parallel to the x- and y-axes (dotted line)."}
+```{r dist, echo=FALSE, fig.margin = TRUE, fig.height=3, fig.width=3, fig.cap="L2-norm vs. L1-norm. Given two points (black dots), the L2-norm measures the distance of the straight line between these points (dashed line). In contrast, L1-norm measures the distance of the path that can only go parallel to the x- and y-axes (dotted line).", fig.alt="L2-norm vs. L1-norm. Given two points (black dots, one located at (0,0) and one located at (1,1)), the L2-norm measures the distance of the straight line between these points. In contrast, L1-norm measures the distance of the path that can only go parallel to the x- and y-axes. Here that is a line going from (0,0) to (1,0) and another line going from (1,0) to (1,1)."}
 x <- c(1,2)
 y <- c(3,4)
 
@@ -106,68 +109,85 @@ lines(x, c(y[1], y[1]), lwd=3, col="blue", lty=3)
 lines(c(x[2], x[2]), y, lwd=3, col="blue", lty=3)
 ```
 
+\newpage
+
+The $L_1$-norm is used when we suspect the data might have outliers or one coordinate may have large values compared to others. This is also useful for binary predictors. The $L_1$ distance is also known as "taxicab" and "Manhattan" distance. The geometry of these distance metrics are shown (simplified) in Figure \ref{fig:dist}.  
+
 There are other types of distance metrics in literature such as Minkowski, Mahalanobis, Hamming, Cosine distances and so on.  
 
 ## The hyperparameter $K$
 
-Let us consider the `Boston` dataset in the `ISLR2` package. The data set contains housing values of $n=506$ suburbs of Boston.  Suppose we want to predict median value of owner occupied homes (in $1000's, `medv` variable) using the lower status of the population (percent, `lstat` variable). A snapshot of the data is shown below with only the two variables of interest. A plot of the data is shown in Figure \ref{fig:boston}. 
+The value of $K$ (the number of neighbors) must be chosen using the data. Most often, we do a resampling technique to do so. We'll discuss this more shortly. For now, let's look at fitting this model in `R`.
 
-```{r boston, echo=FALSE, fig.height=6, fig.width=8, fig.cap= "Plot of median housing value vs. percent of population with lower status from Boston data.", fig.margin = TRUE}
+### `Boston` Dataset 
+
+Let us consider the `Boston` dataset in the `ISLR2` package. The data set contains housing values of $n=506$ suburbs of Boston.  
+
+- Goal: Predict the median value of owner occupied homes (in $1000's, the `medv` variable) using the lower status of the population (percent, `lstat` variable). 
+
+- A plot of the data is shown in Figure \ref{fig:boston}. 
+
+```{r boston, echo=FALSE, fig.height=3, fig.width=5, fig.cap= "Plot of median housing value vs. percent of population with lower status from Boston data.", fig.margin = TRUE, fig.alt = "The image is a scatter plot with data points distributed across a two-dimensional grid. The x-axis is labeled 'Lower status of the population (percent),' ranging from 0 to 40, while the y-axis is labeled 'Median value of owner-occupied homes,' ranging from 0 to 50. The plot illustrates a negative correlation between the two variables, with data points densely concentrated at higher median home values with lower population status percentages, and values decreasing as population status percentage increases. The data points are black dots scattered across the plot."}
 ggplot(Boston) + 
   geom_point(aes(lstat, medv)) + 
   xlab("Lower status of the population (percent)") + 
-  ylab("Median value of owner occupied homes") + 
+  ylab("Median value of owner \n occupied homes") + 
   theme_bw(base_size = 18)
 ```
 
+\newpage
+
+- A snapshot of the `R` `tibble` is shown below with only the two variables of interest. 
+
 ```{r, echo=FALSE}
-as_tibble(Boston) %>% select(medv, lstat) %>% head()
+Boston <- as_tibble(Boston) #coerce data frame to tibble
+as_tibble(Boston) |>
+  select(medv, lstat) |>#pull out our two variables of interest
+  slice(1:5) |>
+  kable()
 ```
 
-Let us see a KNN fit to the data, with $K=30$.^[The value $K=30$ is chosen arbitrarily for demonstration purposes.] Here we are not training/testing the model yet -- we are simply attempting to understand the role of the hyperparameter $K$ and its impact on the fitted model. We can use the function `knnreg()` in the `caret` library. 
+Let us see a KNN fit to the data, with $K=30$. Here we are not training/testing the model yet -- we are simply attempting to understand the role of the hyperparameter $K$ and its impact on the fitted model. We can use the function `kknn()` in the `kknn` library. 
 
+- We use `formula` notation to specify our response and predictor variable relationship
+
+    + `y ~ x`
+    
 ```{r, message=FALSE}
-library(caret)
-
-# Fit KNN with K=30
-knn_fit <- knnreg(medv ~ lstat,
-              data = Boston,
-              k = 30)
-
-# Create prediction grid
-xgrid <- list(lstat = seq(2, 37, len=201))
-
-# Perform prediction
-fitted_values <- predict(knn_fit, newdata = xgrid)
+library(kknn)
+knn_fit <- kknn(medv ~ lstat, 
+                train = Boston, 
+                test = Boston, k = 30) #fit the model
 ```
 
-```{r knnBoston, message=FALSE, fig.margin = TRUE, fig.height=5, fig.width=6, fig.cap="KNN fit to Boston data with K=30.", echo=FALSE}
-# Plot
-plot(Boston$lstat, Boston$medv, 
-     pch=19, 
-     col = "darkgray",
-     xlab = "Lower status of the population (percent)",
-     ylab = "Median value of owner occupied homes")
-lines(xgrid$lstat, fitted_values, lwd=2)
+- Now that we've *fit*, *trained*, or *estimated* our model (three ways of saying the same thing!), we can find the predictions from the model for our training observations and add that as a column to a `tibble`.
+
+```{r}
+#create the predicted values as a new column and append them to our data set
+knn_estimates <- mutate(Boston, knn_est = fitted(knn_fit)) |>
+  arrange(knn_est)
+knn_estimates |> 
+  select(medv, lstat, knn_est) |>
+  slice(1:5) |>
+  kable()
 ```
 
-After the fitting the regression, we plot the fitted function $\widehat f(\cdot)$ on a grid of 201 equally spaced values in $[2, 37]$ -- this interval roughly covers the observed values for `lstat`. The fitted function is shown in Figure \ref{fig:knnBoston}. 
+- Let's plot the fit!
 
-```{r knnBoston2, message=FALSE, fig.margin = TRUE, fig.height=5, fig.width=6, fig.cap="KNN fit to Boston data with K=30.", eval=FALSE}
-# Plot
-plot(Boston$lstat, Boston$medv, 
-     pch=19, 
-     col = "darkgray",
-     xlab = "Lower status of the population (percent)",
-     ylab = "Median value of owner occupied homes")
-lines(xgrid$lstat, fitted_values, lwd=2)
+```{r fig.alt = "The image is a scatter plot with data points distributed across a two-dimensional grid. The x-axis is labeled 'Lower status of the population (percent),' ranging from 0 to 40, while the y-axis is labeled 'Median value of owner-occupied homes,' ranging from 0 to 50. The plot illustrates a negative correlation between the two variables, with data points densely concentrated at higher median home values with lower population status percentages, and values decreasing as population status percentage increases. The data points are black dots scattered across the plot. A blue curve is overlayed. This curve flows roughly through the middle of the data points with some variability evident for lstat values between 5 and 10 but otherwise, pretty smooth."}
+#plot the data along with the predictions found via knn
+knn_estimates |>
+  ggplot(aes(x = lstat, y = medv)) +
+  geom_point(size = 0.5) +
+  geom_line(aes(y = knn_est), color = "blue", linewidth = 2)
 ```
 
+\newpage
 
-How should we choose $K$? To answer this question, we need to investigate how the estimated function changes for different values of $K$. We show three fitted functions for $K = 1$, $30$, and $300$ in Figure \ref{fig:knnDiffK}. 
+**Important** How should we choose $K$? Consider the fits using varying $K$ (1, 30, or 300) in Figure \ref{fig:knnDiffK}. 
 
 
-```{r knnDiffK, echo=FALSE, fig.fullwidth=TRUE, fig.height=5, fig.width=18, fig.cap="Estimated functions form Boston data example for different values of K."}
+```{r knnDiffK, echo=FALSE, fig.fullwidth=TRUE, fig.height=7, fig.width=20, fig.cap="Estimated functions form Boston data example for different values of K.", fig.alt = "The image consists of three side-by-side scatter plots illustrating the relationship between the median value of owner-occupied homes and the lower status of the population, measured as a percentage. Each plot displays data points as gray dots with a colored line indicating a smoothing or regression fit. The x-axis represents the lower status percentage, while the y-axis represents the median home value. The first plot on the left, labeled 'K = 1,' shows a red line that varies wildy with the data, the second plot in the middle, labeled 'K = 30,' features a green line that is somewhat variable but mostly stays through the middle of the data points, and the third plot on the right, labeled 'K = 300,' presents a blue line that is very smooth but does a poor job representing the middle of the data. The plots generally depict a downward trend, where higher lower status percentages correspond to lower median home values."}
 kgrid <- c(1, 30, 300)
 predx <- list(lstat = seq(2, 37, len=201))
 
@@ -199,22 +219,25 @@ p <- ggplot(ggfit) +
 p
 ```
 
-We note that for small value of $K = 1$, KNN produces extremely rough estimate of $f(\cdot)$. We are almost interpolating the data -- this is an example of overfitting the data. While the model is most flexible, and the estimated function does capture the shape of the data (perhaps too much so), such a fit is undesirable as the estimate is much too volatile. 
+- We note that for small value of $K = 1$, KNN produces extremely rough estimate of $f(\cdot)$. We are almost interpolating the data -- this is an example of **overfitting** the data. While the model is most flexible, and the estimated function does capture the shape of the data (perhaps too much so), such a fit is undesirable as the estimate is much too volatile. 
 
-In contrast, for large value $K = 300$ -- this is $60\%$ of our sample size -- the estimate is smooth, but does not capture the shape of the data. Such a model is not flexible, and undesirable as it may produce biased estimate of $f(\cdot)$, and inaccurate predictions. 
+- In contrast, for large value $K = 300$ -- this is $60\%$ of our sample size -- the estimate is smooth, but does not capture the shape of the data. Such a model is not flexible, and undesirable as it may produce a **biased** estimate of $f(\cdot)$, and inaccurate predictions. 
 
-For $K=30$, it seems the model is flexible enough to capture the overall shape of the data, but stable enough to not overfit the data.  Thus we need to discuss a criterion that evaluates the quality of model fit, and enables us to choose $K$ (hyperparameters in a regression model in general) properly.
+- For $K=30$, it seems the model is flexible enough to capture the overall shape of the data, but stable enough to not overfit the data.  Thus we need to discuss a criterion that evaluates the quality of model fit, and enables us to choose $K$ (hyperparameters in a regression model in general) properly.
+
+\newpage
 
 ## Regression model evaluation criterion
 
-We evaluate regression models based on how well they predict new observations. Suppose we have new predictor value $x_0$, and want to predict the response $Y$ corresponding to $x_0$. The (squared) prediction error is $\{Y - \widehat f(x_0)\}^2$. However, we want the procedure to provide good predictions across all possible values of $Y$ when $X=x_0$,^[Note that when $X=x_0$, the response $Y$ is not just a single number -- it is a random variable. For example, if we assume $\epsilon \sim N(0,\sigma^2)$, we have $Y | X = x_0 \sim N(f(x_0), \sigma^2)$. Thus, for $X = x_0$, the response could be any realization from this distribution.] so we might want to choose a model by minimizing expected prediction error^[Also known as generalization error -- see *Elements of Statistical Learning* by Hastie, Tibshirani and Friedman, 2009, for more details.] for $X = x_0$,
+We evaluate regression models based on how well they predict new observations. Suppose we have new predictor value $x_0$, and want to predict the response $Y$ corresponding to $x_0$. The (squared) prediction error is $\{Y - \widehat f(x_0)\}^2$. However, we want the procedure to provide good predictions across all possible values of $Y$ when $X=x_0$, so we might want to choose a model by minimizing expected prediction error for $X = x_0$,
 $$
 E[\{Y - \widehat f(x_0)\}^2 | X = x_0].
 $$
-This strategy works if we are only interested in the specific value $X = x_0$. In general, we want a procedure which can predict for all possible values of $X$, not just one specific value. Thus the average performance of the procedure can be measured by taking "average" (expected value) of the previous expected prediction error over possible values of $x_0$, that is,^[The equality in the equation follows by law of iterative expectation: for random variables $W$ and $Z$, $E[E(W|Z)] = E(W)$.]
+This strategy works if we are only interested in the specific value $X = x_0$. In general, we want a procedure which can predict for all possible values of $X$, not just one specific value. Thus the average performance of the procedure can be measured by taking "average" (expected value) of the previous expected prediction error over possible values of $x_0$, that is, 
 $$
 E\left(E[\{Y - \widehat f(x_0)\}^2 | X = x_0]\right) = E[\{Y - \widehat f(X)\}^2].
 $$
+The equality in the equation follows by law of iterative expectation: for random variables $W$ and $Z$, $E[E(W|Z)] = E(W)$.
 
 Unfortunately, the quantity above can not be directly computed without knowing the probability distribution underlying the data generating process, and hence needs to be estimated using a sample. Suppose we have training set $(Y_i, X_i), i = 1, \ldots, n$, and a test set $(Y_i, X_i), i = n+1, \ldots, n+m$. Then, based on the test set, we can estimate the quantity above as
 $$
@@ -235,25 +258,47 @@ $$
 MSE_{\rm test} = \frac{1}{m}\sum_{i=n+1}^{n+m} (Y_i - \widehat Y_i)^2
 $$}
 
-Using training MSE to evaluate model performance is often misleading and results in overfitting the data. As an example, consider using KNN regression with $K=1$. The training MSE is zero (or close to zero depending on how KNN handles ties in the $X$ values).^[Since for each $X_i$ in the dataset, the nearest point of $X_i$ is itself. Thus the prediction $\widehat Y_i = Y_i$, resulting in (near) zero training MSE!] However, 1-NN regression might perform very poorly in a test dataset. Typically, minimizing the training MSE would result in choosing the most flexible model, but *having a low training MSE does not ensure that the test MSE will be low* as well. 
+- Consider using KNN regression with $K=1$. 
 
-```{r, echo=FALSE, eval=FALSE}
-# Fit KNN woth K=1
-knn_fit <- knnreg(medv ~ lstat,
-              data = Boston,
-              k = 1)
-# Perform prediction
-fitted_values <- predict(knn_fit, newdata = list(lstat = Boston$lstat))
-# Training MSE
-MSE_train <- mean((Boston$medv - fitted_values)^2)
-MSE_train
+    - The training MSE is zero (or close to zero depending on how KNN handles ties in the $X$ values) since for each $X_i$ in the dataset, the nearest point of $X_i$ is itself. However, 1-NN regression might perform very poorly in a test dataset! 
+
+    - Typically, minimizing the training MSE would result in choosing the most flexible model, but *having a low training MSE does not ensure that the test MSE will be low* as well. 
+
+- Let's manually compute the training MSE for our KNN model fit previously
+
+```{r}
+mean((knn_estimates$medv - knn_estimates$knn_est)^2)
 ```
 
-In general, when we evaluate a model or algorithm, we do not care about how it performs in the training set. Instead, we are interested in its performance on new unseen data (test data) independent of the training data. In other words, we want a method  that can be generalized to new data. Thus, a better option to evaluate a model is the *test MSE*. 
+- If we used $K = 1$ instead we get the training MSE value to be estimated at
+
+```{r}
+knn_fit_k1 <- kknn(medv ~ lstat, 
+                train = Boston, 
+                test = Boston, k = 1) #fit the model
+#add the predicted values to the data set
+knn_estimates_k1 <- mutate(Boston, knn_est = fitted(knn_fit_k1)) |>
+  arrange(knn_est)
+#Find the training MSE
+mean((knn_estimates_k1$medv - knn_estimates_k1$knn_est)^2) 
+```
 
 
+\newpage
+    
+- Consider the plot below showing training and testing error for simulated data sets and varying values of $K$.
 
-```{r ttmse, echo=FALSE, cache=TRUE, fig.cap="Training and test MSE for simulated data for different values of K. Larger values of K correspond to less flexibility.", fig.height=5, fig.width=5, fig.margin = TRUE}
+    + Here we know the true form of the function $f(\cdot)$, and thus can simulate data using it.
+    + We can generate many data sets for training purposes and many for testing purposes.
+    + We can then fit KNN regression model with different values of $K$
+    + Figure \ref{fig:ttmse} shows the results for one such experiment. 
+    
+        - We see that the test MSE is generally higher that the training MSE. 
+        - Training MSE keeps increasing as $K$ increases (the procedure becomes less flexible). 
+        - However, the test MSE first decreases and then levels off before increasing slightly. 
+        - In this experiment, the minimum test MSE is produced for $K=50$, while lowest training MSE is for $K=1$.
+        
+```{r ttmse, echo=FALSE, cache=TRUE, fig.cap="Training and test MSE for simulated data for different values of K. Larger values of K correspond to less flexibility.", fig.height=4, fig.width=4, fig.margin = TRUE, fig.alt = "The image is a line graph with two plotted datasets, one labeled as 'test' in red dots and the other as 'train' in blue triangles. The x-axis is labeled 'K' and ranges from 0 to 100, while the y-axis is labeled 'Mean Squared Error' ranging from 0 to 1.5. The graph shows two distinct lines with the test dataset starting at a higher error and slightly decreasing before leveling off, and the train dataset starting at a lower error and gradually increasing, stabilizing after a certain point. A legend at the top right identifies the red dotted line as 'test' and the blue triangular line as 'train'."}
 set.seed(1001)
 true_f <- function(t){
   sin(pi*t)
@@ -305,12 +350,15 @@ ggplot(plot.df) +
   theme(legend.position = "top")
 ```
 
-To visualize this phenomenon, let us conduct a simulation study where we know the true form of the function $f(\cdot)$, and thus can simulate data using it. We can simulate a training set and a test set. We can then fit KNN regression model with different values of $K$, and for each case compute the training and test MSE. Figure \ref{fig:ttmse} shows results for one such experiment. We see that the test MSE is generally higher that the training MSE. Training MSE keeps increasing as $K$ increases (the procedure becomes less flexible). However, the test MSE first decreases and then levels off before increasing slightly. In this experiment, the minimum test MSE is produced for $K=50$, while lowest training MSE is for $K=1$.^[For more such examples and detailed discussion, see Chapter 2 of *An Introduction to Statistical Learning* by James et al.]  
 
+\newpage
 
 ## Bias-Variance decomposition
 
-To understand the shape of the test MSE curve, we further investigate the form of MSE. Recall that we started from the expected prediction error $E[\{Y - \widehat f(X)\}^2 | X = x_0]$ for the test data $x_0$. Some algebra gives us^[The cross-product term in the second line can be shown to be zero for test data set, under the assumption that the test data is independent of the training data.]
+To understand the shape of the test MSE curve, we further investigate the form of MSE. 
+
+- Recall that we started from the expected prediction error $E[\{Y - \widehat f(X)\}^2 | X = x_0]$ for the test data $x_0$. Let's try to 'decompose' this into terms corresponding to bias and variance.
+
 \begin{eqnarray*}
 E[\{Y - \widehat f(x_0)\}^2 | x_0] 
   &=& E[\{Y - f(x_0) + f(x_0) - \widehat f(x_0)\}^2 | X = x_0] \\
@@ -319,9 +367,9 @@ E[\{Y - \widehat f(x_0)\}^2 | x_0]
   &=& \sigma^2 + E[\{\widehat f(x_0) - f(x_0)\}^2].
 \end{eqnarray*}
 
-The first term $\sigma^2$ is a fixed parameter which we can not control. Even if we have a extremely accurate estimation procedure for $f(\cdot)$ so that $\widehat f(X) \approx f(X)$, we would still have the expected prediction error to be $\sigma^2$. Thus the term $\sigma^2$ is called the *irreducible error* -- it is the variance of the target.^[We have that $\sigma^2 = var(Y|X)$. Even if we know true $f$, this variance remains.] 
+The first term $\sigma^2$ is a fixed parameter which we can not control. Even if we have a extremely accurate estimation procedure for $f(\cdot)$ so that $\widehat f(X) \approx f(X)$, we would still have the expected prediction error to be $\sigma^2$. Thus the term $\sigma^2$ is called the *irreducible error* -- it is the variance of the target. We have that $\sigma^2 = var(Y|X)$. Even if we know true $f$, this variance remains. 
 
-The second term is under our control, and depends of the method of estimation of $f(\cdot)$. Minimizing the expected prediction error is equivalent to minimizing the second term. This term can further be decomposed into two parts using similar calculations as above:^[Recall, that for a random variable $W$, $var(W) = E[\{W - E(W)\}^2]$. Also, for an estimator $\widehat \Theta$ of a parameter $\theta$, $Bias(\widehat\Theta) =  E(\widehat\Theta) - \theta$.]
+The second term is under our control, and depends of the method of estimation of $f(\cdot)$. Minimizing the expected prediction error is equivalent to minimizing the second term. This term can further be decomposed into two parts using similar calculations as above: Recall, that for a random variable $W$, $var(W) = E[\{W - E(W)\}^2]$. Also, for an estimator $\widehat \Theta$ of a parameter $\theta$, $Bias(\widehat\Theta) =  E(\widehat\Theta) - \theta$.
 \begin{eqnarray*}
 && E[\{\widehat f(x_0) - f(x_0)\}^2]  \\ 
 && \hbox{     } =  E\left([\widehat f(x_0) - E\{\widehat f(x_0)\}]^2\right) + E\left([E\{\widehat f(x_0)\} - f(x_0)]^2\right) \\
@@ -334,13 +382,17 @@ E[\{Y - \widehat f(x_0)\}^2 | x_0]   = \sigma^2 + var\{\widehat f(x_0)\} + [Bias
 \end{eqnarray*}
 Thus the expected prediction error is a combination of the variance and squared bias of the estimator $\widehat f(x_0)$. 
 
-We again resort to a simulation experiment to see the relative contribution of the variance and squared bias of $\widehat f(x_0)$ to the prediction error. Figure \ref{fig:knnsimdat} shows one simulated training set of size $n  = 500$ along with the true function used to generate the data. We generate multiple such training sets, and for each set we fit KNN regression with $K = 1$, $30$ and $300$. The test set if a grid of 101 equally spaced points in $[0.01, 0.99]$. 
+\newpage
 
-```{r knnsimdat, echo=FALSE, fig.height=5, fig.width=5, fig.margin=TRUE, cache=TRUE, fig.cap="Simulated data of size n=500."}
+- We can now see that the expected prediction error includes terms from a combination of the variance and squared bias of the estimator $\widehat f(x_0)$. 
+
+    + We again resort to a simulation experiment to see the relative contribution of the variance and squared bias of $\widehat f(x_0)$ to the prediction error. 
+    + Figure \ref{fig:knnsimdat} shows one simulated training set of size $n  = 500$ along with the true function used to generate the data ($sin(\pi t)$). 
+
+```{r knnsimdat, echo=FALSE, fig.height=5, fig.width=5, fig.margin=TRUE, cache=TRUE, fig.cap="Simulated data of size n=500.", fig.alt = 'The image is a scatter plot displayed on a gray background with a grid pattern. The horizontal axis is labeled "x" and ranges from 0.00 to 1.00, while the vertical axis is labeled "y" and ranges from -3 to 3. Multiple data points, represented as black dots, are scattered across the plot. The distribution of the dots shows a general upward trend from left to right, peaking near the center before descending slightly. A black curve, fitted through the data points, runs horizontally across the plot, illustrating this upward and then downward trend.'}
 true_f <- function(t){
   sin(pi*t)
 }
-
 
 # train
 n <- 500
@@ -353,9 +405,13 @@ ggplot() +
   geom_line(aes(x, true_f(x)), lwd=1.2)
 ```
 
-The estimated functions are shown in Figure \ref{fig:knnbiasvar}. We notice that for $K = 1$ (the most flexible situation), the estimated functions have high variance, but on average captures the true function well producing low bias. In contrast, for $K=300$ (least flexible case), the estimates have much less variance but show high bias. For $K=30$, it seems both the bias and variance are balanced. Thus, when looking at expected prediction error, or its sample version computed by test MSE, the fit with $K=1$ results in high MSE due to variance dominating the low bias. The $K=300$ case results in higher MSE that $K=30$ due to high bias even though the variance is small. The fit with $K=30$ seems to balance both bias and variance.      
+\newpage
 
-```{r knnbiasvar, echo=FALSE, fig.height=4, fig.width=18, fig.fullwidth=TRUE, cache=TRUE, fig.cap="Simulated data showing bias and variance of KNN fits."}
++ We generate multiple such training sets, and for each set we fit a KNN regression model with $K = 1$, $30$ and $300$. 
++ The test set if a grid of 101 equally spaced points in $[0.01, 0.99]$ and we compare the fits to the true curve. 
++ The estimated functions are shown in Figure \ref{fig:knnbiasvar}. 
+
+```{r knnbiasvar, echo=FALSE, fig.height=6, fig.width=20, fig.fullwidth=TRUE, cache=TRUE, fig.cap="Simulated data showing bias and variance of KNN fits.", fig.alt = "Three line plots illustrating data smoothing with K=1 (red, noisy), K=30 (green, moderately smooth), and K=300 (blue, smooth).}
 kgrid <- c(1, 30, 300)
 predx <- list(x = seq(0.01, 0.99, len=101))
 
@@ -399,6 +455,10 @@ p
 
 In general, this phenomenon holds for various regression models. More flexible models produce estimate with low bias but high variance. Less flexible models do the opposite -- estimates have high bias but low variance. Minimizing test MSE tends to choose a model that balances between bias and variance. 
 
+\newpage
+
+
+### Other Model Metrics
 
 We should be aware that test MSE is not the only metric one can use to evaluate a regression model. A few of the other evaluation metrics are shown below:
 
@@ -419,42 +479,33 @@ R^2 = 1 - \frac{\sum_i(Y_i - \widehat Y_i)^2}{\sum_i(Y_i - \bar Y)^2}.
 $$
 A nice property of $R^2$ is that it will be always between 0 and 1. $R^2$ values close to 0 indicate inadequate model fit, while values close to 1 indicate that the model explains a large amount of variability in the response. 
 
-
+\newpage
 
 # Data splitting
 
-Let us re-examine KNN regression fit to `Boston` data. Suppose we use $K=30$.
+As we want to have a measure of prediction accuracy based on a test set, we don't want to use the entire dataset for training and testing.  We need a test data set that we can use to evaluate our model's performance in general. 
 
-```{r}
-# Fit KNN with K=30
-knn_fit <- knnreg(medv ~ lstat,
-                    data = Boston,
-                    k = 30)
+- We can the *holdout method* or resampling techniques such as *bootstrap* or *v-fold cross validation* to create test set(s) from our data, and validate our models' performance.
 
-# Predictions
-pred <-  predict(knn_fit, 
-                 newdata = data.frame(lstat = Boston$lstat))
-
-# Training MSE
-MSE_train <- mean( (Boston$medv - pred)^2 )
-MSE_train
-```
-
-\noindent So we see that we have a training MSE about $25.88$. However, as we have discussed so far, relying on training MSE is not a good idea. We want to know how the model performs on independent test data. Also, is $K = 30$ a good choice? Both both these issues, we need a test data set that we can use to evaluate our model's performance in general. We can the *holdout method* or resampling techniques such as *bootstrap* or *v-fold cross validation* to create test set from our data, and validate our models performance.
+- Let's go through these ideas!
 
 ## Holdout method
 
-The holdout method randomly splits a given dataset into two sets: one for training and one for evaluation (the holdout/validation/test set).^[Various authors use different terminology here. We will use these names interchangeably. ] In practice, $80\% -- 20\%$, $70\% -- 30\%$ or $60\% -- 40\%$ splits are commonly used for training/test sets. In general, we should keep in mind that putting too much data for training results in a small test set, which may not provide a good estimate of the model performance. On the other hand, putting too much data in the test set results in a small traing set, which results in poor model fitting. Other factors such as whether $p > n$ also may impact the split sizes. Figure \ref{fig:holdout} shows the basic layout of the holdout method. 
+The holdout method randomly splits a given dataset into two sets: one for training and one for evaluation (the holdout/validation/test set).
 
+- In practice, $80\% -- 20\%$, $70\% -- 30\%$ or $60\% -- 40\%$ splits are commonly used for training/test sets. Figure \ref{fig:holdout} shows the basic layout of the holdout method.   In general, we should keep in mind that putting too much data for training results in a small test set, which may not provide a good estimate of the model performance. On the other hand, putting too much data in the test set results in a small traing set, which results in poor model fitting. Other factors such as whether $p > n$ also may impact the split sizes. 
 
 ```{r holdout, echo=FALSE, fig.cap="The holdout method. The whole dataset is split into two parts: training and holdout sets."}
-
 knitr::include_graphics("img/holdout.jpg")
 ```
 
+\newpage
+
+
 A simple way to create such a split is via *simple random sampling without replacement (SRSWOR)*, that is, by randomly choosing a subset of observations from the data set and putting them aside as the training set. The remaining observations form the holdout set. 
 
-Consider the `Boston` data again. In base `R`, we can use the `sample()` function^[See `?sample` for details.] to perform SRSWOR, as follows.
+- Consider the `Boston` data again. In base `R`, we can use the `sample()` function to perform SRSWOR, as follows.
+
 ```{r}
 # set a seed for reproducible results 
 set.seed(1234567)
@@ -473,238 +524,172 @@ test <- Boston[-index, ]
 dim(train)
 dim(test)
 ```
-\noindent We have split the data $80\%$ -- $20\%$ in the example above.
 
-The following code chunk shows examples of SRSWOR using `caret` and `rsample`, if we want to split the data manually.^[Various packages such as `caret`, `mlr3` and `h20` etc. have holdout methods built into their system so that we often do not have to do the data splitting manually.]
-```{r}
-# Using caret
-library(caret)
-index <- createDataPartition(Boston$medv,
-                             p = 0.8,
-                             list = FALSE,
-                             times = 1)
+-  We have split the data $80\%$ -- $20\%$ in the example above!
 
-train.2 <- Boston[index, ]
-test.2 <- Boston[-index, ]
+- We'll look at other R packages that make this process even easier to do and will allow us to easily do stratified sampling and other more advanced splitting techniques.
 
-# Using rsample
-library(rsample)
-index <- initial_split(Boston, 
-                       prop = 0.8)
+\newpage
 
-train.3 <- training(index)
-test.3 <- testing(index)
+
+Ideally, the distribution of $Y$ in the test set will be similar to that in training set. Figure \ref{fig:splitden} shows the corresponding distributions (estimated probability densities) of `medv` for the training/test sets.
+
+```{r splitden, echo=FALSE, fig.fullwidth = FALSE, fig.height=5, fig.width=7, fig.cap="Estimate density functions for `medv` variable in training (orange) and test (black) sets as obtained using base R, caret, and rsample packages.", fig.alt = 'The image is a line graph displaying estimated distributions with the title "Estimated Distributions of Our Response Var." The x-axis is labeled "medv," and the y-axis is labeled "density." The graph features two curves, one orange and one black, that illustrate different distributions. The orange line peaks higher than the black line. Both curves peak around the same x-axis range between 15 and 25 but with varying heights and shapes.'}
+
+p1 <- ggplot(mapping = aes(x = medv)) + geom_density(data = train, col = "darkorange", lwd=1.2) + geom_density(data = test, lwd=1.2) + ggtitle("Estimated Distributions of Our Response Variable") +theme_bw(base_size = 18)
+p1
 ```
 
+- A disadvantage of SRSWOR is that it does not always preserve the distribution of the response variable. 
 
-Ideally, the distribution of $Y$ in the test set will be similar to that in training set. Figure \ref{fig:splitden} shows the corresponding distributions (estimated probability densities) of `medv` for the training/test sets using each of the methods described above.
+\newpage
 
-```{r splitden, echo=FALSE, fig.fullwidth = FALSE, fig.height=4, fig.width=12, fig.cap="Estimate density functions for `medv` variable in training (orange) and test (black) sets as obtained using base R, caret, and rsample packages."}
+*Stratified random sampling* is used to explicitly control aspects of the distribution of $Y$.  
 
-p1 <- ggplot(mapping = aes(x = medv)) + geom_density(data = train, col = "darkorange", lwd=1.2) + geom_density(data = test, lwd=1.2) + ggtitle("Base R") +theme_bw(base_size = 18)
+- Useful with data with small sample size or a skewed response distribution. 
+- Stratified random sampling strategy is to draw sample for each group (strata) of $Y$ so that the test set represents the distribution of $Y$ of the whole data.^
 
-p2 <- ggplot(mapping = aes(x = medv)) + geom_density(data = train.2, col = "darkorange", lwd=1.2) + geom_density(data = test.2, lwd=1.2)+ ggtitle("caret") +theme_bw(base_size = 18)
+For a classification task, if extreme class imbalance is present in the response (say $90\%$ "No" and only $10\%$ "Yes"), we might choose to over-sample the rare class, or under-sample the abundant class, or a combination of both the strategies can be employed. A popular technique in this regard is *Synthetic Minority Over-sampling Technique (SMOTE)*, (N. Chawla et al.
+SMOTE: Synthetic minority over-sampling technique J. Artif. Intell. Res. (2002). See also, Dina Elreedy, Amir F. Atiya, A Comprehensive Analysis of Synthetic Minority Oversampling Technique (SMOTE) for handling class imbalance, Information Sciences, Volume 505, 2019). which generates synthetic samples from the rare class. 
 
-p3 <- ggplot(mapping = aes(x = medv)) + geom_density(data = train.3, col = "darkorange", lwd=1.2) + geom_density(data = test.3, lwd=1.2)+ ggtitle("rsample") +theme_bw(base_size = 18)
+- In particular, SMOTE takes a random observation from the rare class and then finds its nearest neighbors in the rare class. 
+- Then SMOTE generate new samples using the convex combinations of the original randomly selected observation and one of the the nearest neighbors. 
+- Many packages allow for SMOTE implementation as a possible sampling strategy. 
+- The authors of SMOTE also suggest that a combination of SMOTE and under-sampling the majority class works better than just using SMOTE.     
 
-gridExtra::grid.arrange(p1, p2, p3, nrow=1)
-```
-
-A disadvantage of SRSWOR is that it does not always preserve distribution of the response variable. For example, in a classification problem with two classes ('Yes' and 'No'), we might have $70\%$ individuals in 'Yes' group and the remaining $30\%$ in the 'No' group. Performing SRSWOR in the data may lead to a test set with over-representation/under-representation of the groups.^[This issue can arise in a regression problem where $Y$ might have a skewed distribution. The ideal test set should contain both small and large values of $Y$. SRSWOR can not guarantee this.] In this case, a stratified sampling strategy is appropriate. 
-
-*Stratified random sampling* is used to explicitly control aspects of the distribution of $Y$.  This is useful with data with small sample size or skewed response distribution. Stratified random sampling strategy is to draw sample for each group (strata) of $Y$ so that the test set represents the distribution of $Y$ of the whole data.^[For continuous $Y$, we might split $Y$ into multiple groups based on its quantiles, and sample from each group.] We can use the `initial_split()` function as before for this purpose but with an extra argument `strata`.
-
-If extreme class imbalance is present in the data (say $90\%$ "No" and only $10\%$ "Yes"), we might choose to over-sample the rare class, or under-sample the abundant class, or a combination of both the strategies can be employed. A popular technique in this regard is *Synthetic Minority Over-sampling Technique (SMOTE)*,^[N. Chawla et al.
-SMOTE: Synthetic minority over-sampling technique J. Artif. Intell. Res. (2002). See also, Dina Elreedy, Amir F. Atiya, A Comprehensive Analysis of Synthetic Minority Oversampling Technique (SMOTE) for handling class imbalance, Information Sciences, Volume 505, 2019.] which generates synthetic samples from the rare class. In particular, SMOTE takes a random observation from the rare class and then finds its nearest neighbors in the rare class. Then SMOTE generate new samples using the  convex combinations of the original randomly selected observation and one of the the nearest neighbors. The `caret` package has SMOTE implementation as a possible sampling strategy. Authors of SMOTE also suggest that a combination of SMOTE and under-sampling the majority class works better than just using SMOTE.     
+\newpage
 
 
-Let us now investigate the holdout method using the `Boston` data. Recall, that for $K=30$, the training MSE was approximately $25.88$.
+Let us now investigate the holdout method using the `Boston` data. 
+
+- First, let's fit the model with $K=30$ using just the training data
 
 ```{r}
-set.seed(1001)
-
-# (Using rsample) train/test sets (80/20) 
-index <- initial_split(Boston, 
-                       prop = 0.8)
-
-train <- training(index)
-test <- testing(index)
-
-# Fit knn on training set with K = 30
-knn_fit <- knnreg(medv ~ lstat,
-                  data = train,
-                  k = 30)
-
-# Predictions on test set
-pred <- predict(knn_fit, 
-                newdata = data.frame(lstat = test$lstat))
-
-# Test MSE
-MSE_test <- mean( (test$medv - pred)^2 )
-MSE_test
+knn_train_fit <- kknn(medv ~ lstat, 
+                train = train, 
+                test = train, k = 30) #fit the model
 ```
 
-\noindent Thus the test MSE is $`r round(MSE_test,2)`$, which is slightly higher that the training MSE. It is as we expected -- training MSE most likely underestimates the prediction error, while test MSE can be viewed as a reasonable estimate of the same. *It is important to remember that we are operating with the setting $K=30$ - the test MSE might not reflect the best performance the model can have.*
+- Now compute the training set MSE
 
-\begin{comment}
-Doing the same thing above with caret.
-```{r, eval=FALSE, echo=FALSE}
-set.seed(1001)
-k <- expand.grid(k = 30)
-gg <- caret::train(medv ~ lstat,
-             data = train,
-             method = "knn",
-             tuneGrid = k,
-             trControl = trainControl(method = "none")
-             )
-pp <- predict(gg, newdata = test)
-mean( (test$medv - pp)^2 )
+```{r}
+#training MSE
+train_MSE <- mean((train$medv - knn_train_fit$fitted.values)^2)
+train_MSE
 ```
-\end{comment}
 
-Now let us address the question about choosing the optimal $K$, that is, the value of $K$ that gives the best general performance. For the full data set, we can tune $K$ using holdout method, and fit the resulting model to the whole data. In particular, 
+- Fit again but test on the testing set to obtain the test set MSE
 
-(a) Split the data into training and test sets
+```{r}
+knn_train_fit <- kknn(medv ~ lstat, 
+                train = train, 
+                test = test, k = 30) #fit the model
+#test MSE
+test_MSE <- mean((test$medv - knn_train_fit$fitted.values)^2)
+test_MSE
+```
 
-(b) For each candidate value of $K$, fit the model in the training set, and compute MSE using the test set. 
+- Notice the test set MSE is much larger! It is as we expected -- training MSE most likely underestimates the prediction error, while test MSE can be viewed as a reasonable estimate. 
 
-(c) Choose the $K$ which gives minimum test MSE. 
+    + *It is important to remember that we are operating with the setting $K=30$ - the test MSE might not reflect the best performance the model can have.*
 
-(d) Fit KNN with optimal K to the full data set.
+\newpage
 
-\noindent Then the trained model can be used for future predictions.
+### Selecting an Optimal Tuning Parameter Using Only a Holdout Set
 
+Now let us address the question about choosing the optimal $K$, that is, the value of $K$ that gives the best general performance. One option is to use only a holdout set to do so. Once we chose an optimal value of $K$, the model with that $K$ would then be fit to the whole data. 
+
+Our steps would be:
+
+- Split the data into training and test sets
+
+- For each candidate value of $K$, fit the model in the training set, and compute MSE using the test set. 
+
+- Choose the $K$ which gives minimum test MSE. 
+
+- Fit KNN with optimal K to the full data set.
+
+Then the fully trained model can be used for future predictions. Let's do this manually for now!
+
+- We've already split our data into a `train` and `test` set (both are objects in our R environment).
+
+- Now we'll create a grid of $K$ values to fit the model on.
 ```{r, cache=TRUE}
+kgrid <- c(1:100)
+```
+
+- Next, we'll use the `lapply()` function to apply the `kknn()` function to each value of our `kgrid` object. 
+
+    + `lapply()` is a function that allows us to apply a function to a list (or vector)
+    + This is like a nicer way of doing a for loop
+    + Here we'll write a quick anonymous (or lambda) function to take the list elements and return the KNN fit
+
+```{r}
+test_preds <- lapply(X = kgrid, 
+                     FUN = function(x){
+                       kknn(medv ~ lstat, 
+                            train = train,
+                            test = test,
+                            k = x)
+                     })
+```
+
+- A list of fitted objects is returned. 
+- We can apply an MSE calculation to each of these list elements!
+
+    + Here we'll write a quick anonymous (or lambda) function to take the list elements and return the test set MSE
+
+```{r}
+test_MSEs <- lapply(test_preds, FUN = function(x) { 
+  mean((test$medv - x$fitted.values)^2)
+  })
+test_MSEs[1:5]
+```
+
+- Let's plot our test set MSE as a function of $K$.
+
+```{r, fig.alt = 'The image is a scatter plot graph depicting the relationship between two variables, "K" and "Test Set MSE." The x-axis is labeled "K" and ranges from 0 to 100, while the y-axis is labeled "Test Set MSE" and ranges from 30 to 60. The data points form a curve that starts at a higher value around "K" at 0, decreases to a minimum near "K" at 10, and then gradually increases after that. The curve is made up of circular data points scattered closely together.'}
+plot(x = kgrid, y = test_MSEs,
+     xlab = "K",
+     ylab = "Test Set MSE")
+```
+
+- We can find the optimal $K$ programmatically:
+
+```{r}
+## Optimal K
+k_opt <- kgrid[which.min(test_MSEs)]
+k_opt
+#show the test MSE corresponding to the optimal K
+test_MSEs[[k_opt]]
+```
+
+- Now we refit on the entire data set using this optimal $K$.
+
+```{r}
+knn_best_fit <- kknn(medv ~ lstat, 
+                train = Boston, 
+                test = Boston, 
+                k = k_opt) #fit the model
+```
+
+- To predict for future observations, we could refit using a different `test` argument. However, we'll see better packages for doing this type of action across many models soon!
+
+The test MSE of `r round(test_MSEs[[k_opt]], 2)`, equivalently, RMSE `r round(sqrt(test_MSEs[[k_opt]]), 2)`  gives us an unbiased estimate of prediction error of our procedure in unseen test data. This also reflects the added variability due to tuning of the hyperparameter.  Note again that for prediction purposes, we will still use the model fitted to the whole data.
+
+\newpage
+
+The advantage of the holdout method is that it is conceptually and computationally simple. However, this method can produce highly variable test error! 
+
+- To see this, we can repeat the hyperparameter tuning procedure a few times. The plot of the test MSE profiles during the tuning process over multiple splits of the data is shown in Figure \ref{fig:mserep} for 10 training runs. As we see, there is a substantial amount of variability in the test MSE. 
+
+```{r mserep, cache=TRUE, echo=FALSE, message = FALSE, warning = FALSE, fig.height=6, fig.width=7, fig.cap="Test MSE during tuning hyperparameters for 10 runs of the model training.", fig.margin = TRUE, fig.alt = 'The image is a line graph plotting the test mean squared error (MSE) against varying values of K, ranging from 0 to 100 on the x-axis. The y-axis measures the test MSE from 0 to 60. Ten different lines represent results from “Split 1” to “Split 10,” each with a distinct color. The lines generally show a downward trend initially, reaching a minimum, and then ascending as K increases. Each line fluctuates differently in terms of steepness and slope direction. A legend on the right side matches each line color to its corresponding split.'}
 set.seed(1001)
-## (Using rsample) train/test (80/20)  
 index <- initial_split(Boston, 
                        prop = 0.8)
 train_set <- training(index)
 test_set <- testing(index)
 
-## Fit KNN using train for different values of K
-## and compute MSE on the test set
-# Candidate values of K
-kgrid <- c(1:100)
-# vector to store mse values for different k
-mse <- rep(NA, length(kgrid))
-# run through all k values
-for(kn in kgrid){
-  fit <- knnreg(medv ~ lstat, 
-                data = train_set, 
-                k = kn)
-  pred <- predict(fit, 
-                  newdata = test_set)
-  mse[kn] <- mean((pred - test_set$medv)^2)
-}
-
-## Optimal K
-k_opt <- kgrid[which.min(mse)]
-
-## Refit training set with optimal K 
-fit_final <- knnreg(medv ~ lstat, 
-                    data = Boston, 
-                    k = k_opt)
-```
-
-```{r boston_knn_mse, echo=FALSE, fig.margin=TRUE, fig.height=6, fig.width=6, fig.cap="MSE profile for tuning K."}
-plot(kgrid, mse,
-     lwd = 2,
-     pch = 19,
-     type = "b",
-     xlab = "K", ylab = "MSE", cex.lab = 1.6)
-```
-
-It turns out that the optimal choice of $K$ is $K_{opt} = `r k_opt`$. The plot of MSE profile obtained form the tuning process is shown in Figure \ref{fig:boston_knn_mse}.
-
-Before proceeding further, let us take a look into the `caret` package, and implement the procedure using `caret`'s functionality. As we will see, much of the code above can be streamlined. The plot of MSE profile obtained form the tuning process is shown in Figure \ref{fig:boston_knn_mse_caret} for this run.
-
-```{r boston_knn_mse_caret, cache=TRUE, echo=TRUE, fig.margin=TRUE, fig.height=6, fig.width=6, fig.cap="MSE profile for tuning K using caret."}
-set.seed(1001)
-## Candidate values of K
-kgrid <- expand.grid(k = c(1:100))
-
-## Parameters governing training process
-hold <- trainControl(method = "LGOCV",
-                     p = 0.8,
-                     number = 1)
-
-## Training the model
-knn_fit <- train(medv ~ lstat,
-             data = Boston,
-             method = "knn",
-             tuneGrid = kgrid,
-             trControl = hold
-             )
-
-## Plot Root MSE (RMSE)
-plot(knn_fit, lwd=2, pch=19)
-```
-
-\noindent In the code block above^[Execute these lines of code yourself and examine the output of each step to better understand the process.], first we setup the grid of values for the hyperparameter using the `expand.grid()` function. This creates a dataframe with the candidate values. This can be done for multiple hyperparameters as well
-
-Next, we use the `trainControl()` function to create parameter specification for the training process.^[It does not actually train the model yet. It just creates a blueprint for the process.] The option `LGOCV` is the holdout method, `p=0.8` specifies the size of training set, and `number = 1` specifies how many times this process is repeated.
-
-
-Finally, the `train()` function performs the training according to the specifications. The argument `method = "knn"` ensures that we are running KNN regression.
-
-Now we ask again: how does this entire procedure work in general, that is, can we estimate the generalization error of this procedure *including the tuning of the hyperparameter*? Here also, we can use a holdout approach:
-
-+ Split the data into training/test set.
-
-+ Apply the procedure described above (including tuning), that is, all the steps (a) -- (d) to the training set to get the final model.
-
-+ Compute MSE using the test set.
-
-\noindent Let us use `caret` again to perform these steps. Recall we have already set the candidate values in `kgrid`, and the training specifications in `hold` in the previous code block. Also, we have split the data into training/test sets before -- they are stored in `train_set` and `test_set`, respectively. Thus we present only code that is new.  
-
-\begin{comment}
-\newcounter{example}
-\newenvironment{example}[1][]{\refstepcounter{example}\par\bigskip\noindent\rule{2cm}{0.4pt} \\ \noindent\textbf{Code block~\theexample #1} \rmfamily}{\vspace{-1mm}}
-
-\begin{example}\label{cb01}
-Estimating test error with tuning hyperparameter.
-```{r, comment=" "}
-1+1
-```
-\end{example}
-\end{comment}
-
-```{r boston_holdout_two, cache=TRUE, fig.margin=TRUE, fig.height=6, fig.width=6, fig.cap="MSE profile for tuning K using holdout method for tuning in the training set (80 percent of the whle data)."}
-## Training the model on train_set
-knn_fit <- train(medv ~ lstat,
-             data = train_set,
-             method = "knn",
-             tuneGrid = kgrid,
-             trControl = hold
-             )
-plot(knn_fit)
-## Optimal K, and refit on the training set
-# optimal K
-k_opt <- knn_fit$bestTune$k
-# Refit with optimal K
-knn_fit <- train(medv ~ lstat,
-             data = train_set,
-             method = "knn",
-             tuneGrid = expand.grid(k = k_opt),
-             trControl = trainControl(method = "none")
-             )
-
-## Predict test_set and compute MSE  
-pred <- predict(knn_fit, newdata = test_set)
-MSE_test <- mean( (test_set$medv - pred)^2 )
-MSE_test
-```
-
-
-
-\noindent The test MSE of `r round(MSE_test, 2)`, equivalently, RMSE `r round(sqrt(MSE_test), 2)`  gives us an unbiased estimate of prediction error of our procedure in unseen test data. This also reflects the added variability due to tuning of the hyperparameter.  Note again that for prediction purposes, we will still use the model fitted to the whole data.
-
-
-
-
-```{r mserep, cache=TRUE, echo=FALSE, fig.height=6, fig.width=7, fig.cap="Test MSE during tuning hyperparameters for 10 runs of the model training.", fig.margin = TRUE}
-set.seed(1001)
 ## Candidate values of K
 kgrid <- expand.grid(k = c(1:100))
 
@@ -742,16 +727,30 @@ pred <- predict(knn_fit, newdata = test_set)
 MSE_test <- mean( (test_set$medv - pred)^2 )
 kest[b] <- MSE_test
 }
-matplot(mat, pch=19, type = "b", col="black", cex.lab = 1.7, xlab = "# Neighbors", ylab = "Test MSE", ylim = c(0, 70))
+mat |>
+  as_tibble() |>
+  rename("Split1" = V1,
+         "Split2" = V2,
+         "Split3" = V3,
+         "Split4" = V4,
+         "Split5" = V5,
+         "Split6" = V6,
+         "Split7" = V7,
+         "Split8" = V8,
+         "Split9" = V9,
+         "Split10" = V10) |>
+  mutate(K = 1:100) |>
+  pivot_longer(Split1:Split10, values_to = "test_MSE", names_to = "Split") |>
+  mutate(Split = factor(Split, levels = paste0("Split", 1:10))) |>
+  ggplot(aes(x = K, y = test_MSE, color = Split)) +
+  geom_line() 
 ```
 
+- We can apply the train/test idea multiple times to get a more stable estimate. However, if we do this too much, we may end up overfitting. 
+- Often we split our data into a training and test set and do our tuning over multiple splits on the **training set alone**. 
+- We save our test set to only be used sparingly on a **final model evaluation**.
 
-The advantage of the holdout method is that it is conceptually and computationally simple. However, this method can produce highly variable test error. To see this, we can repeat the hyperparameter tuning procedure a few times. The plot of the test MSE profiles during tuning process is shown in Figure \ref{fig:mserep} for 10 training runs. As we see, there is a substantial amount of variability in the test MSE. 
-
-Another possible disadvantage is that the holdout method may overestimate the test error since we are fitting the statistical model with only a subset of the whole data.  
-
-Both these issue might be solved if we repeat the inner/outer loops a few times, and take average of the resulting MSE values. Resampling techniques such as cross-validation provides a natural way to do so. 
-
+\newpage
 
 ## $V$-fold Cross-validation (V-fold CV)
 
@@ -762,91 +761,86 @@ The V-fold CV procedure splits the data into multiple parts, and then cycles thr
 2. For each fold $\ell = 1, \ldots, V$, do:
 
     a. Set Fold $\ell$ as the test set, and the remaining folds together as the training set. 
-    b. Train the model using the training set and compute MSE^[We can use any other performance metric, e.g., MAE, classification accuracy etc. here.] using the test set (Fold $\ell$), say $MSE_\ell$. 
+    b. Train the model using the training set and compute MSE using the test set (Fold $\ell$), say $MSE_\ell$. Note: We can use any other performance metric, e.g., MAE, classification accuracy etc. here.
     
 3. The final estimate of test error is formed by taking the average of the $V$ MSE values: $\frac{1}{V} \sum_{\ell = 1}^V MSE_\ell$.
 
 
 \noindent Keep in mind that the model training step can also include tuning hyperparameter(s) as well. Figure \ref{fig:vcv} shows the layout of $V$-fold CV procedure.
 
-```{r vcv, echo=FALSE, fig.cap="Layout of the V-fold crossvalidation procedure. Data are first randomly split into V equal sized parts, called folds. Each fold is then used as a test set while the remaining folds are used to fit the  model. The test error is estimated by taking the average of the MSEs from the V folds."}
-
+```{r vcv, echo=FALSE, fig.cap="Layout of the V-fold crossvalidation procedure. Data are first randomly split into V equal sized parts, called folds. Each fold is then used as a test set while the remaining folds are used to fit the  model. The test error is estimated by taking the average of the MSEs from the V folds.", fig.alt = 'The image is a diagram illustrating the process of cross-validation, specifically k-fold cross-validation. To the left, there is a labeled block titled "Data," from which three arrows extend to the right. Each arrow leads to a row labeled with sequences of "Test" and "Train" blocks, corresponding to different data folds. The first row shows "Test" in Fold 1 followed by "Train" in subsequent folds. The second row begins with "Train," then "Test" in Fold 2, followed by "Train" in the remaining folds. The last row starts with "Train," with "Test" in the last fold. To the right of each row, the label "MSE" follows, denoting mean squared error for each fold, labeled as MSE1, MSE2, and MSEV. These are converging towards a boxed formula representing the average of these MSE values.'}
 knitr::include_graphics("img/crossvalid.jpg")
 ```
 
-Let us apply CV in practice. Recall, we started our discussion of data splitting by fitting a KNN regression with $K=30$, and used holdout method to estimate the test error of the procedure. Now we use the 5-fold CV to do the same. Since we have fixed $K=30$ (no tuning), there is no inner loop, and the out loop is 5-fold CV.  
+\newpage
 
-We again use `caret` as follows. 
-
-```{r, cache=TRUE}
-set.seed(1001)
-## Set K=30
-kgrid <- expand.grid(k = 30)
-
-## Training control params
-cv <- trainControl(method = "cv",
-                   number = 5)
-
-## Fit the model
-knn_fit <- train(medv ~ lstat,
-                 data = Boston,
-                 method = "knn",
-                 tuneGrid = kgrid, 
-                 trControl = cv)
-knn_fit
-# test MSE
-knn_fit$results$RMSE^2
-```
-
-\noindent The estimate test error is `r round(knn_fit$results$RMSE^2,2)` for the 30-NN regression fit. The `train()` function, by default, returns RMSE, rather than MSE. The RMSE of of each of the 5 folds can be obtained using the `resample` component of `knn_fit`:
-
-```{r}
-knn_fit$resample
-```
-
-Note that the best reported RMSE is the average of the 5 RMSE values above. If we want the average MSE, we have to perform the computation manually, which is slightly different than computing MSE from the best RMSE.^[(Average of RMSE)$^2$ is not the same as (average of RMSE$^2$)$^{1/2}$.]
-
-```{r}
-mean(knn_fit$resample$RMSE^2)
-```
-
-For the rest of the chapter, we will use RMSE as is default in `caret`.
-
-
-We can tune hyperparameters using $V$-fold CV as well:  
+Let us apply CV to our `Boston` data using KNN to select our hyperparameter $K$. 
 
 1. Split the data randomly into $V$ folds. 
 
 2. For each fold $\ell = 1, \ldots, V$, do:
 
     a. Set Fold $\ell$ as the test set, and the remaining folds together as the training set. 
-    b. Fit the model using the training set, and evaluate MSE/RMSE^[We can use any other performance metric, e.g., MAE, classification accuracy etc. here.] using the test set (Fold $\ell$), *for each value of the hyperparameter*. 
+    b. Fit the model using the training set, and evaluate MSE/RMSE using the test set (Fold $\ell$), *for each value of the hyperparameter*. 
 
 3. From step 2., for each value of hyperparameter, we should have a MSE/RMSE value for each fold ($V$ of them). The final MSE/RMSE for each of the hyperparameter value is calculated by taking the mean of $V$ MSE/RMSE values from the $V$ folds. Chose the optimal value of the hyperparameter by minimizing the final MSE/RMSE.
 
 4. Use the best hyperparameter value to refit the model on the whole dataset.
 
+For now, we won't split our data into a training and test set first. We'll simply use CV to tune our hyperparameter. We'll further discuss using both a training/test split and cross-validation shortly.
 
-Continuing from the previous example, let us tune $K$ using 5-fold CV, using `caret`. Figure \ref{fig:cvtune} shows the MSE profile for the tuning process.
+To ease our programming burder, we'll look at using the `caret` package in `R` (similar packages exist in `python`). `caret` allows us to easily specify our tuning method, keeps track of all results, and allows us to easily do predictions on new observations.
 
-```{r cvtune, cache=TRUE, fig.margin = TRUE, fig.height=6, fig.width=6, fig.cap="Results from hyperparameter tuning using 5-fold CV."}
+- Let us tune $K$ using 5-fold CV. Figure \ref{fig:cvtune} shows the MSE profile for the tuning process.
+
+- We start by setting a seed for reproducibility and specifying our `kgrid` for clarity.
+
+```{r}
 set.seed(1001)
 ## Set K grid
 kgrid <- expand.grid(k = c(1:100))
+```
 
+- Next, we set up our `trainControl()` parameters. This is `caret`'s method for specifying how to train our model. We choose `method = cv` and `number = 5` to do 5 fold cross-validation.
+
+```{r}
 ## Training control params
 cv <- trainControl(method = "cv",
                    number = 5)
+```
 
+- Next, we fit the model using `caret`'s `train()` function. 
+
+    + This takes a formula
+    + The data to train on
+    + The `method` or model type ot fit
+    + A grid of tuning parameters (if applicable)
+    + The method for training
+
+```{r}
 ## Fit the model
 knn_fit <- train(medv ~ lstat,
                  data = Boston,
                  method = "knn",
                  tuneGrid = kgrid, 
                  trControl = cv)
+```
 
+- We can run the generic `plot()` function on the result to see the CV test error profile.
+
+```{r cvtune, cache=TRUE, fig.margin = TRUE, fig.height=6, fig.width=6, fig.cap="Results from hyperparameter tuning using 5-fold CV.", fig.alt = 'The image depicts a line graph on a white grid background. The x-axis is labeled "#Neighbors" ranging from 0 to 100, and the y-axis is labeled "RMSE (Cross-Validation)" ranging from 5.0 to 7.5. The data points are represented by small circles connected by a line that starts high at the left side, dips to its lowest point around 20 neighbors, and then gradually rises again towards the right side. The graph shows an initial sharp decline followed by a gradual increase in error rate, indicating an optimal region for the number of neighbors.'}
 plot(knn_fit)
+```
 
+- The `bestTune` list element tells us the optimal tuning parameter using the default criteria of `RMSE`
+
+```{r}
+knn_fit$bestTune
+```
+
+- Lastly, we'll refit to the entire data set with the optimal $K$
+
+```{r}
 ## Optimum K and model refit on full data 
 k_opt <- knn_fit$bestTune$k
 knn_tuned <- train(medv ~ lstat,
@@ -856,88 +850,9 @@ knn_tuned <- train(medv ~ lstat,
                  trControl = trainControl(method = "none"))
 ```
 
-\noindent We can use the final fitted model for further predictions.
+We can use the final fitted model for further predictions!
 
-The code above does not estimate the test error of the tuned model. If we want to estimate the test MSE/RMSE of the tuned model, we can follow the same strategy as in with holdout method. We can use either holdout or $V$-fold CV in the outer loop. Unfortunately, `caret` can only perform the inner loop computation for tuning, so we need to manually create the holdout set or the CV folds for the our loop. The easiest way to create folds is to use the `rsample` package and `vfold_cv()` function. 
-
-```{r}
-folds <- vfold_cv(Boston, v=5)
-folds
-```
-\noindent The column named `splits` contain the folds. We can access each fold by using the `training()` and `testing()` functions. For example, we can obtain fold 1, and the corresponding training set (the remaining folds) as follows.
-
-```{r}
-fold_1 <- testing(folds$splits[[1]])
-training_1 <- training(folds$splits[[1]])
-dim(fold_1)
-dim(training_1)
-```
-
-\noindent Now we can apply the model fitting/tuning procedure on each of the training set and compute test MSE/RMSE on the folds. The final test error can be estimated by taking average of the MSE/RMSE values form the folds. 
-
-```{r, cache=TRUE}
-## Wrap the procedure (including tuning) in a function
-tuned_knn_cv <- function(data_split){
-  # Input: data_split is a v_fold cv split 
-  #        obtained using vfold_cv function
-  
-  # train and test sets from data splits
-  train_set <- training(data_split) 
-  test_set <- testing(data_split)
-  # Set K grid
-  kgrid <- expand.grid(k = c(1:100))
-  # Training control params
-  cv <- trainControl(method = "cv",
-                     number = 5)
-  # Fit the model on train_set
-  knn_fit <- train(medv ~ lstat,
-                   data = train_set,
-                   method = "knn",
-                   tuneGrid = kgrid, 
-                   trControl = cv)
-  # Optimum K and model refit on full train_set  
-  k_opt <- knn_fit$bestTune$k
-  knn_tuned <- train(medv ~ lstat,
-                   data = train_set,
-                   method = "knn",
-                   tuneGrid = expand.grid(k = k_opt), 
-                   trControl = trainControl(method = "none"))
-  # Predict test_set and compute test_mse
-  pred <- predict(knn_tuned,
-                  newdata = test_set)
-  test_mse <- mean( (test_set$medv - pred)^2 )
-  return(test_mse)
-}
-## Apply the process above to each split
-mse_folds <- lapply(folds$splits, tuned_knn_cv)
-MSE_test <- mean(unlist(mse_folds))
-MSE_test
-```
-
-
-An advantage of $V$-fold CV is that every observation in the data will be used once as a part of test set, and $V-1$ times as a part of training set. Another advantage of $V$-fold CV is that it provides test MSEs which have much less variability than those from holdout method. To visualize this phenomenon, we repeated the 5-fold CV based tuning process 10 times -- the resulting MSE profiles are shown in Figure \ref{fig:repcv}. We can see that the CV estimated MSE values have much less variance compared to holdout method shown in Figure \ref{fig:mserep}. 
-
-```{r repcv, echo = FALSE, cache=TRUE, fig.margin = TRUE, fig.height=6, fig.width=6, fig.cap="Results from hyperparameter tuning using 5-fold CV, repeated 10 times."}
-set.seed(1001)
-## Set K grid
-kgrid <- expand.grid(k = c(1:100))
-
-## Training control params
-cv <- trainControl(method = "cv",
-                   number = 5)
-mse <- matrix(NA, ncol = 10, nrow = 100)
-for(ii in 1:10){
-## Fit the model
-knn_fit <- train(medv ~ lstat,
-                 data = Boston,
-                 method = "knn",
-                 tuneGrid = kgrid, 
-                 trControl = cv)
-mse[,ii] <- knn_fit$results$RMSE^2
-}
-matplot(mse, pch=19, type = "l", col="black", cex.lab = 1.7, xlab = "# Neighbors", ylab = "Test MSE", ylim = c(0, 70), lty=1, lwd=2)
-```
-
+\newpage
 
 ## Leave-One-Out Cross-Validation (LOOCV)
 
@@ -953,13 +868,14 @@ As a special case of $V$-fold cross-validation, consider the case with $V=n$, wh
     
 \noindent This procedure is known as *leave-one-out cross-validation* (LOOCV). 
 
-There are two advantages of LOOCV over the holdout method. First, the holdout method fits the models on a smaller subset of the full data (e.g., $80\%$ of whole data, even less if another loop/tuning is involved). This may introduce bias in estimation of test error -- the  holdout method often overestimates the test error due to the fact that the model is trained using a smaller sample. In contrast, LOOCV trains the model using $n-1$ observations, which is effectively the entire dataset, and thus reducing estimation bias.
+\newpage
 
-The second advantage of LOOCV is that, there is no random splitting of the data since LOOCV cycles through every observation systematically. Thus results from running LOOCV multiple times will give the same answer, whereas  running the holdout method multiple times on the same dataset may give (very) different results. 
+Let's do an example using LOOCV in `caret`.  
 
-In `caret` we can specify `method = "LOOCV"` in the `trainControl()` specification to perform LOOCV. Figure \ref{fig:loocvmse} shows the MSE profile for tuning $K$ in the `Boston` data.
+- In `caret` we can specify `method = "LOOCV"` in the `trainControl()` specification. 
+- Figure \ref{fig:loocvmse} shows the MSE profile for tuning $K$ in the `Boston` data.
 
-```{r loocvmse, cache=TRUE, fig.height=5, fig.width=6, fig.cap="Results from tuning K using LOOCV on the whole Boston data.", fig.margin = TRUE}
+```{r loocvmse, cache=TRUE, fig.height=5, fig.width=6, fig.cap="Results from tuning K using LOOCV on the whole Boston data.", fig.margin = TRUE, fig.alt = 'The image depicts a line graph on a white grid background. The x-axis is labeled "#Neighbors" ranging from 0 to 100, and the y-axis is labeled "RMSE Leave-One-Out-Cross-Validation" ranging from 5.0 to 7.5. The data points are represented by small circles connected by a line that starts high at the left side, dips to its lowest point around 35 neighbors, and then gradually rises a little towards the right side. The graph shows an initial sharp decline followed by a gradual increase in error rate, indicating an optimal region for the number of neighbors.'}
 ## Values of K, and LOOCV specification
 kgrid <- expand.grid(k = 1:50)
 loo <- trainControl(method = "LOOCV")
@@ -972,18 +888,17 @@ fit <- train(medv ~ lstat,
 plot(fit)
 ```
 
-A disadvantage of LOOCV is its potential heavy computation cost, especially for large sample size. For example, in `Boston` data ($n = `r nrow(Boston)`$), we have to fit $n - 1 = `r nrow(Boston) - 1`$ models for *each* value of $K$! This can be extremely difficult for larger $n$. In contrast, holdout and $V$-fold CV procedures are more computationally efficient. 
+A disadvantage of LOOCV is its potential heavy computation cost, especially for large sample size. 
 
-When we estimate the test error, we might have different goals to do so in different situations. When we are interested in evaluating model performance in a test set, the actual value of the test error is of interest. However, when we are tuning a hyperparameter (e.g., K in KNN regression), our primary goal is to find the *minimizer of test error*, rather than test error itself. In the former case, the accuracy of the cross-validation estimates might be an issue. But in the later case, the minimizer might still be valid even if the estimate of the test error itself is not accurate. Examples from several simulation studies have been presented in the textbook (Introduction to Statistical Learning) to examine the point made above. Figure  \ref{fig:islr56} shows true test MSE, and the estimates using 10-fold CV and LOOCV for a few simulation scenarios.  
+- For example, in `Boston` data ($n = `r nrow(Boston)`$), we have to fit $n - 1 = `r nrow(Boston) - 1`$ models for *each* value of $K$! This can be extremely difficult for larger $n$. 
+- In contrast, holdout and $V$-fold CV procedures are more computationally efficient. 
 
-```{r islr56, echo=FALSE, fig.fullwidth=FALSE, fig.cap="Comparison of CV estimate of test error and its minimizer compared to true test error in several simulation studies. Shown are the true test MSE (blue), LOOCV estimate (black dashed line), and the 10-fold CV estimate (orange), along with their minimum (cross). Figure and caption adapted from Introduction to Statistical Learning, Figure 5.6.", fig.width=12, fig.height=4, out.width='100%', out.height='60%'}
+When we estimate the test error, we might have different goals to do so in different situations. When we are interested in evaluating model performance in a test set, the actual value of the test error is of interest. However, when we are tuning a hyperparameter (e.g., K in KNN regression), our primary goal is to find the *minimizer of test error*, rather than test error itself. In the former case, the accuracy of the cross-validation estimates might be an issue. But in the later case, the minimizer might still be valid even if the estimate of the test error itself is not accurate. Examples from several simulation studies have been presented in the textbook (Introduction to Statistical Learning) to examine the point made above. 
 
-knitr::include_graphics("img/5_6.pdf")#./Hastie_ISLR2_figures/Chapter5/
-```
+As a final note on cross-validation, the choice of $V$ in $V$-fold cross-validation depends the bias-variance trade-off (See Chapter 5.1.4 of *Introduction to Statistical Learning, second edition* for a detailed discussion) of the procedure. Given a sample size of $n$, the $V$-fold CV uses approximately $(V-1)n/V$ observation to fit the model. Thus LOOCV effectively uses the whole data to train the model, and therefore produces almost unbiased estimates of the test error. However, a 5-fold CV might produce a biased estimate. On the other hand, in LOOCV the $n$ model fits essentially uses the same dataset (any two fits share $n-2$ common training observations), the resulting test MSE values are highly correlated. Averaging the $n$ in MSE values LOOCV does not reduce the variance due to them being highly correlated. Thus LOOCV estimates tend to have high variance. In contrast, a 5-fold CV does not have as high level of overlap between the training folds, and produces less variable estimates of test MSE. In practice, we most often use 5-fold or 10-fold cross validation.
 
-We can observe that estimates from 10-fold CV and LOOCV are very similar. However, the quality (bias) of the estimates changes depending on the scenario.  On the other hand, even though sometimes the CV estimate underestimate the true test error, the minimizer of the CV estimates are very close to the minimizer of the true test error. Thus they tend to correctly identify the flexibility (e.g., how small/large K should be in KNN) of the procedure. 
 
-As a final note on cross-validation, the choice of $V$ in $V$-fold cross-validation depends the bias-variance trade-off^[See Chapter 5.1.4 of *Introduction to Statistical Learning, second edition* for a detailed discussion.] of the procedure. Given a sample size of $n$, the $V$-fold CV uses approximately $(V-1)n/V$ observation to fit the model. Thus LOOCV effectively uses the whole data to rain the model, and therefore produces almost unbiased estimates of the test error. However, a 5-gold CV might produce a biased estimate. On the other hand, in LOOCV the $n$ model fits essentially uses the same dataset (any two fits share $n-2$ common training observations), the resulting test MSE values are highly correlated. Averaging the $n$ in MSE values LOOCV does not reduce the variance due to them being highly correlated. Thus LOOCV estimates tend to have high variance. In contrast, a 5-fold CV does not have as high level of overlap between the training folds, and produces less variable estimates of test MSE. In practice, we most often use 5-fold or 10-fold cross validation.
+\newpage
 
 
 ## Bootstrapping
@@ -994,21 +909,30 @@ Recall that in the holdout method, we used simple random sampling without replac
 
 \noindent In statistical learning, we train our model using the bootstrap sample, and test using OOB samples. We do not use a single bootstrap sample however; instead, many bootstrap samples are drawn, and the model is trained/tested repeatedly. 
 
-We can perform bootstrap manually using the `bootstraps` function in `rsample` package. The code below draws 10 bootstrap samples from the `Boston` data. 
+- We can perform bootstrap manually using the `bootstraps()` function in `rsample` package. The code below draws 10 bootstrap samples from the `Boston` data. 
 
 ```{r}
+set.seed(10)
 # Bootstrap samples
 boot_sample <- bootstraps(Boston, times = 5)
 boot_sample
-# Accessing the bootstrap sample
+```
+
+- We can look at the different `splits` and obtain training and testing sets using the `training()` and `testing()` functions!
+
+```{r}
+# Accessing the first bootstrap sample
 boot_1 <- training(boot_sample$splits[[1]])
 dim(boot_1)
-# Oot of bag sample
+# Corresponding out of bag samples to test on
 oob_1 <- testing(boot_sample$splits[[1]])
 dim(oob_1)
 ```
 
-```{r bootdist, echo=FALSE, fig.margin = TRUE, fig.height=5, fig.width=6, fig.cap="Distribution of `medv` in the Boston data (red solid line), and in 10 bootstrap samples (black dashed lines)."}
+- Recall, we want the distribution of our response variable in our training set(s) to mimic the distribution across all the data
+- The distribution of our response (`medv`) in the five bootstrap resamples is compared to the overall distribution in Figure \ref{fig:bootdist} below. We see good agreement overall!
+
+```{r bootdist, echo=FALSE, fig.margin = TRUE, fig.height=5, fig.width=6, fig.cap="Distribution of `medv` in the Boston data (red solid line), and in 10 bootstrap samples (black dashed lines).", fig.alt = 'The image is a density plot graph with a smooth curve illustrating the distribution of a dataset. The x-axis is labeled "medv," ranging from 0 to 50, and the y-axis is labeled "density," ranging from 0.00 to 0.06. The plot features a prominent red line indicating the main density estimation and two black dashed lines outlining the confidence intervals around the red line. The curve shows a sharp peak near 20 on the x-axis, after which it declines steadily and rises slightly around 30 before flattening out towards the end of the range.'}
 p <- ggplot(mapping = aes(medv))
 for(ii in 1:5){
   p <- p + geom_density(data = training(boot_sample$splits[[ii]]),
@@ -1020,31 +944,24 @@ p <- p +
 print(p)
 ```
 
-```{r, echo=FALSE}
-# Oot of bag sample
-oob_1 <- testing(boot_sample$splits[[1]])
-dim(oob_1)
-```
+- As we mentioned, the bootstrap samples will leave a proportion of observations out. On average, the proportion left out here can be estimated empirically! Here we find the sample proportion left out and plot this distribution.
 
-As with holdout sample, we might want to check whether the distribution of $Y$ in the bootstrap samples is similar to that of the original data. Figure \ref{fig:bootdist} shows distributions of `medv` from 5 bootstrap samples and that of the original data.   We can see that the distributions are quite similar.
-
-```{r, echo=FALSE}
+```{r, fig.alt = 'The image is a histogram depicting the distribution of a out of bag observation percentage. The x-axis is labeled "oob_percent," ranging from 0.32 to 0.40, while the y-axis is labeled "count," with values from 0 to 60. The histogram consists of vertical bars of varying heights between these axis values, with the tallest bar reaching just above 60. The data appears to be approximately normally distributed, peaking around the 0.36 mark on the x-axis.'}
 boot_sample <- bootstraps(Boston, times = 500)
 oob_percent <- sapply(boot_sample$splits,
               function(s){nrow(testing(s))/nrow(training(s))})
-```
-
-Let us look at the size of the OOB samples that we can use as a test set. We generated 500 bootstrap samples from the `Boston` data -- the percentage of observations that are OOB are shown in Figure \ref{fig:oobdist}. On average, we have about `r 100*round(mean(oob_percent), 4)` percent of observations are OOB.^[Interested readers: can you verify this number theoretically? Think about the probability that the $i$-th observation being included in a typical bootstrap sample. Then see how this probability changes for different values of sample size $n$.]
-
-```{r oobdist, echo=FALSE, fig.height=5, fig.width=6, fig.cap="Percent of original observations in OOB sample.", fig.margin = TRUE}
-set.seed(1234567)
-# Bootstrap samples
 ggplot() + 
   geom_histogram(aes(x=oob_percent), bins = 20) + 
   theme_bw(base_size = 18)
 ```
 
-Bootstrap is a general method, and can be used to assess accuracy of statistical procedures. Given a dataset $\cal D$, suppose we want to compute some quantity $S({\cal D})$ based on the whole dataset. We can use bootstrap to assess any aspect of the distribution of $S({\cal D})$ (e.g., mean, variance, quantiles etc.) as follows:
+- On average, we have about `r 100*round(mean(oob_percent), 4)` percent of observations are OOB.
+
+\newpage
+
+### General Uses of Bootstrapping
+
+The Bootstrap is a general method, and can be used to assess accuracy of statistical procedures. Given a dataset $\cal D$, suppose we want to compute some quantity $S({\cal D})$ based on the whole dataset. We can use bootstrap to assess any aspect of the distribution of $S({\cal D})$ (e.g., mean, variance, quantiles etc.) as follows:
 
 + Draw $B$ bootstrap samples from the original data, call them ${\cal D}^*_1, \ldots, {\cal D}^*_B$.
 
@@ -1054,47 +971,63 @@ Bootstrap is a general method, and can be used to assess accuracy of statistical
     
 + Use the bootstrap estimates $S({\cal D}_1^*), \ldots, S({\cal D}_B^*)$ to assess properties of $S({\cal D})$. 
 
-\noindent Figure \ref{fig:bootlay} shows a layout of using bootstrap as described above. 
+Figure \ref{fig:bootlay} shows a layout of using bootstrap as described above. 
 
-```{r bootlay, echo=FALSE, fig.cap="Layout of bootstrap procedure."}
+```{r bootlay, echo=FALSE, fig.cap="Layout of bootstrap procedure.", fig.alt = 'The image is a flowchart illustrating a bootstrap process. On the left, a gray box labeled "Data: (D)" and "Goal: S(D)" has three arrows pointing right towards separate gray rectangles labeled, respectively, as "Bootstrap sample 1: D-star 1", "Bootstrap sample 2: D-star 2", and "Bootstrap sample B: D-star B". Each of these rectangles has an arrow pointing further right toward expressions (S(D-star 1)), (S(D-star 2)), and (S(D-star B)) respectively, indicating bootstrap replicates. These replicates converge with arrows pointing toward a blue box labeled "Bootstrap Distribution of (S(D))".'}
 knitr::include_graphics("img/bootstrap.jpg")
 ```
 
-\noindent For example, we can examine the distribution of $S(D)$ by estimating it by using the bootstrap replicates $S({\cal D}_1^*), \ldots, S({\cal D}_B)$ (e.g., a histogram or a density estimate). We can estimate the variance of $S(D)$ using the sample variance of the replicates:
+\newpage
+
+For example, we can examine the the variance of our quantity using the sample variance of the replicates:
+
 $$
 \widehat{var}\{S(D)\} = \frac{1}{B-1}\sum_{b=1}^B[S({\cal D}_b^*) - \bar S^*]^2,
 $$
-where $S^* = \sum_{b=1}^BS({\cal D}_b^*) / B$ is the sample mean of the bootstrap replicates.
+where 
 
+$$
+S^* = \sum_{b=1}^BS({\cal D}_b^*) / B
+$$
 
-Consider the example of fitting KNN regression to `Boston` data with fixed $K=30$. 
+is the sample mean of the bootstrap replicates.
+
+- Consider the example of fitting KNN regression to `Boston` data with fixed $K=30$. 
 ```{r}
 knn_k30 <- knnreg(medv ~ lstat,
                   data = Boston,
                   k = 30)
 ```
 
-\noindent Suppose we want to estimate $f(x)$ when $x = 5$, that is, expected value of `medv` when `lstat = 5`. The estimation is shown below.
+Suppose we want to estimate $f(x)$ when $x = 5$, that is, we want to estimate the expected value of `medv` when `lstat = 5`. We may want to estimate the standard error of this quantity or perhaps the distribution of it!
 
+- We can obtain one estimate of this quantity from a fit on the entire data set. 
 ```{r}
 pred_k30 <- predict(knn_k30,
                     newdata = data.frame(lstat = 5))
-pred_k30
+pred_k30 
 ```
-\noindent Note that, predicted value of $Y$ when $X=5$ is the same $\widehat f(5)$, the estimated value of $f(x)$ when $x=5$.^[Even though the predicted $Y$ and estimated $f(5)$ values are the same, their variability is not the same. Recall, variability of the prediction is represented by expected prediction error at $x=5$  is  bias$^2 (\widehat f(5))$ +  $var(\widehat f(5))$ + irreducible error. In this case, we are only interested in $var(\widehat f(5))$.] What is the standard error of this estimate? What is the distribution of the estimator? We can use bootstrap to answer these questions.
 
-We will draw 200 bootstrap samples from `Boston` data. For each bootstrap sample, we will fit the KNN procedure with $K=30$, and compute the estimate -- this is all according to Figure \ref{fig:bootlay}.
+- Note: The predicted value of $Y$ when $X=5$ is the same $\widehat f(5)$
+- However, the variability of these two quantities is not the same
+
+    + Recall, the variability of the predicted value is represented by bias$^2 (\widehat f(5))$ +  $var(\widehat f(5))$ + irreducible error. 
+    + In this case, we are only interested in $var(\widehat f(5))$. 
+
+- Let's use the bootstrap to look at the distribution and standard error of $\widehat f(5)$
+
+    - We will draw 200 bootstrap samples from `Boston` data.
+    - For each bootstrap sample, we will fit the KNN procedure with $K=30$, and compute the estimate.
 
 ```{r, cache=TRUE}
-## Wrap the prediction process in a function 
-##   for easy use
+## Wrap the prediction process in a function for easy use
 knn_k30_predict <- function(split){
   # Input: split from bootstrap using rsample
   # Output: prediction at lstat = 5
   
   # Get training set
   train_set <- training(split)
-  # KNN with K = 30
+  # fit the KNN model with K = 30
   knn_k30 <- knnreg(medv ~ lstat,
                     data = train_set,
                     k = 30)
@@ -1106,14 +1039,14 @@ knn_k30_predict <- function(split){
 ## Draw bootstrap samples
 B <- 200
 boot_sample <- bootstraps(Boston, times = B)
-## Apply the prediction function to 
-## ``the bootstrap samples 
-boot_pred <- sapply(boot_sample$splits, knn_k30_predict)
+## Apply the prediction function to the bootstrap samples 
+## sapply is similar to lapply but simplifies what is returned
+boot_pred <- sapply(boot_sample$splits, FUN = knn_k30_predict)
 ```
 
-Figure \ref{fig:preddist} shows the bootstrap distribution of $\widehat f(5)$. Some summaries of the bootstrap estimates are shown below.   
+Figure \ref{fig:preddist} shows the bootstrap distribution of $\widehat f(5)$. 
 
-```{r preddist, echo=FALSE, fig.margin = TRUE, fig.height=5, fig.width=6, fig.cap="Distribution of estimator of E(medv when lstst = 5). Also shown the mean of the bootstrap estimates (red solid lile), and original estimate from the full data (black dashed line),"}
+```{r preddist, echo=FALSE, fig.margin = TRUE, fig.height=5, fig.width=6, fig.cap="Distribution of estimator of E(medv when lstst = 5). Also shown the mean of the bootstrap estimates (red solid lile), and original estimate from the full data (black dashed line),", fig.atl = 'The image is a line chart depicting a density plot overlaid with two vertical lines, one red and one black. The x-axis is labeled as "Predicted medv at lstat = 5," with values ranging from 28 to 34. The y-axis is labeled "density" and ranges from 0.0 to 0.2. The density curve is a smooth, bell-shaped curve peaking slightly above 0.2 and centered around the x-axis value of 31. Two vertical dashed lines intersect the x-axis: a red line at approximately 30.5 and a black line at around 31.5. The background is a light grid with horizontal and vertical lines.'}
 ggplot() + 
   geom_density(aes(boot_pred)) + 
   geom_vline(xintercept = pred_k30, lwd=1.1, lty=2) + 
@@ -1122,9 +1055,14 @@ ggplot() +
   xlab("Predicted medv at lstat = 5")
 ```
 
+- Some summaries of the bootstrap estimates are shown below.   
+
 ```{r}
 ## Summary of bootstrap estimates
-summary(boot_pred)
+summary_boot <- summary(boot_pred) 
+tibble(statistic = names(summary_boot), 
+       value = summary_boot) |> 
+  kable()
 
 ## Variance/SD of the estimate
 c(variance = var(boot_pred),
@@ -1134,9 +1072,16 @@ c(variance = var(boot_pred),
 mean( (boot_pred - pred_k30)^2 )
 ```
 
-In a learning method, we can tune hyperparameters using bootstrap as before -- we fit the model using bootstrap samples, and compute test MSE using OOB samples. The best hyperparameter value can be chosen by minimizing test MSE. In `caret` this can be done by specifying `method = bootstrap` the `trainControl()` function.
+### Tuning with the Bootstrap
 
-```{r boottune, fig.margin = TRUE, fig.height=5, fig.width=6, fig.cap="Results from bootstrap (25 reps) tuning of K.", cache=TRUE}
+In a learning method, we can tune hyperparameters using the bootstrap in a similar method to what we did with cross-validation.
+
+- We fit the model using bootstrap samples, and compute test MSE using OOB samples. 
+- The best hyperparameter value can be chosen by minimizing test MSE. 
+
+In `caret` this can be done by specifying `method = bootstrap` the `trainControl()` function.
+
+```{r}
 set.seed(1001)
 ## Values of K, and bootstrap specification
 kgrid <- expand.grid(k = 1:100)
@@ -1148,606 +1093,136 @@ boot_tuned_knn <- train(medv ~ lstat,
             method = "knn",
             trControl = boot,
             tuneGrid = kgrid)
+```
 
+Now we can `plot()` the fitted object to investigate the test MSE values for each $K$.
+
+```{r boottune, fig.margin = TRUE, fig.height=5, fig.width=6, fig.cap="Results from bootstrap (25 reps) tuning of K.", cache=TRUE, fig.alt = 'The image is a line graph depicting the relationship between the number of neighbors and the root mean square error (RMSE) using bootstrap resampling. The x-axis is labeled "# Neighbors" and ranges from 0 to 100. The y-axis is labeled "RMSE (Bootstrap)" and ranges from 5.0 to 7.5. The graph shows a curve starting from the top left corner, dipping downwards, reaching its lowest point at approximately 5.0 RMSE around 30 neighbors, and then ascending slightly as the number of neighbors increases to 100. Each data point is marked with a diamond shape, and a smooth line connects these points.'}
 plot(boot_tuned_knn)
 ```
 
-Figure \ref{fig:boottune} shows the RMSE profile for tuning $K$ using bootstrap. 
-
 Compared to $V$-fold cross-validation, bootstrap tends to produce less variable estimates. However, on average only $63.2\%$ observations get represented in bootstrap samples. Thus bootstrap estimates may have some bias similar to using a 2-fold or 3-fold CV.   
 
+\newpage
 
-# $K$-Nearest Neighbors Classification 
+# Comparing Competing Models
 
-The discussion and techniques presented so far also apply to classification setting, the main difference is model evaluation metric. To demonstrate the ideas clearly, let us introduce a simple classification technique based of $K$-nearest neighbors.
+We discussed specifying our $f(\bullet)$ function in multiple ways. For instance, we could choose a simple linear or multiple linear regression model instead of a KNN model. In this section, we look at how to use a train/test split along with cross-validation to choose an optimal model from competing models. 
 
-Suppose we have training data $(Y_i, X_i)$ for $i=1,\ldots,n$, where $Y_i$ is categorical variable denoting class label of $X_i$. For a given predictor $x_0$, KNN classifier predicts the class label as follows:
+- Remember: We want to touch the test data as little as possible. Otherwise, we may end up training to the test set! Again, if we do this type of overfitting, we may no longer generalize well to a future test set.
 
-+  Identify the $K$ observations in the training data such the their $X$ values are "nearest" to $x_0$.^[See the discussion about distance metric in KNN regression section.]
-+ Predict the class label corresponding to $x_0$ as the class having the majority vote, that is, having the most number of points among the $K$ neighbors obtained form previous step.
+- In some cases, especially when we don't have much data, we may choose to simply use CV or the bootstrap to do our tuning and overall model evaluation! We may also do this when we only have one model form that we are considering
 
-\noindent Formally, we can think of the process as estimating the conditional probability of $P(Y | X)$. Suppose that we have $J$ classes, that is, $Y$ can take values $1, \ldots, J$.^[These are not numeric values. They are merely labels for $J$ classes.]  suppose $S_K(x_0)$ denotes the indices of the $K$ points whose $X$ values are nearest to $x_0$. Then for a data point $x_0$, KNN estimates the conditional probability that the class label is $j$ given $X = x_0$ as^[Here $I(\cdot)$ denotes the indicator function. For any event $A$, we define $I(A) = 1$ if $A$ is true, $0$ otherwise.] 
-$$
-\widehat P(Y = j | X = x_0) = \frac{1}{K}\sum_{i \in S_K(x_0)} I(Y_i = j), 
-$$
-for each $j = 1, \ldots, J$. Thus, for each of the $J$ classes, we compute the proportion of the $K$ neighbors belonging to that class. We classify $x_0$ to the class that has the highest estimated probability.
+## Competing Models
 
-```{r, echo=FALSE, fig.margin = TRUE, fig.height=5, fig.width=6, eval=FALSE}
-set.seed(1001)
-simdat <- quadBoundaryFunc(100) #easyBoundaryFunc(100)
-p <- ggplot(simdat) + 
-  geom_point(aes(X1, X2, col=class, shape = class), 
-             size=2) + 
-  theme_bw(base_size = 18) + 
-  theme(legend.position = "top")
-p
-```
+Let's stick with the `Boston` data set. We'll compare the basic simple linear regression model to the KNN model! 
 
-```{r, echo=FALSE, eval=FALSE}
-k <- expand.grid(k = 60)
-none <- trainControl(method = "none")
-fit <- train(class ~ X1 + X2,
-             data = simdat,
-             method = "knn",
-             tuneGrid = k,
-             trControl = none)
+For completeness, we'll go through the entire process here.
 
-newd <- expand.grid(X1 = seq(-5, 5, len=201),
-                    X2 = seq(-5, 5, len=201))
-pred <- predict(fit, newdata = newd, type = "prob")
+## Train/Test split
 
-#p + geom_point(aes(X1, X2, col = pred, fill=pred), 
-#               data = newd, 
-#               alpha = 0.2, 
-#               shape=0)
-z <- pred[,1] #as.numeric(pred)
-p + 
-#  geom_raster(data = newd,
-#                mapping = aes(X1, X2, fill = z), alpha=0.3, breaks = c(0,0.5)) + 
-  geom_contour_filled(data = newd, 
-               mapping = aes(X1, X2, z = z, fill=z), 
-               col="black", breaks = c(0,0.5), lwd=1.2, alpha=0.1)
-```
-
-## Bayes classifier
-
-The motivation behind estimating the conditional probabilities $P(Y = j | X)$ is from minimizing test error rate. Similar to regression, given a new independent test point $X$ with label $Y$, we can define expected prediction error for classification as
-$$
-E[I(Y \neq \widehat Y)],
-$$
-where $\widehat Y$ is the prediction from a classifier. Notice that $Y$ depends on $X$, and $\widehat Y$ depends on both $X$ and the training set. We want a classifier that minimizes the expected prediction error. It can be shown^[Interested readers can consult *Elements of Statistical Learning* by Hastie et al. (2017).] that the optimal classifier is the one that predicts a new observation $x_0$ by $\widehat Y$ such that 
-
->> $\widehat Y = j$ if $P(Y = j | X = x_0)$ is maximum among $P(Y = 1 | X = x_0), \ldots, P(Y = J | X = x_0).$
-
-\noindent The optimal classifier is called the *Bayes classifier*.
-
-\mydbldefbox{Bayes classifier and error}{
-{\bf Bayes Classifier:} Classifies an observation to the most probable class using the discrete conditional distribution of $P(Y | X)$
-}{
-{\bf Bayes error rate:} misclassification error rate of the Bayes classifier. For a given $x_0$, Bayes error is $1 - max_\ell P(Y = \ell | X = x_0)$. The overall Bayes error rate is $1 - E[max_\ell P(Y = \ell | X)]$.
-}
-
-\noindent Thus every classification problem has a corresponding Bayes classification rule and associated Bayes error rate. The Bayes rate is analogous to the irreducible error that we encountered in the regression setting.
-
-Unfortunately, we can not directly use the Bayes classifier since we do not know the distribution of $Y|X$. Different classifiers use different estimators of such conditional distributions -- KNN uses proportion of points in the $K$ nearest neighbors belonging to each class as the estimator, as discussed before.   
-
-## Evaluating a classifier
-
-To evaluate the performance of the classifier, instead of test MSE, we can use *classification accuracy* or *misclassification error rate*.^[In the definitions below, $|S|$ denotes the *cardinality* of $S$, that is, the number of observations in $S$.] 
-
-\mydbldefbox{Accuracy/error rate of a classifier}{{\bf Accuracy:} the proportion of points correctly classified to their respective classes. With a set of observations $S$, $$
-\hbox{Accuracy} = \frac{\hbox{Total correct classification}}{\hbox{
-Total number of points}} = \frac{1}{|S|}\sum_{i \in S} I(Y_i = \widehat Y_i).
-$$
-We can compute {\it training} and {\it test accuracy} depending on whether $S$ is the training or testing set.}{{\bf Misclassification error rate:} The proportion of points wrongly classified.
-$$
-\hbox{Error rate} = \frac{\hbox{Total incorrect classification}}{\hbox{Total number of points}} = \frac{1}{|S|}\sum_{i \in S} I(Y_i \neq \widehat Y_i).
-$$
-As before, we can compute {\it training} and {\it test error rate}.}
-
-
-As with regression setting, here too we aim to maximize *test* accuracy or minimize test error. minimizing training error is undesirable since it will lead to overfitting the data. For example, consider $K=1$, a 1-NN classifier. Since each $X_i$ is the closest neighbor to itself, the training error would be zero. Figure \ref{fig:knncerr} shows training and test error rates from a simulation study (figure adapted from the textbook *Introduction to Statistical Learning*). 
-
-
-```{r knncerr, echo=FALSE, fig.margin = TRUE, fig.cap="Training and test error rates for a KNN classifier based on 200 training and 5000 test observations. The error rates are plotted against 1/K. The black dashed line shows the Bayes error rate. Figure adapted from Introduction to Statistical Learning."}
-knitr::include_graphics("img/2_17.pdf") #Hastie_ISLR2_figures/Chapter2
-```
-
-
-
-## Role of hyperparameter in classification
-
-As with KNN regression, the hyperparameter $K$ determines how flexible the KNN method is. However, the idea of flexibility is subtle in this case. Consider a two class problem -- a classification problem with two classes. A classifier will attempt to create regions using the predictors so that a new data point could be classified into a class depending on which region it fall into. The boundary that separates  the these regions is effectively the classification rule for that classifier. Figure \ref{fig:bnd} shows a classification problem with two classes. A certain classifier creates two regions (red and blue) so that a new data point will be classified to red/blue classes if it falls in the corresponding region. The *decision boundary*, is the boundary of the regions, a straight line in this example.
-
-
-```{r bnd, fig.width=7, fig.height=6, echo=FALSE, warning=FALSE, message=FALSE, fig.margin=TRUE, fig.cap="Two-dimensional classification."}
-
-wines <- read.table("data/Wines.txt", header = TRUE)
-pro <- wines$Proline[wines$Class == 1 | wines$Class == 2]
-alc <- wines$Alcohol[wines$Class == 1 | wines$Class == 2]
-newclass <- wines$Class[wines$Class == 1 | wines$Class == 2]
-
-#data <- cbind(pro, alc)
-#par(mfrow=c(1,2))
-#partimat(x=data, grouping = factor(newclass), 
-#         image.colors = c("#FFBBBB", "white"), prec=200, pch=c(19,17))
-#partimat(x=data, grouping = factor(newclass), image.colors = c("#FFBBBB", "white"), prec=200, method = "qda")
-nbp <- 200;
-PredA <- seq(min(alc), max(alc), length = nbp)
-PredB <- seq(min(pro), max(pro), length = nbp)
-Grid <- expand.grid(alc = PredA, pro = PredB)
-
-df <- data.frame(alc = alc, pro = pro, Class = factor(newclass))
-
-TrControl <- trainControl(savePredictions = TRUE)
-Seed <- 345
-Formula = "Class ~ ."
-Method = "lda"
-
-Model <- train(form = as.formula(Formula), 
-               data = df, 
-               method = Method, 
-               trControl = TrControl)
-
-Prediction <- predict(Model, newdata = Grid)#, type = "prob")
-
-#colors <- rep("#990000", length(newclass))
-#colors[newclass==2] <- "steelblue"
-#pts <- rep(19, length(newclass))
-#pts[newclass==2] <- 17
-
-#contour(PredA, PredB, matrix(as.numeric(Pred), ncol = nbp), 
-#        drawlabels = F, col="black", nlevels = 2, lwd=2,
-#        xlab = "Alcohol", ylab = "Proline", main = "Linear DA", ylim=c(0, 1800))
-#points(df$alc, df$pro, col=colors, pch = pts)
-#legend(12, 1800, legend = "Predicted Group 1", col ="#990000")
-#legend(11, 200, legend = "Predicted Group 2", col ="steelblue")
-
-
-#ggplot() + 
-#  geom_contour(mapping = aes(alc, pro, z = as.numeric(Pred)), 
-#               data = Grid) + 
-#  geom_point(mapping = aes(alc, pro, col=group), data = df) + 
-#    geom_point(mapping = aes(alc, pro, col=Pred), data = Grid, alpha=0.1) + 
-#    theme_bw(base_size = 18)
-
-ggplot(Grid, aes(alc, pro)) + 
-  geom_point(mapping = aes(alc, pro, col=Class), 
-             data = df, size=3) +
-  geom_raster(aes(fill=Prediction), alpha=0.2) + 
-  geom_contour(mapping = aes(alc, pro, z = as.numeric(Prediction)),
-               col="black") + 
-  theme_bw(base_size = 18) + 
-  xlab("X1") + 
-  ylab("X2") + 
-  theme(legend.position = "top")
-  
-
-```
-
-How would the decision boundary look like for the Bayes classifier? For a two class problem, the Bayes classifier assigns the most probable class to a new data point. Thus for a new $x_0$, it will be assigned to class 1 if $P(Y = 1 | X = x_0) > P(Y = 2 | X = x_0)$, assign to class otherwise. Equivalently, $x_0$ will be assigned to class 1 if $P(Y = 1 | X = x_0) > 0.5$. Thus the decision boundary of the Bayes classifier is the set of all $x$ such that $P(Y = 1 | X = x) = 0.5$.
-
-```{r knnthree, echo=FALSE, fig.fullwidth = FALSE, fig.cap="Impact of K on decision boundaries of KNN classifiers. The Bayes dicision boundary is shown using purple dashed line. Image adapted from \\textit{Introduction to Statistical Learning}.", out.height="40%"}
-
-knitr::include_graphics(c("img/2_16.pdf"))#Hastie_ISLR2_figures/Chapter2/
-
-```
-
-The value of $K$ in a KNN classifier determines how smooth or rough the decision boundary is (this is analogous to estimating $f(\cdot)$ in a regression problem). Figure \ref{fig:knnthree} shows decision boundaries for KNN classifier for different values of $K$ in a simulated data along with that of the Bayes classifier. For small value of $K$ (in this example,  $K=1$), the boundary is extremely rough. Although it follows the Bayes boundary closely, it is overly flexible (uses local features) and tries to discover patterns that do not conform to the Bayes boundary. This is an example of overfitting a classification problem.  In contrast, for a large value of $K$ (such as $K=100$), the decision boundary is much smoother but does not capture the shape of the Bayes boundary.^[Again we see the bias-variance trade-off here.] Large value of $K$ results in a non-flexible (uses global features but averages over local ones) classifier that perhaps captures the overall trend of the Bayes boundary, but misses the  details. In fact, as $K$ grows, the decision boundary will get closer to a straight line. 
-
-
-
-
-```{r knnk10, echo=FALSE, fig.fullwidth = FALSE, fig.margin = TRUE, fig.cap="Decision boundary for $K=10$ using simulated data presented in Figure \\ref{fig:knnthree}. The Bayes dicision boundary is shown using purple dashed line. Image adapted from \\textit{Introduction to Statistical Learning}.", out.height="40%"}
-
-knitr::include_graphics(c("img/2_15.pdf"))#Hastie_ISLR2_figures/Chapter2/
-
-```
-
-Therefore, we need to tune $K$ so that the "optimal" $K$ will result in a decision boundary that is not too rough but also sufficiently captures the shape of the Bayes boundary.  Firgure \ref{fig:knnk10} shows one such example with $K=10$. In practice, we might choose $K$ by minimizing the test error rate or equivalently maximizing test accuracy. 
-
-
-## Building a classifier
-
-Consider the `wines` data set available at the UCI machine learning repository.^[https://archive.ics.uci.edu/ml/datasets/wine; also available with the textbook Applied Multivariate Statistics with R by Zelterman]. The dataset contains quantities of 13 constituents found in each of the three types (cultivars) of wines.
+First, let's split our data using the basic simple random sample method. We'll use `caret`'s functionality to do so.
 
 ```{r}
-# Read the data
-wines <- read.table("data/Wines.txt", header = TRUE)
-wines$Class <- as.factor(wines$Class)
+set.seed(51)
+index <- createDataPartition(Boston$medv,
+                             p = 0.8,
+                             list = FALSE,
+                             times = 1)
+
+train <- Boston[index, ]
+test <- Boston[-index, ]
 ```
 
-A snapshot of the full data is shown below. The goal is to find a *rule* that can assign a specimen of wine to its region. In other words, we want to predict the classes (regions) based on the predictors (13 variables).  
 
+## Tuning of KNN model Using 10-fold CV
 
-```{r, echo=FALSE}
-as_tibble(wines)
-```
-```{r}
-# classes of wine
-table(wines$Class)
-```
-
-For this demonstration, we will only consider two predictor variables, `Alcohol` and `Malic`. However, the techniques discussed hereafter can be applied to any number of predictors. Figure \ref{fig:winetwo} shows the three classes on a scatterplot of `Alcohol` vs. `Malic`.  
-
-
-```{r winetwo, fig.width=6, fig.height=6, fig.cap="Scatterplot of Alcohol vs. Malic in the wine data.", fig.margin=T, echo=FALSE}
-# pairs plot
-#colors <- c("darkgreen", "darkorange", "#990000")[wines$Class]
-#plot(wines$Alcohol, wines$Proline, pch = 16, cex = .5, col = colors, #xaxt = "n", yaxt = "n", xlab = "Alcohol", ylab = "Proline")
-
-ggplot(wines) + 
-  geom_point(aes(Alcohol, Malic, 
-                 col=as.factor(Class),
-                 shape=as.factor(Class)),
-             size = 3) + 
-  scale_color_manual(name = "Class",
-                     labels = c(1,2,3),
-                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
-  scale_shape_manual(name = "Class",
-                     labels = c(1,2,3),
-                     values = c(15, 17, 19)) +
-  theme_bw(base_size = 18) + 
-  theme(legend.position = "top")
-```
-
-Let us start with a KNN classifier with $K = 30$. We can use the `knn()` function in the `class` package, or use `caret` with `method = "knn"`. Note that `caret` does both regression and classification. It automatically determines  the problem depending on whether the response is numeric or categorical (factor). We have already converted the `Class` variable in the `wines` data to a factor.
+Now that we have a training set, we can use it to select the tuning parameter for the KNN model via 10 fold CV. 
 
 ```{r}
-## 30-NN Classifier / no tuning needed
-fit <- train(Class ~ Alcohol + Malic,
-             data = wines,
-             method = "knn",
-             tuneGrid = expand.grid(k = 30),
-             trControl = trainControl(method = "none"))
-fit
-```
-
-
-```{r knnk20, echo=FALSE, cache=TRUE, fig.height=6, fig.width=6, fig.cap="Decision boundary of 20-NN classifier of the wines data.", fig.margin = TRUE}
-
-nbp <- 200
-PredA <- seq(min(wines$Alcohol), max(wines$Alcohol), length = nbp)
-PredB <- seq(min(wines$Malic), max(wines$Malic), length = nbp)
-Grid <- expand.grid(Alcohol = PredA, Malic = PredB)
-
-pred_reg <- predict(fit, newdata = Grid)
-
-ggplot() + 
-  geom_point(aes(Alcohol, Malic, 
-                 col = Class, 
-                 shape = Class), 
-             data = wines,
-             size = 2) + 
-  geom_raster(aes(Alcohol, Malic, fill = pred_reg), 
-              data = Grid,
-              alpha = 0.1) + 
-  geom_contour(mapping = aes(Alcohol, Malic, 
-                             z = as.numeric(pred_reg)), data = Grid,
-               col="black") + 
-  scale_color_manual(name = "Class",
-                     labels = c(1,2,3),
-                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
-  scale_shape_manual(name = "Class",
-                     labels = c(1,2,3),
-                     values = c(15, 17, 19)) +
-  scale_fill_manual(name = "Prediction",
-                     labels = c(1,2,3),
-                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
-  theme_bw(base_size = 18) + 
-  theme(legend.position = "top") +
-  guides(color = guide_legend(override.aes = list(size = 5)))
-  
-
-```
-\noindent Figure \ref{fig:knnk20} shows the decision boundaries of this classifier.
-
-We can tune $K$ as we did in the regression setting. The code below searches odd values of $K$ (to avoid ties) for the optimal value with largest test accuracy. We use 50 times repeated 5-fold CV for tuning -- Figure \ref{fig:knnloocv} shows the results. 
-
-
-
-```{r knnloocv, cache=TRUE, fig.height=6, fig.width=6, fig.cap="Results for repeated 5-fild CV tuning.", fig.margin = TRUE}
-set.seed(1001)
-## K values for tuning
-kgrid <- expand.grid(k = seq(1,51, by=2))
-## LOOCV tuning
-tr <- trainControl(method = "repeatedcv",
-                   number = 5,
-                   repeats = 50)
-## Train the classifier
-fit <- train(Class ~ Alcohol + Malic,
-             data = wines,
-             method = "knn",
-             tuneGrid = kgrid,
-             trControl = tr)
-plot(fit)
-fit$bestTune$k
-```
-
-```{r}
-## Refit the model with best K
-tuned_knn_class <- train(Class ~ Alcohol + Malic,
-             data = wines,
-             method = "knn",
-             tuneGrid = expand.grid(k = fit$bestTune$k),
-             trControl = trainControl(method = "none"))
-```
-
-
-To estimate the prediction error of the tuned model, we can use any of the methods discussed previously. For example, you can use bootstrap as the outer loop while the inner loop uses LOOCV for tuning $K$. 
-
-
-
-```{r}
-new_dat <- data.frame(Alcohol = c(13, 12.78),
-                   Malic = c(3,2))
-new_dat
-```
-```{r again, echo=FALSE, cache=TRUE, fig.height=6, fig.width=6, fig.cap="Decision boundary of 21-NN classifier of the wines data with two new unlabeled points.", fig.margin = TRUE}
-nbp <- 200;
-PredA <- seq(min(wines$Alcohol), max(wines$Alcohol), length = nbp)
-PredB <- seq(min(wines$Malic), max(wines$Malic), length = nbp)
-Grid <- expand.grid(Alcohol = PredA, Malic = PredB)
-
-pred_reg <- predict(tuned_knn_class, newdata = Grid)
-
-ggplot() + 
-  geom_point(aes(Alcohol, Malic, 
-                 col = Class, 
-                 shape = Class), 
-             data = wines,
-             size = 2) + 
-  geom_point(aes(Alcohol, Malic), 
-             data = new_dat,
-             size = 5, shape = 5) + 
-  geom_text(aes(Alcohol, Malic, label = rownames(new_dat)),
-            data = new_dat, size = 5) + 
-  geom_raster(aes(Alcohol, Malic, fill = pred_reg), 
-              data = Grid,
-              alpha = 0.2) + 
-  scale_color_manual(name = "Class",
-                     labels = c(1,2,3),
-                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
-  scale_shape_manual(name = "Class",
-                     labels = c(1,2,3),
-                     values = c(15, 17, 19)) +
-  scale_fill_manual(name = "Prediction",
-                     labels = c(1,2,3),
-                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
-  theme_bw(base_size = 18) + 
-  theme(legend.position = "top") +
-  guides(color = guide_legend(override.aes = list(size = 5)))
-
-```
-
-We can predict classes of new unlabeled data. Let us consider two new data points -- Figure \ref{fig:again} shows the original data, along with the two new points (black). We can predict their classes as follows.
-
-```{r}
-pred_class <- predict(tuned_knn_class,
-                      newdata = new_dat)
-pred_class
-```
-
-\noindent The first point (first row of `new_dat`) was classified into Class `3`, and second one to class `2`. The issue with just obtaining the final predicted class is that we do not know how sure we are about these predictions. In addition, we often look at the class probabilities for each new data. We can specify `type = "prob"` to do so.
-
-```{r}
-pred_prob <- predict(tuned_knn_class,
-                     newdata = new_dat,
-                     type = "prob")
-pred_prob
-```
-
-\noindent Note that for the first point, has as $80\%$ probability associated with class `3`, and hence we are quite confident about out final class prediction of `3`. However, for the second point, probabilities associated with classes `1` and `2` are quite similar ($38\%$ vs $43\%$). So while we are quite confident about the predicted class of the first data point, there is some uncertainlty about the second prediction.  
-
-
-
-## Evaluating Predicted Classes
-
-There are many other metrics to evaluate a classification technique other than error rate and accuracy. The main criticism of these two criteria are that they provide a global measure, but do not provide much insight into how individual classes are correctly identified. For example,$80\%$ accuracy of a classifier does *not* guaranty  that it will correctly classify items form *both* the classes correctly $80%$ of times. Such a criticism is even more relevant when there is class imbalance in the data: say we have a situation where $80%$ of observations belong to class A, and rest in class B. If we employ a classifier that classifies *every point into class A* regardless of their predictor values. This classifier will have $80\%$ accuracy! This is called the *no information rate (NIR)* of the classification problem.
-
-\mydefbox{No information rate (NIR)}{
-The percentage of the largest class in the training set.
-}
-
-\noindent The NIR represents the accuracy that can be obtained without using any model. Thus for any classifier, no information rate should be the minimum accuracy it should have. Any classifier having accuracy better than NIR might be considered viable. 
-
-
-
-For a problems with two classes (say "positive" = 1 and "negative" = 2), most of the measures to evaluate a classifier can be obtained by cross-tabulating the true and predicted classes of a test set. Such a table is called *confusion matrix*. An example is shown in Table \ref{tab:conftab}.
-
-```{r conftab, echo=FALSE}
-x <- lda(matrix(alc, ncol=1), factor(newclass))
-y <- predict(x, matrix(alc, ncol=1))
-
-tt <- t( errormatrix(newclass, y$class) )
-aa <- attr(tt, "dimnames")
-dd <- cbind(c("Predicted", aa$true), rbind(aa$predicted, tt) )
-rownames(dd) <- NULL
-colnames(dd) <- NULL
-dd %>% 
-  kbl(booktabs = T, caption = "Example of a confusion matrix") %>%
-  add_header_above(c(" ", "True" = 2, " ")) %>%
-  kable_styling(latex_options = c("striped", "hold_position"))
-
-#confusionMatrix(reference = as.factor(newclass), 
-#                data = y$class)
-
-```
-
-In general, for a two class problem, the confusion table looks like \ref{tab:conftabgen} (I have deleted the `-SUM-` column/row) .
-
-```{r conftabgen, echo=FALSE}
-dd[2,2] <- "True positive (TP)"
-dd[2,3] <- "False positive (FP)"
-dd[3,2] <- "False negative (FN)"
-dd[3,3] <- "True negative (TN)"
-ee <- dd[1:3, 1:3] 
-ee[1,2:3] <- ee[2:3,1] <- c("Positive", "Negative")
-ee %>% 
-  kbl(booktabs = T, caption = "General confusion matrix for a two class problem.") %>%
-  add_header_above(c(" ", "True" = 2)) %>%
-  kable_styling(latex_options = c("striped", "hold_position"))
-
-cat("\n\n")
-```
-
-
-\noindent Some measures we might look at are as follows:
-
-+ *sensitivity*^[Also called "true positive rate" or "recall"] =  $\frac{\text{number of positive cases classified as positive}}{\text{Total number of positive samples}} = \frac{TP}{TP + FN}$
-
-+ *specificity*^[Also called "true negative rate"] = $\frac{\text{number of negative cases classified as negative}}{\text{Total number of negative samples}}  = \frac{TN}{TN + FP}$
-
-+ *Precision* = $\frac{\text{number of positive cases classified as positive}}{\text{Total number of predicted positive cases}}  = \frac{TP}{TP + FP}$ 
-
-\noindent We can also examine: 
-
-+ *Cohen's kappa*:^[Cohen, Jacob (1960). "A coefficient of agreement for nominal scales". Educational and Psychological Measurement. 20 (1): 37–46.] measures the agreement of the classifier to the sample data taking into account any class imbalances, and how much agreement is by chance.  Values close to 1 are considered good. The R function to do so is `cohen.kappa()` in `psych` library.
-
-+ *McNemar's test*:^[Alan Agresti (1990). Categorical data analysis. New York: Wiley. Pages 350–354.] hypothesis test for agreement between the predictions from an classifier to the observed data using a Chi-squared test. The R function to do so is `mcnemar.test()`.
-
-For a multi-class problem, we can create these measures using a "one-vs-all" approach, that is, by comparing each class vs the remaining combined (class `1` vs not class `1`, and so on). 
-
-
-Just for demonstration, let us calculate the above mentioned measures using the wines data set, that is, the training set.
-
-```{r, cache=TRUE, eval=FALSE, echo=FALSE}
-set.seed(1001)
-
-## Stratified sample to create a test set 
-split <- initial_split(wines, prop = 0.8, strata = Class)
-test_set <- testing(split)
-train_set <- training(split)
-
-## Train the model
-# K values for tuning
-kgrid <- expand.grid(k = seq(1,51, by=2))
-# CV tuning
-tr <- trainControl(method = "repeatedcv",
-                   number = 5,
-                   repeats = 50)
-# Train the classifier
-fit <- train(Class ~ Alcohol + Malic,
-             data = train_set,
-             method = "knn",
-             tuneGrid = kgrid,
-             trControl = tr) 
-# Refit the model with best K
-tuned_knn_class <- train(Class ~ Alcohol + Malic,
-             data = train_set,
-             method = "knn",
-             tuneGrid = expand.grid(k = fit$bestTune$k),
-             trControl = trainControl(method = "none"))
-```
-```{r}
-## Confusion matrix and other measures
-pred_class <- predict(tuned_knn_class, 
-                      newdata = wines)
-confusionMatrix(data = wines$Class,
-                reference = pred_class)
-```
-
-\noindent We should keep in mind that the results might have large bias since we are using the same data to build our model as well as test it. We should not put to much emphasis on high accuracy we see here. Ideally, we would create a test set, or perform re-sampling to properly measure performance. 
-
-
-Often, we want a single measure of performance of the classifier rather than the multitude of measures shown above. There are many such options, such as *Youden’s $J$ Index*, 
-$$J = \hbox{Sensitivity} + \hbox{Specificity} - 1,$$
-which measures the proportions of correct predictions for both the positive and negative events.
-
-
-## Evaluating predicted probabilities via ROC curves
-
-Another approach to combine sensitivity and specificity is to investigate the Receiver Operating Characteristic (ROC) curves. Consider a two-class classification problem. According to the Bayes rule, we assign a observation, $x$, to class `1` if $P(Y = 1 | X = x) > 0.5$, assign to class `2` otherwise. However, is the cutoff 0.5 reasonable all the time? 
-Sometimes using the default cutoff of 0.5 results in loss of sensitivity/specificity, and changing the cutoff might increase the class-specific performance of the classifier. The ROC curve can be used to determine other cutoff values for class probabilities.    
-
-We calculate the ROC by using a set of  cutoff values in a continuum. For each of the cutoff values, we calculate the sensitivity (the true-positive rate) and $1 -$ specificity (the false-positive rate). These quantities are then plotted against each other. The resulting curve is the ROC curve. Keep in mind that changing the cutoff values gives us either more positive or negative classifications -- it can not reduce false positive and false negative simultaneously. Thus for a cutoff, if sensitivity increases the specificity most likely decreases. 
-
-
-We can use libraries such as `pROC`, `ROCR`, `caTools`, `PresenceAbsence`, and many others to produce ROC curve and statistics. Let us consider a two class problem (wines data with only classes 1 and 2). Figure \ref{fig:probplot} shows the predicted probabilities of an item belonging to class `1`, that is, $P(Y = 1 | X)$ for items of each of the true classes. In this case, the two distributions do not have much overlap. 
-
-```{r}
-# Create a two-class problem
-wines <- read.table("data/Wines.txt", header = TRUE)
-new_wine <- wines %>% filter(Class == 1 | Class == 2)
-new_wine$Class <- as.factor(new_wine$Class)
-# 20-NN for demonstration
-knn_k20 <- train(Class ~ Alcohol + Malic,
-                 data = new_wine,
+cv <- trainControl(method = "cv",
+                   number = 10)
+knn_fit <- train(medv ~ lstat,
+                 data = train,
                  method = "knn",
-                 trControl = trainControl(method = "none"),
-                 tuneGrid = expand.grid(k = 20))
-# Prediction on the training data
-pred_wine <- predict(knn_k20, 
-                     newdata = new_wine, 
-                     type = "prob")
-
+                 tuneGrid = kgrid, 
+                 trControl = cv)
 ```
 
-```{r probplot, echo=FALSE, fig.height=5, fig.width=6, fig.cap="Predited class probabilities of the two classes.", fig.margin = TRUE, message=FALSE}
-ggplot(pred_wine) + 
-  geom_histogram(aes(`1`, group = new_wine$Class, 
-                     fill = new_wine$Class)) + 
-  #facet_grid(rows = vars(new_wine$Class)) + 
-  scale_fill_viridis_d(option = "D", name = "True class") + 
-  theme_bw(base_size = 18) + #ggthemes::theme_economist(base_size = 18) + 
-  geom_vline(aes(xintercept = 0.5), lty=2, lwd=1.2) + 
-  xlab("Class probabilities") + 
-  theme(legend.position = "top")
-```
-
-```{r, fig.height=5, fig.width=6, fig.cap="ROC curve of the wine data with two classes.", fig.margin = TRUE, message=FALSE}
-# ROC
-library(pROC)
-library(ggplot2)
-
-roccurve <- roc(response = new_wine$Class, 
-                predictor = pred_wine[,2])
-
-ggroc(roccurve, legacy.axes = TRUE, lwd=2) + 
-  theme_bw(base_size = 18)
-
-# Can also use:
-# plot(roccurve, legacy.axes = TRUE)
-```
-
-A perfect classifier will have both sensitivity and specificity value 1, that is, there will be no misclassification error (perfect separation between the classes). In contrast, a  "random guess" classifier will distribute the observations into two classes randomly, leading to a diagonal ROC curve. The corresponding ROC curves are shown in Figure \ref{fig:perfect}. Thus a classifier can be evaluated based on how close its ROC curve is to the perfect ROC curve. A single measure  is the area under the ROC curve (AUC). Large AUC values are associated with better classifier (since the ROC curves are closer to the perfect ROC curve, which has AUC 1.)
+Let's look at our best tuning parameter value and the corresponding CV error.
 
 ```{r}
-auc(roccurve)
+k_opt <- knn_fit$bestTune$k
+k_opt
+knn_fit$results[k_opt, ] |>
+  kable()
 ```
 
-```{r perfect, echo=FALSE, fig.cap="ROC curve of a perfect and a completely ineffective classifier.", fig.height=5, fig.width=6, fig.margin = TRUE, message=FALSE}
+Now we fit this to the full training set.
 
-roccurve1 <- roc(response = c(1,1,2,2), 
-                 predictor = c(1,1,0,0))
-roccurve2 <- roc(response = c(1,1,2,2), 
-                 predictor = c(1,0,1,0))
-ggroc(list(roccurve1, roccurve2), aes = c("linetype", "col"), legacy.axes = TRUE, lwd=2) + 
-  theme_bw(base_size = 18) + 
-  scale_color_viridis_d(labels = c("perfect", "Ineffective"), option = "D") +
-  labs(col = "Classifier") + 
-  guides(linetype = "none") + 
-  theme(legend.position = "top")
-  
+```{r}
+knn_tuned <- train(medv ~ lstat,
+                 data = train,
+                 method = "knn",
+                 tuneGrid = knn_fit$bestTune, 
+                 trControl = trainControl(method = "none"))
 ```
-A disadvantage of AUC is that we lose information about the ROC curve if we just use AUC. Often, given multiple classifiers, a single ROC curve might not be uniformly better than all others, and the curves can cross. Such patterns are suppressed if we only look at AUC. 
 
-We can use ROC curves to visually compare different models. Such comparisons include investigating different set of covariate in the same model, choice of different hyperparameters (i.e., comparing different $K$ values in KNN), or between different classifiers.
+## Fitting the SLR Model
 
-*Keep in mind*, ROC curve and AUC are still statistics, i.e., summaries of the data. As such, we should compute them on the test set(s) to avoid getting overly optimistic performance due to overfitting. 
+We can also fit our SLR model on the training data. There is no need to use CV to fit the model. You might use CV to get a basic understanding of how the model does at predicting though. We won't do that at this time.
 
+For consistency, let's use `caret` to fit this model as well.
+
+```{r}
+slr_fit <- train(medv ~ lstat,
+                 data = train,
+                 method = "lm",
+                 trControl = trainControl(method = "none"))
+```
+
+We can get an idea about the model fit using `summary()` on the fitted object.
+
+```{r}
+coef <- summary(slr_fit)$coefficients
+coef |>
+  as_tibble() |>
+  kable()
+```
+
+
+## Comparison on Test Set
+
+Now that we have a KNN model and an SLR model, we can compare those two models on the test set to determine an overall 'best' model!
+
+- First we get our test set predictions.
+
+```{r}
+knn_preds <- predict(knn_tuned, newdata = test)
+slr_preds <- predict(slr_fit, newdata = test)
+```
+
+- Now we calculate the MSE!
+
+```{r}
+mean((test$medv-knn_preds)^2)
+mean((test$medv-slr_preds)^2)
+```
+Looks like the KNN model performs better at predicting for this data and choice of predictors!
 
 # Summary
 
 In this chapter we discussed the following main concepts.
 
-+ $K$-nearest neighbors methods: regression and classification.
++ $K$-nearest neighbors for regression.
 
-+ Evaluation metrics: MSE/RMSE for regression, Accuracy/misclassification error for classification.
++ Evaluation metrics for regression: MSE/RMSE, MAE, etc.
 
 + Bias-variance trade-off in relation to model flexibility.
 
-+ Irreducible error (regression) and Bayes error rate (classification), training and test MSE/error.
++ Irreducible error in a regression model. 
+
++ Training and test MSE/error
 
 + Data splitting methods: Holdout, $V$-fold CV, Leave-One-Out CV, Bootstrap.
     
@@ -1755,115 +1230,3 @@ In this chapter we discussed the following main concepts.
 
 + Test error estimation methods.
 
-We have used R packages `caret` and `rsample` for the most parts. Many of the plots used in this chapter were created using `ggplot2` package (code not shown).  
-
-
-
-
-\begin{comment}
-
-# Source materials
-
-Kuhn -- applied predictive modeling etc.
-
-
-```{r, eval=FALSE, echo=FALSE}
-my_roc <- function(pcut){
-  pred_cut <- as.factor(ifelse(pred_wine[,1] > pcut, 1, 2))
-  se <- sensitivity(pred_cut, new_wine$Class)
-  sp <- specificity(pred_cut, new_wine$Class)
-  return(c(FPR = 1 - sp, TP = se))
-}
-
-pcut <- roccurve$thresholds #seq(0, 1, by=0.01)
-rc <- sapply(pcut, my_roc)
-plot(rc[1,], rc[2,], type = "l", xlim = c(-0.25, 1))
-abline(a=0, b=1)
-
-points(1-sp, se, pch=19)
-
-```
-
-
-*Lift charts*
-
-** Rewrite**
-To construct the lift chart we would take the following steps:
-1. Predict a set of samples that were not used in the model building process
-but have known outcomes.
-2. Determine the baseline event rate, i.e., the percent of true events in the
-entire data set.
-3. Order the data by the classification probability of the event of interest.
-4. For each unique class probability value, calculate the percent of true events
-in all samples below the probability value.
-5. Divide the percent of true events for each probability threshold by the
-baseline event rate.
-
-
-
-
-
-
-
-
-\noindent 
-
-
-
-
-
-\begin{comment}
-
-```{r, echo=FALSE, eval=FALSE, cache=TRUE}
-simdat <- easyBoundaryFunc(200)
-test_set <- easyBoundaryFunc(5000)
-
-
-ms_error <- function(kn, dat){
-  k <- expand.grid(k = kn)
-  none <- trainControl(method = "none")
-  fit <- train(class ~ X1 + X2,
-             data = simdat,
-             method = "knn",
-             tuneGrid = k,
-             trControl = none)
-  
-  pred <- predict(fit, newdata = dat)
-  ee <- mean(pred != dat$class)
-  return(ee)
-  
-}
-
-ms_error_train <- function(kn){
-  ms_error(kn, dat = simdat)
-}
-ms_error_test <- function(kn){
-  ms_error(kn, dat = test_set)
-}
-
-
-kval <- tibble(k = seq(1, 61, by=2))
-kval <- kval %>% 
-  group_by(k) %>% 
-  mutate(train_error = ms_error_train(k)) %>%
-  mutate(test_error = ms_error_test(k)) %>%
-  ungroup()
-
-p <- ggplot(kval) + 
-  geom_point(aes(k, train_error)) + 
-  geom_line(aes(k, train_error)) + 
-  geom_point(aes(k, test_error)) + 
-  geom_line(aes(k, test_error))
-p
-
-
-
-```
-
-
-We still need to tune the hyperparameter $K$, since $K$ controls the flexibility of the classifier.  
-
-
-
-
-\end{comment}
