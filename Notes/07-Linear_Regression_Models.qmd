@@ -61,10 +61,15 @@ if we wanted to!
 
 Recall that we have two major goals:
 
--   Inference - *determine which predictors are important for the model
-    and quantifying their effects and relationships*
--   Prediction - *performing well at predicting responses for
-    observations the data was not trained on*
+-   Inference - 
+
+&nbsp;  
+&nbsp;  
+
+-   Prediction - 
+
+&nbsp;  
+&nbsp;  
 
 We'll see that most of the models we look at in this section can be used
 for either of these tasks!
@@ -130,11 +135,7 @@ SLR_fit <- lm(rented_bike_count ~ temperature, data = bike_share)
 summary(SLR_fit)$coefficients
 ```
 
-Clearly, in real data, we often have relationships that are non-linear.
-However, sometimes these relationships can be *locally* linear. In other
-cases, even if the original relationship is not linear, one may
-transform the response and predictors (e.g., using a $log$-transform) to
-get approximate linearity.
+\newpage
 
 ## Fitting the model
 
@@ -142,9 +143,10 @@ Once we've determined our model structure, we must **fit** or
 **estimate** our model. This is generally done by minimizing some
 criteria.
 
-*The common criterion for the multiple linear regression model is least
-squares (equivalent to maximum likelihood with normal errors described
-shortly).*
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 ## Conducting Inference Using the Model
 
@@ -152,24 +154,27 @@ If we want to do statistical tests, we usually need to make assumptions
 about the error terms of our linear regression model. The assumptions
 made to do inference are also dependent on how we fit the model.
 
-*In the MLR setting, we usually assume our errors iid by a normal
-distribution with constant variance. These assumptions require us to
-investigate model diagnostics in order to understand the validity of the
-assumptions.*
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 ## Using the Model to Predict
 
 Once the model is fit, we often want to predict. This can be done by
-plugging in values of our predictor(s) we are interested in. The
-estimated values is called $\hat{y}$.
+plugging in values of our predictor(s) we are interested in. 
 
-*In the SLR model we have*
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
-$$
-\hat{y} = \hat{\beta}_0+\hat{\beta}_1x
-$$ Our plan will be to discuss the multiple linear regression model in
+Our plan will be to discuss the multiple linear regression model in
 detail and then look at extensions to the model such as the LASSO, Ridge
 Regression, Principle Component Regression, etc.
+
+\newpage
 
 # Multiple Linear Regression (MLR)
 
@@ -177,15 +182,13 @@ A linear regression model has the form $$
 Y_i = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + \ldots + \beta_pX_{ip} +\epsilon_i,
 $$ where
 
--   $Y_i$ is a quantitative response *(`rented_bike_count`)*
+-   $Y_i$ is a quantitative response
 
--   $X_{i1}, \ldots, X_{ip}$ are predictor variables *(`temperature`,
-    `hour`, `seasons`, etc.)*
+-   $X_{i1}, \ldots, X_{ip}$ are predictor variables 
 
 -   $\epsilon_i$ is unobserved random error
 
--   $\beta_0$ is the *intercept* *(expected bike count when all
-    predictors are 0)*
+-   $\beta_0$ is the *intercept* 
 
 -   Coefficients $\beta_j, j = 1, \ldots, p$ are 'slope' terms
     associated with predictor $X_{ij}$
@@ -194,8 +197,8 @@ $$ where
         *linear* relationship between $X_{ij}$ and $Y_i$
     -   $\beta_j$ is the expected change in the response for a unit
         change in $X_ij$, holding all other predictors constant
-    -   *If interactions or quadratics are included, this interpretation
-        changes!*
+    -   If interactions or quadratics are included, this interpretation
+        changes!
 
 ```{r}
 MLR_fit <- lm(rented_bike_count ~ temperature + hour + wind_speed, data = bike_share)
@@ -219,29 +222,38 @@ is **linear in parameters**, that is, linear in $\beta$.
 We can have nonlinear terms of $X$, but the model would be still a
 linear model!
 
--   *For example, the so-called polynomial regression,*
+-   For example, the so-called polynomial regression,
 
-$$E(Y_i|X_i) = \beta_0 + X_i\beta_1 + \ldots +  X_i^d\beta_d$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 -   Fractional polynomial regression (introduced by Royston & Sauerbrei
     in their 2004 paper, *A new approach to modelling interactions
     between treatment and continuous covariates in clinical trials by
     using fractional polynomials.* in Stat Med)
-    $$E(Y_i|X_i) = \beta_0 + X_i^{r_1}\beta_1 + \ldots +  X_i^{r_d}\beta_d,$$
-    *where the powers* $r_1, \ldots, r_d$ are chosen from
-    $\{-2, -1, -0.5, 0.5, 1,2,3\}$
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 -   Models with interaction such as
 
-$$E(Y_i | X_{i1}, X_{i2}) = \beta_0 + X_{i1}\beta_1 + X_{i2}\beta_2 + X_{i1}X_{i2}\beta_3,$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 A non-linear model, in contrast, is a model such as
 
-$$E(Y|X) = e^{\beta_0 + X\beta_1}$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 Hopefully, you can see that linear models do not just capture linear
 effects of $X$, they can capture nonlinear functions of $X$ as well! The
-figurebelow shows a few examples functions that can be captured by
+figure below shows a few examples functions that can be captured by
 appropriate linear models.
 
 ```{r example, echo=FALSE, fig.cap="Examples of functions that can be captured by appropriate linear models.", fig.width=5, fig.margin = TRUE}
@@ -283,7 +295,11 @@ inference on the coefficients such as:
 Although not the only way to make the above inferences, our common
 assumption on the distribution of the errors is
 
-$$\epsilon_i \stackrel{iid}\sim N(0, \sigma^2)$$ Conceptually, this idea
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+Conceptually, this idea
 can be visualized in the simple linear regression model by the graph
 below.
 
@@ -291,14 +307,17 @@ below.
 knitr::include_graphics("img/normal_errors.png")
 ```
 
+\newpage
+
 ## Fitting a Linear Model
 
 We denote the estimated coefficients as $\widehat\beta_j$ and the
 estimated response as $\hat{Y}$.
 
-$$
-\widehat Y_i = \widehat\beta_0 + X_{i1}\widehat\beta_1 + X_{i2}\widehat\beta_2 + \ldots + X_{ip}\widehat\beta_p.
-$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 How we determine these estimated coefficients depends! Let's go through
 common methods for fitting the model.
@@ -311,16 +330,17 @@ A common estimation procedure for the regression coefficients is the
 -   The difference between the observed and predicted values are called
     *residuals*,
 
-$$
-e_i = Y_i - \widehat Y_i.
-$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 -   We define the *residual sum of squares*, also known as
     *sum-of-squared errors (SSE)* as
 
-$$
-RSS = \sum_{i=1}^n e_i^2 = \sum_{i=1}^n (Y_i - \widehat Y_i)^2.
-$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 We see that MSE is simply RSS divided by the sample size! (This could be
 found over the training set or a test set.)
@@ -340,9 +360,21 @@ $$
 min_{\widehat{\beta}_0, \widehat{\beta}_1}\sum_{i=1}^n (Y_i - \beta_0 - \beta_1X_{i1})^2,
 $$
 
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 $$
 \widehat\beta_1 = \frac{\sum_{i=1}^n (X_i - \bar X)(Y_i - \bar Y)}{\sum_{i=1}^n (X_i - \bar X)^2}
-$$ $$
+$$ 
+$$
 \widehat \beta_0 = \bar Y - \bar X \widehat\beta_1.
 $$
 
@@ -449,13 +481,7 @@ If $\mathbf{X}$ violates (C1) then (C2) is automatically violated as a matrix ca
 
 In that case, one can take a few steps described below.
 
--   We can *remove highly correlated predictors* to reduce the overall number of predictors.
-
--   Use *variance inflation factor (VIF)* -- we will learn it shortly -- to diagnose multicollinearity. VIF tells us how correlated each predictor is with the remaining predictors.
-
--   Apply *dimension reduction techniques*, such as principal component analysis (PCA) or partial least squares (PLS).
-
--   Apply *shrinkage methods*, such as LASSO regression, to reduce small regression coefficients to zero.
+\newpage
 
 ### Fitting Via Maximum Likelihood (Optional)
 
@@ -465,7 +491,11 @@ model that assumes our iid Normal errors with constant variance.
 
 Consider the SLR model with Normal errors. The likelihood is given by
 
-$$L(\beta_0, \beta_1, \sigma^2|y_i's, x_{ij}'s) = \prod_{i=1}^{n}\frac{1}{\sqrt{2\pi\sigma^2}}e^{-\frac{1}{2\sigma^2}(y_i-\beta_0-\beta_1x_{i1})} = \frac{1}{(2\pi\sigma^2)^{n/2}}e^{-\frac{1}{2\sigma^2}\sum_{i=1}^{n}(y_i-\beta_0-\beta_1x_{ij})^2}$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 We want to find the values of $\beta_0$, $\beta_1$, and $\sigma^2$ that
 maximize this function. We can interpret these values as the 'most
@@ -474,7 +504,11 @@ likely values of the parameters to have produced the data we saw.'
 Rather than optimize the likelihood directly, we usually optimize the
 log-likelihood (natural log) given by
 
-$$\ell(\beta_0,\beta_1,\sigma^2) = -(n/2)ln\left(2\pi\sigma^2\right)-\frac{1}{2\sigma^2}\sum_{i=1}^{n}(y_i-\beta_0-\beta_1x_{ij})^2$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 We can take the derivatives with respect to each of our parameters, set
 the resulting equations equal to zero and solve simultaneously. But
 wait! Notice that the maximizing the second term over $\beta_0$ and
@@ -483,6 +517,8 @@ least squares)!
 
 Therefore, we get the same coefficient estimates for our intercept and
 slope terms whether we use least squares or maximum likelihood!
+
+\newpage
 
 ### Other Methods for Fitting the Regression Model
 
@@ -600,6 +636,8 @@ ggplot() +
 
 In general, *robust regression* methods are often of interest if data are prone to large outliers or have a heavy tailed distribution.
 
+\newpage
+
 ## Fitting non-linear Relationships in the Linear Model
 
 As we mentioned, we can include polynomial terms, interaction terms, and more to allow our model to be more flexible. Let's look at how to do this in R and the implications for interpretation.
@@ -610,18 +648,8 @@ The general syntax is `response ~ predictor terms`
 
 -   The right hand side contains the regression formula.
 
-    -   The intercept is automatically included for most models
 
-    -   To remove the intercept, we need to specify
-        "`y ~ -1 + predictors...`"
-
-    - We can include more than one 'main-effect' by adding predictors "`y ~ pred1 + pred2`"
-    
-    - We can include interaction terms using an asterisk or colon. "`y ~ pred1 + pred2 + pred1:pred2`" is equivalent to "`y ~ pred1*pred2`"
-    
-    - We can include polynomial terms using the `poly()` function or by using `I()` and specifying the relationship. "`y ~ pred1 + I(pred1^2)`" or "`y ~ poly(pred1, 2, raw = TRUE)`"
-    
-    - Of course we can transform a variable prior to adding it to the formula as well (creating a `log_pred1` variable for instance)
+\newpage
 
 ### Including Polynomial Terms
 
@@ -651,16 +679,25 @@ We need to be careful of interpretations now!
 
 - Inference can still be done though! We must be careful that the colinearity of `temperature` with `temperature^2` is accounted for (note the correlation between the two is `r round(cor(bike_share$temperature, bike_share$temperature^2), 4)`)
 
-    - *We can use orthogonal polynomials to avoid this (which is the default of `poly()` in `R`!)*
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 ### Including Interaction Terms
 
 An **interaction** between two predictors implies that the effect of one predictor depends on the value of the other predictor.
 
 - For example, consider the effect of `temperature` and `wind_speed` on the `rented_bike_count`
-- We have an interaction if the effect on `rented_bike_count`associated with `temperature` is different for lower `wind_speed`s than it is for higher `wind_speed`s
-- Equivalently, this would imply a differ effect for `wind_speed` on `rented_bike_count` for lower `temperature`s as compared to higher `temperature`s
-- This would make sense here as cold and windy is very different than warm and windy on how likely people are to be out and about, possibly renting bikes!
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 In `R`, we can fit interaction terms using the `X1*X2` notation. 
 
@@ -707,7 +744,7 @@ temp_wind <- expand.grid(temperature = temperature, wind_speed = wind_speed)
 surface3d(x = temperature, y = wind_speed, z = predict(saddle_fit, newdata = temp_wind), color = "blue")
 ```
 
-```{r, fig.align='center', fig.width=3, echo = FALSE}
+```{r, fig.align='center', fig.width=3, echo = FALSE, fig.cap = "Best saddle surface fit through the data."}
 knitr::include_graphics("img/saddle_fit_1.png")
 ```
 
@@ -716,7 +753,8 @@ Note:
 - We usually *retain all lower-order terms corresponding to an
 interaction* in the model
 
-    + If the model has the term $X_1X_2$, we also retain terms $X_1$ and $X_2$!
+
+\newpage
 
 ### Including Qualitative Predictors
 
@@ -739,17 +777,20 @@ MLR_binary_pred <- lm(rented_bike_count ~ temperature + holiday,
 MLR_binary_pred$coefficients
 ```
 
-The indicator variable created is called `holidayNo Holiday`. This variable takes on 1 when `holiday` takes on `No Holiday`. We can then see that our model has different intercepts but the same slope.
 
-$$
-\mbox{For Holidays: }\hat{y} = 211.6793 + 28.9532(temperature)
-$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
-$$
-\mbox{For Non-Holidays: }\hat{y} = 211.6793 + 126.1416 + 28.9532(temperature) = 337.8209 + 28.9532(temperature)
-$$
 
-```{r echo=FALSE, fig.cap="Regression line for No Holiday (0) and Holiday (1) based on a linear model with main effects for holiday and temperature."}
+```{r echo=FALSE, fig.cap="Regression line for No Holiday (0) and Holiday (1) based on a linear model with main effects for holiday and temperature.", fit.alt = 'The image is a scatter plot graph displaying the relationship between rented bike count and temperature, with an overlay of holiday information. The x-axis represents temperature, ranging from -20 to 40 degrees, while the y-axis shows the rented bike count, ranging from 0 to over 3000. Data points are scattered across the plot, mostly concentrated between 0 and 40 degrees on the x-axis, and 0 to 2500 on the y-axis. Two trend lines are included: a red line indicating the trend for holidays and a blue line showing the trend for non-holidays. The lines are parallel with No holiday have a slightly higher intercept.'}
 x_values <- seq(from = min(bike_share$temperature), 
                 to = max(bike_share$temperature), 
                 length = 2)
@@ -783,15 +824,18 @@ Again, the indicator variable created is called `holidayNo Holiday`. This variab
 
 We can then see that our model has different intercepts and different slopes!
 
-$$
-\mbox{For Holidays: }\hat{y} = 151.0245 + 35.0493(temperature)
-$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
-$$
-\mbox{For Non-Holidays: }\hat{y} = 151.0245 + 190.3090 + 35.0493(temperature) + (-6.3656)(temperature) = 341.3335 + 28.6873(temperature)
-$$
-
-```{r echo=FALSE, fig.cap="Regression line for No Holiday (0) and Holiday (1) based on a linear model with main effects and an interaction effect for holiday and temperature."}
+```{r echo=FALSE, fig.cap="Regression line for No Holiday (0) and Holiday (1) based on a linear model with main effects and an interaction effect for holiday and temperature.", fig.alt ='The image is a scatter plot graph displaying the relationship between rented bike count and temperature, with an overlay of holiday information. The x-axis represents temperature, ranging from -20 to 40 degrees, while the y-axis shows the rented bike count, ranging from 0 to over 3000. Data points are scattered across the plot, mostly concentrated between 0 and 40 degrees on the x-axis, and 0 to 2500 on the y-axis. Two trend lines are included: a red line indicating the trend for holidays and a blue line showing the trend for non-holidays. The lines are not parallel. The No holiday line has a larger intercept but a smaller slope. The line starts off above the holiday line, intersecting around a temperature of 30 degrees Celsius.'}
 ggplot(bike_share, aes(temperature, rented_bike_count, color = holiday)) + 
   geom_point(alpha = 0.25, size = 1) + 
     geom_smooth(method = "lm",
@@ -831,6 +875,10 @@ print(AmesHousing::ames_raw, n = 5)
 - If the sample size were smaller, say $n=500$, standard techniques like 5-fold CV (training set size will be
 $400$) or $70\% - 30\%$ split (training set size $350$) may produce unreliable results due to number of predictors being close to training set size. In general, we should always check the size of the model matrix before choosing a proper data splitting method.
 
+
+\newpage
+
+
 ## Inference
 
 The linear model has many great properties that allow us to make inference! Let's cover a few of this briefly.
@@ -844,28 +892,38 @@ To this end, we require additional assumptions on the error terms $\epsilon_i$.
 
 For simplicity, we will use the following set of assumptions:
 
--   The errors $\epsilon_i$ are independently and identically
-    distributed as $N(0, \sigma^2)$.
 
--   Errors are independent of the covariates $X_i$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 
 Note: There are ways to relax these assumptions. For example, if we have large sample size, we might relax the normality assumption under certain conditions on $\mathbf{X}$.
 
 The assumptions above imply that
 
-$$Y_i | X_i \stackrel{independent}\sim N(\beta_0 + X_i\beta_1, \sigma^2)$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
-One way to quantify the variability associated with estimation of $\beta$'s is to compute the *standard error (SE)* of the estimates, defined as, $$
+One way to quantify the variability associated with estimation of $\beta$'s is to compute the *standard error (SE)* of the estimates, defined as, 
+
+$$
 SE(\widehat\beta_j) = \sqrt{var(\widehat\beta_j)}.
 $$
 
 For a general multiple linear regression model with model matrix
-$\mathbf{X}$, the standard error of $\beta_j$ can be computed as $$
+$\mathbf{X}$, the standard error of $\beta_j$ can be computed as
+$$
 SE(\widehat\beta_j) = \sigma\sqrt{(j+1)\mbox{th diagonal element of} (\mathbf{X}^T\mathbf{X})^{-1}}, j = 0, 1, \ldots, p.
 $$
 where $j=0$ corresponds to the intercept $\beta_0$.
 
-- A special case is the simple linear regression, where the standard errors, given fixed values of $x_1, \ldots, x_n$ are $$
+- A special case is the simple linear regression, where the standard errors, given fixed values of $x_1, \ldots, x_n$ are 
+$$
 SE(\widehat\beta_0) = \sqrt{\sigma^2\left[\frac{1}{n} + \frac{\bar x}{\sum_{i=1}^n (x_i - \bar x)^2}\right]}, \,\, SE(\widehat\beta_1) = \sqrt{\frac{\sigma^2}{\sum_{i=1}^n (x_i - \bar x)^2}}.
 $$ 
 
@@ -895,9 +953,13 @@ $SE(\widehat\beta_j)$.
 
 The denominator $n-(p+1)$ in the expression of $\widehat\sigma^2$ merits some discussion. 
 
-- We can view this number as "sample size - number of $\beta$ parameters in the mean function". 
-- In SLR we have two parameters in mean function, and thus we have the term $n-2$.
-- In general, with $p$ predictors, the total number of parameters in the mean function is $p + 1$ (since we need to include the intercept). 
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 We can see the standard errors in `R` using the `summary()` function.
 
@@ -943,6 +1005,8 @@ The standard errors, along with normality assumption on the errors, further enab
 
 We discuss each of the items below.
 
+\newpage
+
 ### Confidence interval
 
 Without going into mathematical details, we can obtain a confidence interval for $\beta_j$ using the standard errors.
@@ -950,10 +1014,14 @@ Without going into mathematical details, we can obtain a confidence interval for
 **Confidence interval for $\beta_j$**
 
 - A $100(1-\alpha)\%$ confidence interval for $\beta_j$ is
-$$
-[\widehat\beta_j \pm t_{1 - \alpha/2, n-(p+1)}SE(\widehat\beta_j)]
-$$
-where $t_{1 - \alpha/2, n-(p+1)}$ denotes the $1 - \alpha/2$ quantile of a $t_{n-(p+1)}$ distribution.
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 - Again, the number $n-(p+1)$ is the same as we see in the
 estimator $\widehat\sigma^2$. This number is called the *degrees of freedom* of the $t$-distribution used above.
@@ -983,11 +1051,14 @@ ci
 that `rented_bike_count`, on average, decreases between `r round(abs(ci[2,1]), 2)` and
 `r round(abs(ci[2,2]), 2)` for 1 unit increase in `temperature` if we hold `wind_speed` constant.
 
+\newpage
+
 ### $t$-test
 
 We can also perform hypothesis tests on the regression coefficients. 
 
-- If our main interest is in testing the association between $X_j$ and $Y$, we test for $$
+- If our main interest is in testing the association between $X_j$ and $Y$, we test for 
+$$
 H_0:\beta_j = 0 \mbox{ vs. } H_0:\beta_j \neq 0. 
 $$ 
 
@@ -996,9 +1067,11 @@ $$
 **$t$-test for** $H_0:\beta_j = 0 \mbox{ vs. } H_0:\beta_j \neq 0$
 
 - The $t$ test statistic is
-$$
-t = \frac{\widehat\beta_j - 0}{SE(\widehat\beta_j)}.
-$$
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 - The test statistic measures how far away the estimated value of
 $\beta_1$ is from zero compared to the variability of the estimate
@@ -1062,10 +1135,9 @@ boston_interaction <- lm(medv ~ lstat*age, data = Boston)
 summary(boston_interaction)
 ```
 
-- Note that the interaction term is statistically significant
-but the *main effect of age* is not significant. 
-- As the significant interaction implies an effect of `age` on `medv` that differs with respect to `lstat`, we still conclude that `age` is important!
-- We also do not want to remove the `age` main effect for interpretability purposes.
+
+\newpage
+
 
 ### $F$-test
 
@@ -1078,16 +1150,19 @@ H_0:\beta_{p - q+1} = \ldots = \beta_p = 0,
 $$ where we are testing the effects of the last $q$ predictors (last $q$
 columns of $\mathbf{X}$).
 
-**F$-test for** $H_0:\beta_{p - q+1} = \ldots = \beta_p = 0$
+**$F$-test for** $H_0:\beta_{p - q+1} = \ldots = \beta_p = 0$
 
 - Let $RSS_0$ be the residual sum of squares of the model where we fit all the predictors **except the last $q$**. 
 - Recall $RSS$ denotes the residual sum of squares for the full model. 
 - The $F$-statistic is
-$$
-F = \frac{(RSS_0 - RSS)/q}{RSS/(n - (p+1))}.
-$$
-- We reject $H_0$ if the observed value of $F$ is "large
-enough" or we calculate a p-value = $P(F_{q, n-p-1} > F_{obs})$
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 
 Let us revisit the interaction model for `rented_bike_count` with `temperature`, `holiday` and `temperature*holiday`
 as predictors 
@@ -1134,6 +1209,8 @@ conclude that `holiday` does have association with the `rented_bike_count`, even
 - Note: When $q=1$, that is, we are testing for one predictor only, the $t$-test and $F$-test are equivalent. 
 - In fact, the square of the $t$-statistic will give the $F$-statistic!
 
+\newpage
+
 #### Why is the Global $F$-test Needed?
 
 So why do we need the $F$-test when we can examine $t$-test results for each predictor in our model? You might think that if at least one $t$-test gives a significant result we know our model is useful.
@@ -1141,17 +1218,22 @@ So why do we need the $F$-test when we can examine $t$-test results for each pre
 - The main issue is the *type I error* or *level* of the tests. That is, the probability of rejecting a null hypothesis when the null hypothesis is true.
 - Typically, we set $\alpha = 0.05$ as level of the tests. 
 
-    + That means, for individual $t$-tests, there is a $5\%$ chance that some effect will be detected as significant when it is actually not significant. 
-    + Looking at individual $t$-tests, we should on average have about $0.05*p$ many false significant results, just by
-chance, even if none of the predictors might be useful. 
-    + In fact, for large $p$, it is very likely we will observe at least one false significance just by chance!
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
     
 - Using the F-statistic to test the model utility first does not suffer from this problem because it adjusts for the number of predictors. 
 
     + If $H_0$ is true, there is only a $5\%$ chance that the F-statistic detect a false significance regardless of the number of predictors.
 
+\newpage
 
-### Model diagnostics
+### Model Diagnostics
 
 To estimate standard errors, and to perform inference, we needed certain assumptions on the errors and the model as a whole:
 
@@ -1192,7 +1274,11 @@ In contrast, any pattern in the residual plot would indicate the model does not 
 The standard errors, confidence intervals, and hypothesis testing
 procedures discussed so far depends on the assumption of constant
 variance of the errors: 
-$$var(\epsilon_i) = \sigma^2$$
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 - We call such errors *homoscedastic*. 
 - If errors have different variance, such phenomenon is called *heteroscedasticity*.
