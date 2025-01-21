@@ -82,7 +82,9 @@ Let's reintroduce our data on bike sharing.
 bike_share <- read_csv("https://www4.stat.ncsu.edu/online/datasets/SeoulBikeData.csv",
                        local = locale(encoding = "latin1"))
 bike_share |> 
-  select(`Rented Bike Count`, everything())
+  select(`Rented Bike Count`, everything()) |>
+  slice(1:4) |>
+  kable()
 ```
 
 As the variable names are non-standard in R, let's quickly modify them
@@ -127,7 +129,8 @@ The equation for the model is fit in the software and given here.
 
 ```{r}
 SLR_fit <- lm(rented_bike_count ~ temperature, data = bike_share)
-summary(SLR_fit)$coefficients
+summary(SLR_fit)$coefficients |>
+  kable()
 ```
 
 Clearly, in real data, we often have relationships that are non-linear.
@@ -199,7 +202,8 @@ $$ where
 
 ```{r}
 MLR_fit <- lm(rented_bike_count ~ temperature + hour + wind_speed, data = bike_share)
-summary(MLR_fit)$coefficients
+summary(MLR_fit)$coefficients |>
+  kable()
 ```
 
 ## Assumptions on the Errors
@@ -244,7 +248,7 @@ effects of $X$, they can capture nonlinear functions of $X$ as well! The
 figurebelow shows a few examples functions that can be captured by
 appropriate linear models.
 
-```{r example, echo=FALSE, fig.cap="Examples of functions that can be captured by appropriate linear models.", fig.width=5, fig.margin = TRUE}
+```{r example, echo=FALSE, fig.cap="Examples of functions that can be captured by appropriate linear models.", fig.width=5, fig.margin = TRUE, fig.alt = 'The image is a line graph displaying four different functions plotted on a grid. The x-axis is labeled "x," ranging from 0 to 4, and the y-axis is labeled "f(x)," ranging from -5 to 20. Four colored lines represent different functions: a red line for "BSpline," which rises steeply, dips, and then ascends sharply; a green line for "Cubic," which starts low, dips, and then rises continually; a cyan line for "Cubic," which begins high, dips to around zero, and then levels off; and a purple line for "Fractional," which runs relatively flat, slightly ascending. The graph grid consists of evenly spaced horizontal and vertical lines. The functions are labeled in the top left corner alongside their colors.'}
 x <- seq(0.2,4, len=51)
 df <- tibble(x = x,
              Linear = 1 + x,
@@ -287,7 +291,7 @@ $$\epsilon_i \stackrel{iid}\sim N(0, \sigma^2)$$ Conceptually, this idea
 can be visualized in the simple linear regression model by the graph
 below.
 
-```{r, fig.cap = "At each value of the predictor, we assume the values of the response variable are normally distributed about the line. Figure from physicsforums.com", fig.width=4, echo = FALSE}
+```{r, fig.cap = "At each value of the predictor, we assume the values of the response variable are normally distributed about the line. Figure from physicsforums.com", fig.width=4, echo = FALSE, fig.alt = 'The image is a graph depicting a relationship between two variables, labeled "Predictor (X)" on the horizontal axis and "Response (Y)" on the vertical axis. The graph features a series of symmetrical, bell-shaped curves arranged horizontally across the graph. These curves are shaded in yellow and represent variability or distribution at different levels of the Predictor variable. A red line diagonally traverses the graph, indicating a trend or average relationship between the X and Y variables. The curves are evenly spaced along the red line, illustrating distribution around the trend line following a consistent normal distribution, regardless of the value of X.'}
 knitr::include_graphics("img/normal_errors.png")
 ```
 
@@ -342,7 +346,8 @@ $$
 
 $$
 \widehat\beta_1 = \frac{\sum_{i=1}^n (X_i - \bar X)(Y_i - \bar Y)}{\sum_{i=1}^n (X_i - \bar X)^2}
-$$ $$
+$$ 
+$$
 \widehat \beta_0 = \bar Y - \bar X \widehat\beta_1.
 $$
 
@@ -389,7 +394,8 @@ X <- bike_share_first_ten |>
   select(intercept, temperature, hour, wind_speed) |>
   as.matrix()
 y
-X
+X[1:5, ] |>
+  kable()
 ```
 
 A *unique* minimizer of the sum-of-squares exists under certain
@@ -405,7 +411,15 @@ We can find this in software easily.
 #%*% is the matrix muliplication operator in R
 #solve() gives the matrix inverse
 #t() gives the transpose
-solve(t(X)%*%X)%*%t(X)%*%y
+solution <-solve(t(X)%*%X)%*%t(X)%*%y 
+```
+```{r echo = FALSE}
+temp_solution <- cbind(row.names(solution), solution)
+row.names(temp_solution) <- NULL
+temp_solution <- as.data.frame(temp_solution)
+names(temp_solution) <- c("Parameter", "Estimate")
+temp_solution |>
+  kable()
 ```
 
 Which is the same as the basic `lm()` fit!
@@ -413,7 +427,8 @@ Which is the same as the basic `lm()` fit!
 ```{r}
 MLR_first_ten <- lm(rented_bike_count ~ temperature + hour + wind_speed,
                     data = bike_share_first_ten)
-MLR_first_ten$coefficients
+MLR_first_ten$coefficients |>
+  kable()
 ```
 
 #### Notes on Matrix Requirements
@@ -494,7 +509,7 @@ regression process!
 The figure below shows an example of an outlier and its impact of the
 regression fit.
 
-```{r outlier, echo=FALSE, fig.cap="Example of an outlier (red point). Shown are two regression lines fit with OLS: before (red dashed) and  after (blue solid) removing the outlier.", message=FALSE, fig.width = 4}
+```{r outlier, echo=FALSE, fig.cap="Example of an outlier (red point). Shown are two regression lines fit with OLS: before (red dashed) and  after (blue solid) removing the outlier.", message=FALSE, fig.width = 4, fig.alt = 'The image is a scatter plot on a Cartesian plane displaying data points, a linear regression line, and another line for comparison. The x-axis is labeled from -2 to 2, and the y-axis from -1 to 3. Black circular markers represent the individual data points, clustered mainly between the y-values of -1 and 2. A noted outlier is a red triangle located at x=2 and y=3. A blue line indicating a linear trend follows the general direction of the data points, sloping slightly upwards. This is the fitted least squares curve without the outlier included. A red dashed line runs parallel and slightly above the blue line across the graph. This indicates the least squares fit including the outlier point. Both the slope and intercept are changed by a reasonable amount by the addition of one point.'}
 set.seed(1001)
 df <- tibble(x = rnorm(100), 
                  y = 0.1*x + rnorm(100)/2)
@@ -534,7 +549,7 @@ $$
 \sum_{i=1}^{n}\left[ (1/2)e_i^2I_{|e_i^2|\leq \delta}(e_i) + \delta\left(|e_i|-(1/2)\delta\right)I_{|e_i^2|>\delta}(e_i)\right]
 $$
 
-```{r, echo = FALSE, fig.height = 3, fig.width = 3, fig.cap = "Visual of the loss associated with squared error loss and huber loss. Source: Wikipedia"}
+```{r, echo = FALSE, fig.height = 3, fig.width = 3, fig.cap = "Visual of the loss associated with squared error loss and huber loss. Source: Wikipedia", fig.alt = 'The image is a graph plotting two curves on a Cartesian coordinate system. The horizontal x-axis ranges from -4 to 4, and the vertical y-axis ranges from 0 to 8. Both axes are evenly ticked. The blue curve opens upwards and represents a quadratic function, forming a U-shape that is symmetrical around the y-axis. It starts at the top left corner at (-4, 8), dips to a minimum point near (0, 0), and rises to the top right corner at (4, 8). The green curve is a straight line taking on smaller values than the blue curve except in the region where x is between -1 and 1. In that region the green curve exactly follow the parabola of the blue curve.'}
 knitr::include_graphics("img/huber_loss.png")
 ```
 
@@ -547,20 +562,22 @@ mlr_ae_fit <- lmrob.lar(x = as.matrix(bike_share |>
                                         mutate(intercept = rep(1, nrow(bike_share))) |>
                                                  select(intercept, temperature, wind_speed)),
                                       y = bike_share$rented_bike_count)
-mlr_ae_fit$coefficients
+mlr_ae_fit$coefficients |>
+  kable()
 ```
 
 Compare with the MLR fit:
 
 ```{r}
 mlr_ls_fit <- lm(rented_bike_count ~ temperature + wind_speed, data = bike_share)
-mlr_ls_fit$coefficients
+mlr_ls_fit$coefficients |>
+  kable()
 ```
 
 Let's create a similar plot that showed how the OLS line was affected by
 the outlier, but use the absolute error loss for the model.
 
-```{r outlier2, echo=FALSE, fig.cap="Example of an outlier (red point). Shown are two regression lines fit with absolute error loss: before (red dashed) and  after (blue solid) removing the outlier.", message=FALSE, fig.width = 4}
+```{r outlier2, echo=FALSE, fig.cap="Example of an outlier (red point). Shown are two regression lines fit with absolute error loss: before (red dashed) and  after (blue solid) removing the outlier.", message=FALSE, fig.width = 4, fig.alt = 'The image is a scatter plot on a Cartesian plane displaying data points, a linear regression line, and another line for comparison. The x-axis is labeled from -2 to 2, and the y-axis from -1 to 3. Black circular markers represent the individual data points, clustered mainly between the y-values of -1 and 2. A noted outlier is a red triangle located at x=2 and y=3. A blue line indicating a linear trend follows the general direction of the data points, sloping slightly upwards. This is the fitted least squares curve without the outlier included. A red dashed line runs parallel and slightly above the blue line across the graph. In comparison to the graph of the least squares fit earlier, the slope and intercept are more similar here.'}
 set.seed(1001)
 df <- tibble(x = rnorm(100), 
                  y = 0.1*x + rnorm(100)/2)
@@ -632,10 +649,11 @@ Let's fit a quadratic term for `temperature` to our SLR model. (We'll use OLS as
 #equivalently, specify poly(temperature, 2, raw = TRUE)
 quad_ols <- lm(rented_bike_count ~ temperature + I(temperature^2),
                  data = bike_share)
-quad_ols$coefficients
+quad_ols$coefficients |>
+  kable()
 ```
 
-```{r quad, echo=FALSE, fig.cap="Least squares fit using a quadratic term."}
+```{r quad, echo=FALSE, fig.cap="Least squares fit using a quadratic term.", fig.alt = "A scatterplot between temperature on the x-axis and rented bike count on the y-axis. The plots shows a general upward trend with more spread in the rented bike count as the temperature increases. The overlayed quadratic line has a positive slope and shows a strong linear relationship. The line is nearly indistinguishable from the basic SLR fit from earlier. "}
 dd <- quad_ols$coefficients
 ggplot(bike_share) + 
   geom_point(aes(temperature, rented_bike_count)) + 
@@ -670,7 +688,8 @@ In `R`, we can fit interaction terms using the `X1*X2` notation.
 #fit an interaction relationship
 interaction_ols <- lm(rented_bike_count ~ temperature*wind_speed,
                  data = bike_share)
-interaction_ols$coefficients
+interaction_ols$coefficients |>
+  summary()
 ```
 
 ```{r echo = FALSE}
@@ -707,7 +726,7 @@ temp_wind <- expand.grid(temperature = temperature, wind_speed = wind_speed)
 surface3d(x = temperature, y = wind_speed, z = predict(saddle_fit, newdata = temp_wind), color = "blue")
 ```
 
-```{r, fig.align='center', fig.width=3, echo = FALSE}
+```{r, fig.align='center', fig.width=3, echo = FALSE, fig.alt = 'The image is a 3D scatter plot depicting data points related to bike rentals, temperature, and wind speed. On the x-axis, labeled as "temp," values range from -10 to 30. The y-axis, labeled as "bike rentals," ranges from 0 to 3000. The z-axis, labeled as "wind," ranges from 0 to 6. The plot displays numerous black dots spread across the three-dimensional space, indicating individual data points. A dark blue triangular plane represents the best saddle fit to the data, passing through the cluster of dots.', fig.cap = "Best saddle surface fit through the data."}
 knitr::include_graphics("img/saddle_fit_1.png")
 ```
 
@@ -736,7 +755,8 @@ As an example, consider the binary variable *`holiday`*. This takes on "Holiday"
 ```{r binary}
 MLR_binary_pred <- lm(rented_bike_count ~ temperature + holiday,
                       data = bike_share)
-MLR_binary_pred$coefficients
+MLR_binary_pred$coefficients |>
+  kable()
 ```
 
 The indicator variable created is called `holidayNo Holiday`. This variable takes on 1 when `holiday` takes on `No Holiday`. We can then see that our model has different intercepts but the same slope.
@@ -776,7 +796,8 @@ Now consider what happens when we add an interaction term between `temperature` 
 ```{r binary_int}
 MLR_binary_interaction <- lm(rented_bike_count ~ temperature*holiday,
                       data = bike_share)
-MLR_binary_interaction$coefficients
+MLR_binary_interaction$coefficients |>
+  kable()
 ```
 
 Again, the indicator variable created is called `holidayNo Holiday`. This variable takes on 1 when `holiday` takes on `No Holiday`. 
@@ -815,7 +836,8 @@ In `R`, the first level alphabetically becomes the 'reference' level.
 ```{r}
 MLR_qualitative_interaction <- lm(rented_bike_count ~ temperature*seasons,
                       data = bike_share)
-MLR_qualitative_interaction$coefficients
+MLR_qualitative_interaction$coefficients |>
+  kable()
 ```
 
 - Finally, we should be cautious when there are many categorical variables in the data. Since we need to expand each of them into multiple indicator variables, the number of predictors can increase quickly.
@@ -824,7 +846,10 @@ MLR_qualitative_interaction$coefficients
 variable `SalePrice` as response, and the rest as covariates. 
 
 ```{r}
-print(AmesHousing::ames_raw, n = 5)
+AmesHousing::ames_raw |>
+  select(1:5) |> #grab first five columns
+  slice(1:5) |>
+  kable()
 ```
 
 - Out of about 80 covariates, about 40 are categorical. However, after expanding each categorical variable into dummy variables, we will in fact have about $300$ predictors!
@@ -855,17 +880,20 @@ The assumptions above imply that
 
 $$Y_i | X_i \stackrel{independent}\sim N(\beta_0 + X_i\beta_1, \sigma^2)$$
 
-One way to quantify the variability associated with estimation of $\beta$'s is to compute the *standard error (SE)* of the estimates, defined as, $$
+One way to quantify the variability associated with estimation of $\beta$'s is to compute the *standard error (SE)* of the estimates, defined as, 
+$$
 SE(\widehat\beta_j) = \sqrt{var(\widehat\beta_j)}.
 $$
 
 For a general multiple linear regression model with model matrix
-$\mathbf{X}$, the standard error of $\beta_j$ can be computed as $$
+$\mathbf{X}$, the standard error of $\beta_j$ can be computed as 
+$$
 SE(\widehat\beta_j) = \sigma\sqrt{(j+1)\mbox{th diagonal element of} (\mathbf{X}^T\mathbf{X})^{-1}}, j = 0, 1, \ldots, p.
 $$
 where $j=0$ corresponds to the intercept $\beta_0$.
 
-- A special case is the simple linear regression, where the standard errors, given fixed values of $x_1, \ldots, x_n$ are $$
+- A special case is the simple linear regression, where the standard errors, given fixed values of $x_1, \ldots, x_n$ are 
+$$
 SE(\widehat\beta_0) = \sqrt{\sigma^2\left[\frac{1}{n} + \frac{\bar x}{\sum_{i=1}^n (x_i - \bar x)^2}\right]}, \,\, SE(\widehat\beta_1) = \sqrt{\frac{\sigma^2}{\sum_{i=1}^n (x_i - \bar x)^2}}.
 $$ 
 
@@ -904,7 +932,8 @@ We can see the standard errors in `R` using the `summary()` function.
 ```{r}
 MLR_ols <- lm(rented_bike_count ~ temperature + wind_speed,
                  data = bike_share)
-summary(MLR_ols)
+summary(MLR_ols)$coefficients |>
+  kable()
 ```
 
 The first column of the output above are the estimates that we
@@ -917,7 +946,8 @@ Alternatively, we can directly use the following code:
 - Taking the square root yields the SEs
 ```{r}
 se <- sqrt(diag(vcov(MLR_ols)))
-se
+se |>
+  kable()
 ```
 
 The last part of the summary output above shows
@@ -958,7 +988,7 @@ where $t_{1 - \alpha/2, n-(p+1)}$ denotes the $1 - \alpha/2$ quantile of a $t_{n
 - Again, the number $n-(p+1)$ is the same as we see in the
 estimator $\widehat\sigma^2$. This number is called the *degrees of freedom* of the $t$-distribution used above.
 
-```{r tcdf, echo=FALSE, fig.margin = T, fig.cap="t PDF and quantiles. The shaded region has area p, and the x-axis value corresponding to the solid vertical line represents the  (1-p)-quantile. In this example, we have p = 0.05, and the vertical line represents the upper 0.95-quantile.", fig.height=5, fig.width=6}
+```{r tcdf, echo=FALSE, fig.margin = T, fig.cap="t PDF and quantiles. The shaded region has area p, and the x-axis value corresponding to the solid vertical line represents the  (1-p)-quantile. In this example, we have p = 0.05, and the vertical line represents the upper 0.95-quantile.", fig.height=5, fig.width=6, fig.alt = 'A t distribution with three degrees of freedom is displayed. This is a distribution that is bell-shaped, centered at 0, having fatter tails than a standard normal distribution. The right tail above 2.2 or so is shaded. This shaded region represents the probability associated with a p-value.'}
 curve(dt(x, df  = 3), from = -5, to = 5, lwd=2, ylab = "t_3 PDF")
 # shaded region
 left <- qt(0.05, df = 3, lower.tail = FALSE)
@@ -974,7 +1004,8 @@ In `R`, we can use the function `confint()` on our model fit to obtain *individu
 ```{r}
 ## 95\% confidence intervals
 ci <- confint(MLR_ols, level = 0.95)
-ci
+ci |>
+  kable()
 ```
 
 - We can interpret the intervals for intercept by saying that when `temperature` and `wind_speed` are 0, on average `rented_bike_count` is estimated to be between `r round(ci[1,1], 2)` and `r round(ci[1,2], 2)` with $95\%$ confidence. 
@@ -987,7 +1018,8 @@ that `rented_bike_count`, on average, decreases between `r round(abs(ci[2,1]), 2
 
 We can also perform hypothesis tests on the regression coefficients. 
 
-- If our main interest is in testing the association between $X_j$ and $Y$, we test for $$
+- If our main interest is in testing the association between $X_j$ and $Y$, we test for 
+$$
 H_0:\beta_j = 0 \mbox{ vs. } H_0:\beta_j \neq 0. 
 $$ 
 
@@ -1018,7 +1050,7 @@ we set $\alpha$ to be a small value (usually set to $5\%$).
 
 - The quantity $\alpha$ is called the type I error of the test (probability of rejecting $H_0$ when it should not be rejected).
 
-```{r tpv, echo=FALSE, fig.margin = T, fig.cap="Two-tailed p-value for a t-test."}
+```{r tpv, echo=FALSE, fig.margin = T, fig.cap="Two-tailed p-value for a t-test.", fig.alt = 'A t distribution with an arbitrary n-1 degrees of freedom is displayed. This is a distribution that is bell-shaped, centered at 0, having fatter tails than a standard normal distribution. The right tail above 2.2 or so and the left tail below -2.2 or so are both shaded. This shaded region represents the probability associated with a two-tailed p-value.'}
 
 curve(dt(x, df  = 3), from = -5, to = 5, lwd=2, ylab = "t_{n-1} PDF")
 # shaded region
@@ -1039,7 +1071,8 @@ polygon(x,y, col="steelblue")
 In R, we can use the `summary()` function to obtain the test results.
 
 ```{r}
-summary(MLR_ols)
+summary(MLR_ols)$coefficients |>
+  kable()
 ```
 
 We see that the p-value associated with $\beta_1$ (coefficient of
@@ -1049,7 +1082,8 @@ has a linear relationship with `rented_bike_count`, even in the presence of `win
 - Another way to test $H_0:\beta_j = 0$ at $\alpha = 0.05$ is to check whether the value zero is in the $95\%$ confidence interval of $\beta_j$ or not.
 
 ```{r}
-confint(MLR_ols)
+confint(MLR_ols) |>
+  kable()
 ```
 
 **Remember**: Caution must be taken to interpret results from model with interaction terms. 
@@ -1059,7 +1093,8 @@ confint(MLR_ols)
 
 ```{r}
 boston_interaction <- lm(medv ~ lstat*age, data = Boston)
-summary(boston_interaction)
+summary(boston_interaction)$coefficients |>
+  kable()
 ```
 
 - Note that the interaction term is statistically significant
@@ -1100,10 +1135,13 @@ jointly test the effects of all the three terms,
 $H_0:\beta_1 = \beta_2 = \beta_3 = 0$. The F-test results can be found at the bottom of the summary output for this model:
 
 ```{r}
-summary(MLR_binary_interaction)
+summary(MLR_binary_interaction)$coefficients |>
+  kable()
+summary(MLR_binary_interaction)$fstatistic |>
+  kable()
 ```
 
-Note the line: "`F-statistic:  1206 on 3 and 8756 DF,  p-value: < 2.2e-16`". 
+Note the large F-stat value. This corresponds to a p-value very close to 0.
 
 - The very small p-value indicates that we reject $H_0$, and the model is useful in predicting $Y$.
 
@@ -1114,7 +1152,8 @@ Note the line: "`F-statistic:  1206 on 3 and 8756 DF,  p-value: < 2.2e-16`".
 ```{r}
 # Reduced model with only intercept
 MLR_red <- lm(rented_bike_count ~ 1, data = bike_share)
-anova(MLR_red, MLR_binary_interaction)
+anova(MLR_red, MLR_binary_interaction) |>
+  kable()
 ```
 
 - Now suppose we want to test "whether *holiday* may have any association with response" or not. Since we have the interaction term, we have to test
@@ -1124,7 +1163,8 @@ $H_0:\beta_2 = \beta_3 = 0$
 
 ```{r}
 # Reduced model with only intercept and temperature is in SLR_fit
-anova(SLR_fit, MLR_binary_interaction)
+anova(SLR_fit, MLR_binary_interaction)  |>
+  kable()
 ```
 
 Here we have observed $F$-statistic $14.536$ with a p-value of
@@ -1285,7 +1325,7 @@ MLR_log_int <- lm(log_rented_bike_count ~ temperature*holiday, data = bike_share
 
 First, let's look at the summary of the model fit.
 ```{r}
-summary(MLR_log_int)
+summary(MLR_log_int)$coefficients
 ```
 
 Great, now let's look at the diagnostic plots to see if any issues were fixed.
@@ -1390,13 +1430,14 @@ multicollinearity.
 - We can use `car::vif()` to calculate VIFs. In our
 example above, the VIF for each model are shown below.
 
+- Model A
 ```{r, echo=FALSE}
 a <- car::vif(mod1)
+```
+
+- Model B
+```{r, echo = FALSE}
 b <- car::vif(mod2)
-cat("Model A:\n")
-a
-cat("Model B:\n")
-b
 ```
 
 In presence of multicollinearity, we can exclude the problematic

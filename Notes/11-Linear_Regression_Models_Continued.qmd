@@ -1,0 +1,2254 @@
+---
+title: "Linear Regression Continued"
+author: "Arnab Maity - Modified by Justin Post"
+always_allow_html: yes
+format: docx
+include-in-header: 
+      - header.tex
+editor_options: 
+  chunk_output_type: console
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+Packages used in this set of notes:
+
+```{r setup, message=FALSE, warning = FALSE}
+library(MASS)
+library(klaR)
+library(tufte)
+library(tidyverse)
+library(lubridate)
+library(caret)
+library(rsample)
+library(ISLR2)
+library(knitr)
+library(AppliedPredictiveModeling)
+library(kableExtra)
+library(robustbase)
+```
+
+```{r  include=FALSE, message=FALSE}
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, 
+                      cache.extra = packageVersion('tufte'),
+                      kable.force.latex = TRUE,
+                      fig.margin = TRUE, 
+                      fig.height = 5, 
+                      fig.width = 6)
+options(htmltools.dir.version = FALSE)
+```
+
+\newpage
+
+# Methods for Selecting Variables
+
+# Evaluating model performance
+
+Like any other learner, we need ways to evaluate model performance of
+linear regression. We will discuss how to assess model fit in the
+training data, and then in unseen test observations.
+
+## Prediction
+
+As mentioned before, we can predict the response associated with a set
+of predictors $x_1, \ldots, x_p$ as $$
+\widehat Y = \widehat\beta_0 + x_1\widehat\beta_1 + \ldots + x_p\widehat\beta_p.
+$$
+
+In order to quantify uncertainty of the prediction, we can use a
+*prediction interval*. We can use the function `predict()` to compute
+both the prediction and the corresponding prediction interval. The
+following code produces both for the new data point $lstat = 5$ for the
+simple linear regression of `medv` on `lstat`: `fit` is the point
+predcition, `lwr` and `upr` are the lower and upper bound of the
+prediction interval, respectively. Note the function argument
+`interval = "prediction"`.[^19]
+
+[^19]: See `?predict.lm` for details.
+
+```{r}
+simple_ols <- lm(medv ~ lstat, data = Boston)
+pred_int <- predict(simple_ols, 
+        newdata = data.frame(lstat = 5),
+        interval = "prediction",
+        level = 0.95)
+pred_int
+```
+
+Note that the point prediction is simply estimate of
+$E(Y|x_1, \ldots, x_p)$. However, the prediction interval is not the
+same as the confidence interval of $E(Y|x_1, \ldots, x_p)$. This is
+because predicting the actual response $Y$ is more difficult that
+estimating the mean $E(Y|X)$. For the ideal case where we know the exact
+values of $\beta_0, \ldots, \beta_p$, then $E(Y|x_1, \ldots, x_p)$ is
+exactly determined. But even then, the response $Y$ has some variability
+due to error $\epsilon$. Thus, even if we fully know the regression
+line, we can not predict the response exactly. The prediction interval
+captures this additional uncertainty. For example, the confidence
+interval of $E(Y|x_1, \ldots, x_p)$ for the example shown above is as
+follows. Note the confidence interval is narrower than the prediction
+interval.
+
+```{r}
+conf_int <- predict(simple_ols, 
+        newdata = data.frame(lstat = 5),
+        interval = "confidence",
+        level = 0.95)
+```
+
+We can interpret these intervals as: when `lstat = 5`, we have $95\%$
+confidence that the *mean* value of `medv` will fall in
+(`r round(conf_int[2],2)`, `r round(conf_int[3],2)`) -- this is the
+confidence interval. But `medv` of a *randomly chosen new observation*
+with fall in (`r round(pred_int[2],2)`, `r round(pred_int[3],2)`).
+
+## Training set performance
+
+We can measure how well the model fits the training data by using the
+following measures:
+
+-   Residual squared error (RSE).
+
+-   Coefficient of determination, $R^2$.
+
+-   $F$ statistic discussed before
+
+We have seen RSE as the estimator of $\sigma$ in the previous sections.
+In general, RSE quantifies the uncertainty in prediction on $Y$ from $X$
+*even if the true regression parameters were known.* We can view RSE as
+the amount the response will deviate on average from the true regression
+line. A small RSE would indicate a good regression fit. In the `Boston`
+data example with only `lstat` as predictor described above, we have
+$RSE = `r round(sigma(simple_ols),2)`$. Thus, even if we knew the true
+regression line (assuming that the linear model is correct), a
+prediction of `medv` based on `lstat` would still be off by
+$`r round(sigma(simple_ols),2)`$ units on average. In the `Boston` data,
+the mean value of `medv` over all values of `lstat` is
+`r round(mean(Boston$medv), 2)`. Thus we are making an error in the
+amount of `r round(sigma(simple_ols)/mean(Boston$medv), 2)*100` percent.
+
+The RSE is considered a measure of the *lack of fit* of the model. Small
+values of RSE imply the predictions are close to the observed values
+which indicate good model fit. Large values of RSE would indicate that
+the model did not fit the data well. However, it is often not clear what
+values of RSE is acceptable. The coefficient of determination ($R^2$) is
+another option to measure goodness of fit.
+
+```{=tex}
+\mydefbox{Coefficient of determination: $R^2$}{
+Define the \textit{total sum of squares (TSS)} as $\sum_i(Y_i - \bar Y)^2$. Recall RSS is the residual sum of squares. Then
+$$
+R^2 = 1 - \frac{RSS}{TSS}.
+$$
+}
+```
+TSS measures the total variance in the response[^20]. We can think of
+TSS as the amount of variability inherent in the response before the
+regression is performed. In contrast, RSS measures the amount of
+variability that is left unexplained after performing the regression.
+Thus we can interpret $R^2$ as the *proportion of variance* in the
+response *explained by the model*. It can be shown that
+$0 \leq R^2 \leq 1$, with larger values indicting better fit. $R^2$
+values close to zero would indicate that perhaps the linear model is
+wrong, and/or the error variance is high. Another way to interpret $R^2$
+is that $$
+R^2 = (\mbox{correlation coefficient between observed and predicted values})^2.
+$$
+
+[^20]: Note that TSS is proportional to the sample variance of the
+    $Y$'s.
+
+## Test set performance
+
+We can use the techniques and data splitting methods (CV, Bootstrap,
+holdout etc) to evaluate model performance on unseen test data. For
+example, the code below uses 5-fold CV, repeated 10 times, to estimate
+the test error for the model with `lstat`, `age` and `lstat:age` as
+predictors.
+
+```{r}
+set.seed(1001)
+# control params
+cv <- trainControl(method = "repeatedcv", 
+                   number = 5, 
+                   repeats = 10)
+# training
+res <- train(medv ~ lstat * age, 
+             data = Boston, 
+             method = "lm", 
+             trControl = cv)
+res
+```
+
+We can compare several regression models as well. In the code below, we
+fit five models, and compare their test RMSE values using 10 times
+repeated 5-fold CV. Note the use of the `resample()` function from
+`caret` package. Figure \ref{fig:bw} shows boxplots of estimated test
+errors using CV for the model.
+
+```{r, cache=TRUE}
+set.seed(1001)
+# control params
+cv <- trainControl(method = "repeatedcv", 
+                   number = 5, 
+                   repeats = 10)
+# training
+model1 <- train(medv ~ lstat + age, 
+             data = Boston, 
+             method = "lm", 
+             trControl = cv)
+
+model2 <- train(medv ~ lstat * age, 
+             data = Boston, 
+             method = "lm", 
+             trControl = cv)
+
+model3 <- train(medv ~ lstat + age + I(lstat^2) + I(age^2), 
+             data = Boston, 
+             method = "lm", 
+             trControl = cv)
+
+model4 <- train(medv ~ lstat * age + I(lstat^2) + I(age^2), 
+             data = Boston, 
+             method = "lm", 
+             trControl = cv)
+
+model5 <- train(medv ~ ., 
+             data = Boston, 
+             method = "lm", 
+             trControl = cv)
+
+# Comparison
+rsm <- resamples(list(model1, model2, model3, model4, model5))
+summary(rsm, metric = "RMSE")
+```
+
+```{r bw, fig.cap="Boxplots of estimated test RMSE for different models."}
+# Comparison plots
+bwplot(rsm, metric = "RMSE")
+```
+
+Models 1 and 2 above are similar in test performance, as are model 3 and
+4. But Models 3 and 4 are better that 1 and 2. Also, it seems that, as
+far as prediction accuracy is concerned, adding `lstat:age` interaction
+term does not improve prediction performance by much. Overall, model 5
+(regression with main effects of all predictors) performs the best among
+the five model considered above.
+
+```{r, echo=FALSE, eval=FALSE}
+dat <- Boston[ ,-13]
+y <- Boston[,13]
+
+# control params
+cv <- trainControl(method = "repeatedcv", 
+                   number = 5, 
+                   repeats = 10)
+
+
+res <- vector(mode = "list", length = 12)
+for(ii in 1:12){
+  dat <- data.frame(Boston$medv,
+                    Boston[,1:ii])
+  colnames(dat) <- c("medv", colnames(Boston)[1:ii])
+  
+# training
+  res[[ii]] <- train(medv ~ .,
+                     data = dat,
+               method = "lm", 
+               trControl = cv)
+}
+res
+summary(resamples(res))
+```
+
+
+
+## Subset selection
+
+In practice, many of many of the variables is a dataset may not be
+associated with the response of interest. Including such irrelevant
+predictors in the model may lead to unnecessary complexity in the
+resulting model and therefore more variability in the estimates. Often
+we would like to remove the unnecessary variables before building our
+final model. Such a procedure will also help in interpretation of the
+model as well. This process of selecting relevant variables
+corresponding to a response is called *variable selection* or *feature
+selection*. In this section, we discuss methods to select a *subset* of
+the available covariates that we believe to be related to the response.
+Then the final model will be built by using least squares using the
+selected subset.
+
+### Metrics for model selection
+
+Usage of RSE and $R^2$ from the training set in model selection is
+undesirable as they will always choose the largest model possible --
+minimum RSE and maximum $R^2$ will occur when number of predictors is
+largest.
+
+We can use the data splitting methods to estimate test errors, but
+sometimes they can be computationally expensive. Consider the `Boston`
+data with $p=12$. If we want to investigate performance of all possible
+subsets, we have to go though $2^{12} = `r 2^12`$ models. On top of that
+if we want to use $5$-fold CV, repeated 50 times, we have to fit a total
+of $2^{12}\times 5 \times 50 = `r 2^12 * 5 * 50`$ models.
+
+Alternatively, there are metrics available that adjusts training
+performance metrics such as $RSS$ and $R^2$ to balance both goodness of
+fit and model complexity/size, so that a separate training set is not
+needed for model comparison. These approaches can be used to select
+among a set of models with different numbers of variables. Four such
+metrics are:
+
+-   Adjusted $R^2$,
+
+-   Akaike information criterion (AIC),
+
+-   Bayesian information criterion (BIC), and
+
+-   $C_p$ statistic.
+
+\noindent Adjusted $R^2$ re-scales total sum of squares and RSS, before
+taking their ratio, to account for the number of predictors in the
+model. In contrast, AIC, BIC and $C_p$ *adds a penalty term* involving
+number of predictors to the training RSS to account for model size.
+
+Suppose we have a model with $d$ predictors. Recall that
+$R^2 = 1 - RSS/TSS$. Adjusted $R^2$ is defined as $$
+\mbox{Adjusted } R^2 = 1 - \frac{RSS/(n - d - 1)}{TSS/(n-1)},
+$$ where $d$ is the number of predictors in the model. Maximizing the
+adjusted $R^2$ is equivalent to minimizing $RSS/(n - d - 1)$. Unlike
+$RSS$, which monotonically decreases as $d$ increases, $RSS/(n - d - 1)$
+will increase and decrease as $d$ changes. We choose the model with
+maximum adjusted $R^2$.
+
+AIC, BIC and $C_p$ all have the form for a model with $d$ predictors: $$
+[RSS + P(n, d, \widehat\sigma^2)]/n,
+$$ where $P(n, d, \widehat\sigma^2)$ is a penalty term involving sample
+size, number of predictors in the model and estimated error variance
+using the full model containing all predictors. The three metrics use
+the following form of $P$:[^21] $$
+P(n, d, \widehat\sigma^2) = \left\{ \begin{matrix} 2d\widehat\sigma^2,\;\; \mbox{ for } C_p, AIC \\ log(n)\,d\,\widehat\sigma^2, \;\; \mbox{ for } BIC \end{matrix}\right.
+$$ We choose the model which gives minimum AIC/BIC values.
+
+[^21]: See Introduction to Statistical Learning, Chapter 6.1.3.
+
+```{r aic, echo=FALSE, fig.cap="Example of model selection using AIC/$C_p$, BIC and adjusted $R^2$.", fig.width=9, fig.height=3, fig.margin = FALSE}
+
+knitr::include_graphics("img/6_2.png")
+```
+
+It seems AIC and $C_p$ are equivalent from the formula above -- this
+happens for linear regression model using least squares and normal
+errors. However, AIC and BIC both have general forms involving
+*log-likelihood* values, and can be computed for general regression
+problems.
+
+We can see from the penalty terms that BIC tend to have a higher penalty
+than AIC/$C_p$ as $n$ increases. Thus BIC tends to produce smaller
+models compared to AIC/$C_p$. Figure \ref{fig:aic} shows an example of
+model selection using AIC/$C_p$, BIC and adjusted $R^2$.
+
+```{r, eval=FALSE, echo=FALSE}
+BB <- cbind(medv = Boston$medv,
+            Boston[, 1:12], 
+            matrix(rnorm(nrow(Boston)*100), 
+                   nrow = nrow(Boston), 
+                   ncol = 100))
+medv <- Boston$medv
+ff <- matrix(NA, nrow = 100, ncol = 2)
+for (ii in 1:100){
+  out <- lm(medv ~ ., data = BB[, c(1:(ii+1))])
+  ss <- summary(out)
+  ff[ii, ] <- c(ss$adj.r.squared, ss$r.squared)
+}
+```
+
+### Best subset selection
+
+In this approach, we need to fit a separate least square model to *each*
+of the possible combination of the $p$ predictors in the dataset, that
+is, we need to fit all $2^p$ possible models. We can either use
+CV/holdout or AIC/BIC to choose the best model. The following algorithm
+shows the best subset selection procedure.
+
+1.  Start with the model with only intercept, and no other predictor.
+    Denote the model by $M_0$.
+
+2.  For $k = 1, \ldots, p$, fit all $C^p_k$ models with $k$ predictors,
+    and pick the best model (smallest RSE, largest $R^2$ etc.). Denote
+    the resulting model as $M_k$.
+
+3.  Among the models $M_0, M_1, \ldots, M_p$, choose the best model
+    using AIC, BIC, adjusted $R^2$ or CV.
+
+Note that we can use cross-validation for the entire set of $2^p$
+possible models if we have such computational resources (for larger $p$,
+this procedure can have tremendous computational burden). The algorithm
+above reduces this computational burden using Step 2, where it
+identifies the best model for each subset size *on the training set*.
+Thus we reduce the problem from $2^p$ possible models to $p + 1$
+possible models. However, performing CV, if possible, has the distinct
+advantage over AIC/BIC that it directly estimates the test error for
+each models.
+
+In R, we can use `regsubsets()` in the `leaps` package to perform best
+subset selection. We demonstrate this procedure using `Boston` data.
+Note the usage of the argument `nvmax = 11`. This ensures that we will
+search of subsets up to size 12 (Since Boston data has 12 predictors).
+
+```{r, warning=FALSE, message=FALSE}
+library(leaps)
+# Best model for each model size
+bestmod <- regsubsets(medv ~ ., 
+                      data = Boston,
+                      nvmax = 12)
+# summary
+mod_summary <- summary(bestmod)
+mod_summary
+```
+
+The summary shows, for each model size, which predictors give the best
+model (based on training set performance). Now we can use either AIC/BIC
+or adjusted $R^2$ to choose the best model among these 12 models.
+
+```{r}
+metrics <- data.frame(aic = mod_summary$cp,
+                      bic = mod_summary$bic,
+                      adjR2 = mod_summary$adjr2)
+metrics
+```
+
+The minimum AIC/BIC as well as maximum adjusted $R^2$ occurs for model
+size $10$. The best fitted model is below.
+
+```{r}
+round( coef(bestmod, 10), 2)
+```
+
+As mentioned before, investigating all off the $2^p$ models can be
+computationally intensive for large values of $p$. The following two
+approaches provide computationally efficient alternatives using
+*stepwise subset selection*.
+
+### Forward Stepwise Selection
+
+Recall that the best subset selection procedure considers all $2^p$
+possible models containing subsets of the $p$ predictors. In contrast,
+*forward stepwise selection* considers a much smaller set of models. The
+algorithm as as follows:
+
+```{r, echo=FALSE, fig.cap="AIC, BIC and Adjusted $R^2$ for best subset selection in Boston data.", fig.margin = TRUE, fig.width=3, fig.height=6}
+dd <- cbind(size = 1:12, metrics)
+p1 <- ggplot(dd, aes(size, aic)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 13) + 
+  ggtitle("AIC") + 
+  scale_x_discrete(limits=as.factor(1:12))
+p2 <- ggplot(dd, aes(size, bic)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 13) + 
+  ggtitle("BIC")+ 
+  scale_x_discrete(limits=as.factor(1:12))
+p3 <- ggplot(dd, aes(size, adjR2)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 13) + 
+  ggtitle("Adjusted R2")+ 
+  scale_x_discrete(limits=as.factor(1:12))
+
+gridExtra::grid.arrange(p1,p2,p3, nrow=3)
+
+#gg <- gather(cbind(size = 1:12, metrics), 
+#             key = metric,
+#             value = value,
+#             -size)
+#ggplot(gg, aes(size, value)) + 
+#  geom_point() + 
+#  facet_wrap(vars(metric))
+```
+
+1.  Start with the model with only intercept, and no other predictor.
+    Denote the model by $M_0$.
+
+2.  For $k = 0, \ldots, p-1$,
+
+    -   consider all $p-k$ models that adds one more predictor to the
+        existing predictors in $M_k$.
+    -   choose the best among these $p-k$ models; denote this model by
+        $M_{k+1}$
+
+3.  Among the models $M_0, M_1, \ldots, M_p$, choose the best model
+    using AIC, BIC, adjusted $R^2$ or CV.
+
+Forward stepwise selection involves fitting one intercept-only model,
+along with $p-k$ models in the $k$th iteration, for $k = 0,\ldots, p-1$.
+This reduces the computational complexity substantially from the best
+subset selection, which fits $C_k^p$ models for each $k = 1, \ldots, p$.
+We should keep in mind that, since forward stepwise selection does not
+go through all possible models, there is no assurance that it will find
+the best model.
+
+The following code performs forward stepwise selection for Boston data
+example.
+
+```{r}
+forward <- regsubsets(medv ~ ., 
+                      data = Boston,
+                      nvmax = 12,
+                      method = "forward")
+# summary
+mod_summary <- summary(forward)
+mod_summary
+```
+
+As before, the summary shows which predictors give the best model (based
+on training set performance) for each model size. Next we can choose the
+best model among these 12 models.
+
+```{r}
+metrics <- data.frame(aic = mod_summary$cp,
+                      bic = mod_summary$bic,
+                      adjR2 = mod_summary$adjr2)
+metrics
+round( coef(forward, 10), 2)
+```
+
+```{r, echo=FALSE, fig.cap="AIC, BIC and Adjusted $R^2$ for forward stepwise selection in Boston data.", fig.margin = FALSE, fig.width=10, fig.height=3}
+dd <- cbind(size = 1:12, metrics)
+p1 <- ggplot(dd, aes(size, aic)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 18) + 
+  ggtitle("AIC") + 
+  scale_x_discrete(limits=as.factor(1:12))
+p2 <- ggplot(dd, aes(size, bic)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 18) + 
+  ggtitle("BIC")+ 
+  scale_x_discrete(limits=as.factor(1:12))
+p3 <- ggplot(dd, aes(size, adjR2)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 18) + 
+  ggtitle("Adjusted R2")+ 
+  scale_x_discrete(limits=as.factor(1:12))
+
+gridExtra::grid.arrange(p1,p2,p3, nrow=1)
+
+#gg <- gather(cbind(size = 1:12, metrics), 
+#             key = metric,
+#             value = value,
+#             -size)
+#ggplot(gg, aes(size, value)) + 
+#  geom_point() + 
+#  facet_wrap(vars(metric))
+```
+
+### Backward Stepwise Selection
+
+Like forward selection, backward selection also considers a smaller set
+of models. It start from including all the predictors, and gradually
+removes one predictor at a time. The following algorithm performs
+backward stepwise selection.
+
+1.  Start with the model with all the predictors included. Denote the
+    model by $M_p$.
+
+2.  For $k = p, p-1 \ldots, 1$,
+
+    -   consider all $k$ models that contain all but one of the
+        predictors in $M_k$, for a total of $k-1$ predictors.
+    -   choose the best among these $k$ models; denote this model by
+        $M_{k-1}$
+
+3.  Among the models $M_0, M_1, \ldots, M_p$, choose the best model
+    using AIC, BIC, adjusted $R^2$ or CV.
+
+Like forward stepwise selection, backward stepwise selection is not
+guaranteed to yield the best model containing a subset of the $p$
+predictors. The following code performs backward stepwise selection for
+Boston data example.
+
+```{r}
+backward <- regsubsets(medv ~ ., 
+                      data = Boston,
+                      nvmax = 12,
+                      method = "backward")
+# summary
+mod_summary <- summary(backward)
+mod_summary
+```
+
+As before, the summary shows which predictors give the best model (based
+on training set performance) for each model size. Next we can choose the
+best model among these 12 models.
+
+```{r}
+metrics <- data.frame(aic = mod_summary$cp,
+                      bic = mod_summary$bic,
+                      adjR2 = mod_summary$adjr2)
+metrics
+coef(forward, 10)
+```
+
+```{r, echo=FALSE, fig.cap="AIC, BIC and Adjusted $R^2$ for backward stepwise selection in Boston data.", fig.margin = FALSE, fig.width=10, fig.height=3}
+dd <- cbind(size = 1:12, metrics)
+p1 <- ggplot(dd, aes(size, aic)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 18) + 
+  ggtitle("AIC") + 
+  scale_x_discrete(limits=as.factor(1:12))
+p2 <- ggplot(dd, aes(size, bic)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 18) + 
+  ggtitle("BIC")+ 
+  scale_x_discrete(limits=as.factor(1:12))
+p3 <- ggplot(dd, aes(size, adjR2)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 18) + 
+  ggtitle("Adjusted R2")+ 
+  scale_x_discrete(limits=as.factor(1:12))
+
+gridExtra::grid.arrange(p1,p2,p3, nrow=1)
+
+#gg <- gather(cbind(size = 1:12, metrics), 
+#             key = metric,
+#             value = value,
+#             -size)
+#ggplot(gg, aes(size, value)) + 
+#  geom_point() + 
+#  facet_wrap(vars(metric))
+```
+
+In the `Boston` data example seen so far, results from using AIC, BIC
+and adjusted $R^2$ match -- they all choose the same model. This is not
+the case in general setting. We might have different "best" models
+depending on the evaluation criterion we use. In that case, we will just
+pick the criteria we like the most (e.g. BIC for typically giving
+smaller models), and go with the corresponding best model.
+
+### Using the holdout and Cross-Validation for subset selection
+
+As mentioned before, apart from AIC/BIC/adjusted $R^2$, it is also
+possible to use data splitting techniques such as holdout or CV for
+model selection. Ideally, we can run CV for each of the $2^p$ models,
+and choose the one with best test error. However, such an approach can
+be computationally expensive.
+
+Alternatively, we can use the algorithms presented above and use CV on
+them. It is important to recall our discussion in the previous chapters
+about proper implementation of CV: the entire model building process,
+including any tuning, has to be applied to the training set. We **can
+not** simply use steps 1 and 2 on the full data to get
+$M_0, \ldots, M_p$ and then just use CV on the final models. The
+following paragraph is quoted verbatim from the textbook to emphasize
+this important point.
+
+> In order for these approaches to yield accurate estimates of the test
+> error, we must use *only the training observations* to perform all
+> aspects of model-fitting---including variable selection. Therefore,
+> the determination of which model of a given size is best must be made
+> using *only the training observations*. This point is subtle but
+> important. If the full data set is used to perform the best subset
+> selection step, the validation set errors and cross-validation errors
+> that we obtain will not be accurate estimates of the test error.
+>
+> `r tufte::quote_footer('--- Gareth James, Daniela Witten, Trevor Hastie, and Robert Tibshirani, An Introduction to Statistical Learning, second edition, 2021, page 271.')`
+
+\noindent Thus we can think the *model size* as tuning parameter here,
+since each training set might yield different models even if the size
+remains the same. We use holdout/CV to choose the best model size, and
+then choose the best model of that size using the full data.
+
+The algorithm of subset selection using *holdout method* is as follows:
+
+-   Split the observations into training and test sets.
+
+-   Apply best/forward/backward selection method on the training set.
+
+-   For *each model size*, pick the best model, and compute test error
+    using test set.
+
+-   Choose the optimal model size that has minimum test error.
+
+-   Finally, perform best/forward/backward subset selection on the full
+    data set, and select the best model of the size chosen in the
+    previous step.
+
+```{r}
+set.seed(1001)
+## Create test and training sets
+library(rsample)
+data_split <- initial_split(Boston, prop = 0.8)
+test_set <- testing(data_split)
+train_set <- training(data_split)
+
+## Best subset selection on the training data
+best_train <- regsubsets(medv ~ ., 
+                         data = train_set,
+                         nvmax = 12)
+train_sum <- summary(best_train)
+
+## For each model size, estimate test performance
+# A function to predict and estimate error 
+#    on the test set. Inputs are 
+#           model size (mod_size),
+#           summary outout of the selection process (reg_summary)
+#           model matrix of the test data (test_model)
+#           test set response (test_resp)
+test_err <- function(mod_size, 
+                     reg_summary, 
+                     test_model,
+                     test_resp){
+  # get regression coefs
+  betahat <- coef(reg_summary$obj, mod_size)
+  # get best subset of the specified size
+  sub <- reg_summary$which[mod_size, ]
+  # Create test model matrix, predcition, test error
+  model <- test_model[, sub]
+  yhat <- model %*% betahat
+  err <- mean((test_resp - yhat)^2)
+  return(err)
+}
+
+## Apply the function above to each model size
+test_model <- model.matrix(~ . - medv, data = test_set)
+test_resp <- test_set$medv
+hold_err <- sapply(1:12, test_err, 
+                   reg_summary = train_sum,
+                   test_model = test_model, 
+                   test_resp = test_resp)
+plot(hold_err, type = 'b', pch=19, lwd=2)
+## Best model size and refit of full data
+size_opt <- which.min(hold_err)
+bestmod <- regsubsets(medv ~ .,
+                      data = Boston,
+                      nvmax = 12)
+coef(bestmod, size_opt)
+```
+
+In this particular example, we have the same 10-variable model as
+before. We refit the full data set in order to obtain more accurate
+estimates of the regression coefficient estimates. It is important that
+we perform best/forward/backward subset selection on the full data set
+and select the best model with 10 variables (for this example), rather
+than simply using the variables that were obtained from the training
+set. This is because the best model with 10 predictors on the full data
+set may be different from the corresponding model on the training set.
+
+We can similarly use $V$-fold cross-validation as follows:
+
+-   Split the data into $V$ equally sized folds.
+
+-   For $v = 1, \ldots, V$:
+
+    -   Set $v$-th fold as test set, and the remaining folds as training
+        set.
+    -   Apply best/forward/backward selection method on the training
+        set.
+    -   For *each model size*, pick the best model, and compute test
+        error using test set.
+
+-   Choose the optimal model size that has minimum average test error
+    over $V$ folds.
+
+-   Finally, perform best/forward/backward subset selection on the full
+    data set, and select the best model of the size chosen in the
+    previous step.
+
+```{r cvsub, echo=FALSE, fig.cap="Best subset selection using 5-fold cross-validation. The gray lines are test MSE profiles for the 5 folds. The black line is the mean test MSE over the folds. The red error bars indicate test MSE +/- one SE."}
+set.seed(1001)
+fl <- 10
+cvsplit <- vfold_cv(Boston, v = fl, repeats = 1)
+
+f <- function(sp){
+  test <- testing(sp)
+  train <- training(sp)
+  
+  
+  best_train <- regsubsets(medv ~ ., 
+                         data = train,
+                         nvmax = 12)
+  train_sum <- summary(best_train)
+
+  test_model <- model.matrix(~ . - medv, data = test)
+  test_resp <- test$medv
+  hold_err <- sapply(1:12, test_err, 
+                   reg_summary = train_sum,
+                   test_model = test_model, 
+                   test_resp = test_resp)
+  
+  return(hold_err)
+
+}
+
+ss <- data.frame(sapply(cvsplit$splits, f))
+names(ss) <- cvsplit$id
+mn <- rowMeans(ss)
+se <- apply(ss, 1, sd)/sqrt(fl)
+ss <- cbind(ss, size = 1:12)
+kmin <- which.min(mn)
+k1se <- min(c(1:12)[mn < (mn + se)[which.min(mn)]])
+
+
+best_train <- regsubsets(medv ~ ., 
+                         data = Boston,
+                         nvmax = 12)
+
+# matplot(ss, lwd=2, col = "gray", type = "b", pch=19, lty=1,
+#        xlab = "Model size", ylab = "CV test error")
+# 
+# points(mn, lwd = 2, type = "b", pch=19)
+# points(which.min(mn), mn[which.min(mn)], pch=25, col="red", cex=2, bg = "red")
+# 
+# 
+# points(mn + se, lwd = 2, type = "b", pch=19, lty=2)
+# points(mn - se, lwd = 2, type = "b", pch=19, lty=2)
+
+gg <- gather(ss, "Fold", "Error", -size)
+
+df <- data.frame(err = mn, lwr = mn - se, upr = mn + se, 
+                 size = 1:12, ss)
+
+ggplot() + 
+  geom_point(aes(size, Error), data = gg, col = "gray") +
+  geom_line(aes(size, Error, group = Fold), data = gg, col = "gray") +
+  geom_point(aes(size, mn), data = df, cex=3) +
+  geom_line(aes(size, mn), data = df, lwd=1.3) + 
+  geom_errorbar(aes(size, mn, ymin = lwr, ymax = upr), data = df, col = "red", lwd=1.1) + 
+  theme_bw(base_size = 18) + 
+  scale_x_discrete(limits=as.factor(1:12)) + 
+  geom_hline(yintercept = (mn + se)[kmin], lty = 2, col = "red") + 
+  geom_hline(yintercept = (mn - se)[kmin], lty = 2, col = "red")
+  
+```
+
+\noindent Figure \ref{fig:cvsub} shows the results best subset selection
+using a 10-fold CV. The resulting model has size 10, and in fact is the
+same as the one chosen by holdout in this example.
+
+Notice that even though the model with 10 predictors give the lowest
+test MSE, the models containing 5 -- 9 predictors also have similar
+(slightly higher) MSE values. Surely, if we repeated CV using different
+folds, the exact minimum might change. In this setting, we often use the
+*one-standard-error rule*: calculate the standard error of the estimated
+test MSE from the 10 folds for each model size, and then select the
+smallest model for which the estimated test error is within one standard
+error of the minimum estimated MSE. If a set of models are essentially
+equal in performance, then one-standard-error rule would chose the the
+model with the smallest number of predictors. In our example in Figure
+\ref{fig:cvsub}, one-standard-error rule chooses a model with 5
+predictors:
+
+```{r, echo=FALSE}
+coef(best_train, k1se)
+```
+
+As a final note on correctly implementing cross-validation in general,
+we quote the following paragraph verbatim from *Elements of Statistical
+Learning*, **Section 7.10.2: The Wrong and Right Way to Do
+Cross-validation**:
+
+> Consider a classification problem with a large number of predictors,
+> as may arise, for example, in genomic or proteomic applications. A
+> typical strategy for analysis might be as follows:
+>
+> 1.  Screen the predictors: find a subset of "good" predictors that
+>     show fairly strong (univariate) correlation with the class labels
+> 2.  Using just this subset of predictors, build a multivariate
+>     classifier.
+> 3.  Use cross-validation to estimate the unknown tuning parameters and
+>     to estimate the prediction error of the final model.
+>
+> Is this a correct application of cross-validation? Consider a scenario
+> with N = 50 samples in two equal-sized classes, and p = 5000
+> quantitative predictors (standard Gaussian) that are independent of
+> the class labels. The true (test) error rate of any classifier is 50%.
+> We carried out the above recipe, choosing in step (1) the 100
+> predictors having highest correlation with the class labels, and then
+> using a 1-nearest neighbor classifier, based on just these 100
+> predictors, in step (2). Over 50 simulations from this setting, the
+> average CV error rate was 3%. This is far lower than the true error
+> rate of 50%.
+
+> What has happened? The problem is that the predictors have an unfair
+> advantage, as they were chosen in step (1) on the basis of all of the
+> samples. Leaving samples out after the variables have been selected
+> does not correctly mimic the application of the classifier to a
+> completely independent test set, since these predictors "have already
+> seen" the left out samples.
+
+Even though the discussion above is in the context of classification,
+the idea still applies to regression problems. Instead of
+misclassification error rate, we will be concerned about test MSE.
+
+If we do need to screen predictors for a specific regression model, we
+need to do so *without involving response*, that is, using
+*unsupervised* methods. This should be done *before splitting data*.
+Again we quote a paragraph from *Elements of Statistical Learning*:
+
+> In general, with a multistep modeling procedure, cross-validation must
+> be applied to the entire sequence of modeling steps. In particular,
+> samples must be "left out" before any selection or filtering steps are
+> applied. There is one qualification: initial unsupervised screening
+> steps can be done before samples are left out. For example, we could
+> select the 1000 predictors with highest variance across all 50
+> samples, before starting cross-validation. Since this filtering does
+> not involve the class labels, it does not give the predictors an
+> unfair advantage.
+
+## Regularization/Shrinkage methods
+
+Another approach to selecting relevant predictors is to fit a model with
+all $p$ predictors but put *constraints* on the regression coefficients.
+This is called *regularization* of the estimates. It is done is such a
+way that the resulting estimates are pulled towards zero -- this is
+called *shrinkage*. Without going into mathematical details, it can be
+shown that shrinking the coefficients towards zero in this manner
+increases their bias but significantly reduces their variance.
+
+A common regularization method is to add an extra *penalty term* to the
+usual least squares criterion. In other words, we minimize a criterion
+of the form $$
+\sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots X_{ip}\beta_p)^2 + P,
+$$ where the term $P$ is a penalty term involving the regression
+coefficients. Depending on the form of the penalty terms, we have
+different regression methods. In this section, we will discuss several
+such estimation methods.
+
+### Ridge regression
+
+Ridge regression shrinks the regression coefficients towards zero by
+imposing a *quadratic penalty*. The ridge regression coefficient
+estimates are obtained by minimizing[^22] $$
+\sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots - X_{ip}\beta_p)^2 + \lambda\sum_{j=1}^p\beta_j^2,
+$$ where $\lambda \geq 0$ is a tuning parameter. The penalty term
+$\lambda\sum_{j=1}^p\beta_j^2$ is called a *shrinkage penalty*.[^23]
+Here $\lambda$ controls the relative impact of the two terms on the
+regression coefficient estimates. For large values of $\lambda$, the
+quadratic penalty term dominates the criterion, and the resulting
+estimates approach to zero. When $\lambda = 0$, there is no penalty, and
+thus we get exactly the ordinary least squares estimates. Thus we must
+select a reasonable value of $\lambda$ to balance both the terms.\
+Recall that $\mathbf{X}$ denotes the model matrix of the regression
+problem. We can show that ridge regression solutions have a closed form
+expression (if we also penalize intercept):[^24] $$
+\widehat\beta^{\rm ridge} = (\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I})^{-1}\mathbf{X}^T\mathbf{Y}.
+$$ Notice again that setting $\lambda = 0$ gives us the least squares
+estimates, $\widehat\beta$. Also note that, for $\lambda > 0$, the
+matrix $(\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I})$ always has an
+inverse *even if* $\mathbf{X}$ does not have full column rank. Thus,
+even in presence of collinearity/redundant columns in $\mathbf{X}$,
+ridge regression will still produce unique regression estimates.[^25]
+
+[^22]: Note that the intercept $\beta_0$ is not penalized.
+
+[^23]: The idea of using the sum-of-squares of the parameters as penalty
+    is also used in neural networks -- it is known as
+    \textit{weight decay}.
+
+[^24]: Here $\mathbf{I}$ denotes the identity matrix: a diagonal matrix
+    with all diagonal elements being 1.
+
+[^25]: This was the original motivation behind development of ridge
+    regression, see Hoerl and Kennard (1970), Ridge Regression: Biased
+    Estimation for Nonorthogonal Problems, Technometrics, 12, 55 -- 67.
+
+Figure \ref{fig:ridge} shows the estimated ridge regression coefficients
+for different values of $log(\lambda)$ in `Boston` data with `medv` as
+response, and *standardized* predictors. The left most part of the plot
+corresponds to $\lambda = 0$, and shows the least squares estimates. The
+right extreme of the plot represents a large value of $\lambda$, and we
+see that all the coefficients are very close to zero.
+
+```{r ridge, echo=FALSE, fig.cap="Ridge regression coefficients for different values of lamda (log10 scale) for Boston data.", message=FALSE, warning=FALSE, fig.width=9, fig.height=6, cache=TRUE}
+
+
+<<boston_prep>>
+
+<<boston_ridge_fit>>
+
+
+betahat <- t(as.matrix(betahat)[-1,])
+lam <- boston_ridge$lambda
+df <- data.frame(lam = lam, betahat)
+cc <- coef(boston_ridge, s = min(lam))
+dflab <- data.frame(lab = rownames(cc)[-1],
+                    ypos = cc[-1],
+                    xpos = -2.5)
+gg <- gather(df, "Variable", "Beta", -lam)
+ggplot() + 
+  geom_line(aes(log(lam, base = 10), Beta, col = Variable), lwd = 1.2, data = gg) + 
+  #geom_point(aes(log(lam), Beta, shape = Variable), lwd = 1.2) +
+  theme_bw(base_size = 18) + 
+  scale_color_viridis_d(option = "magma") + 
+  xlab("log(lambda)") + 
+  ylab("Estimated beta") +
+  geom_text(aes(xpos, ypos, label = lab), 
+            data = dflab, size = 5) + 
+  theme(legend.position = "None")
+```
+
+We can also view the ridge regression problem as a *constrained
+minimization problem*, $$
+\mbox{minimize } \sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots - X_{ip}\beta_p)^2 
+$$ subject to the constraint $$
+\sum_{j=1}^p \beta_j^2 \leq t,
+$$ for some $t > 0$. The second formulation of ridge regression
+explicitely puts constraint on the size of the regression coefficients.
+The parameters $\lambda$ in the penalized formulation and $t$ in the
+constraint formulation are connected via an one-to-one relationship.
+
+Based on the second formulation, we can think of ridge regression as
+minimizing RSS of a linear regression while preventing the regression
+coefficients from getting too large or small. The parameter $t$
+determines how large/small regression coefficients can become. If $t$ is
+set to very large, then we are effectively allowing $\beta$'s to take
+any value (equivalent to setting a small $\lambda$). On the other hand,
+a small $t$ will force the $\beta$'s to be smaller and closer to zero
+(equivalent to setting large $\lambda$).
+
+In presence of multicollinearity, the corresponding $\beta$'s can become
+wildly variable. A very large positive $\beta$ on one variable can be
+canceled by a similarly large negative $\beta$ on another predictor
+correlated to the first one. A size constraint imposed by $t$, fixes
+this issue.
+
+Before fitting the ridge regression model, we need to aware that scaling
+the predictors is often needed. In least squares estimation,
+scaling/standardizing a predictor does not *not* change the overall
+quality of the fit (e.g., $R^2$, $MSE$ etc). If we multiply a predictor
+by a constant $c$, then the resulting least square coefficient estimate
+will get multiplied by $1/c$. In other words, using least squares, the
+quantity $X_j\widehat\beta_j$ will remain the same no matter how we
+scale the $j$-th predictor.[^26]
+
+[^26]: This is the reason we call least squares estimators *scale
+    equivariant*.
+
+```{r}
+mod1 <- lm(medv ~ lstat, data = Boston)
+mod2 <- lm(medv ~ I(5*lstat), data = Boston)
+# Coefficients
+cbind(original = mod1$coefficients[2],
+      scaled = mod2$coefficients[2])
+```
+
+\noindent  In contrast, ridge regression estimates can change
+substantially depending on scaling of the predictors. In fact, ridge
+regression estimators $\widehat\beta^{\rm ridge}_j$ will depend on the
+scaling of the $j$-th predictor, the value of the tuning parameter
+$\lambda$, *and* the scaling of the *other* predictors as well.
+Therefore it is best to apply ridge regression *after we have
+standardized each of the predictors*. This way, each predictor has
+variance 1, and the final fit will not depend on the scale on which the
+predictors are measured.
+
+In addition, the ridge formulation does not penalize the intercept
+$\beta_0$. This is due to the fact that the ridge estimates depend on
+the center chosen for the responses. Specifically, in least squares
+regression, if we add a constant $c$ to each of the responses $Y_i$, the
+resulting predictions also shift by the same amount $c$. But this does
+not happen in ridge regression if we penalize the intercept -- therefore
+we do not penalize $\beta_0$.
+
+It can be shown that, if we center each covariate, that is, we use
+$X_{ij} - \bar X_j$ as predictors, then the estimator of the intercept
+is simply the sample mean of $Y$: $\widehat\beta_0 = \bar Y$. The
+remaining coefficients, $\beta_1, \ldots, \beta_p$, are estimated by a
+ridge regression without intercept.
+
+> For simplicity, we will henceforth assume that the model matrix $\X$
+> does not include intercept, and thus has only $p$ columns, not $p+1$.
+> We will also assume that mean of each column is zero.
+
+\noindent Under this assumption, we still have the same form of the
+solution:
+$(\widehat\beta_1, \ldots, \widehat\beta_p) = (\X^T\X + \lambda \mathbf{I})^{-1} \X^T\Y$.
+Furthermore, if we standardize predictors beforehand and if they are
+orthogonal to each other, it can be shown that
+$\widehat\beta_j^{\rm ridge} = \widehat\beta/(1 + \lambda)$.
+
+In R, we can use the `glmnet()` function in the `glmnet` library.[^27]
+Let us use the Boston data for example. Note the usage of `alpha = 0`
+(ensures we are fitting ridge regression as `glmnet()` can fit other
+models like LASSO and elastic net as well).
+
+[^27]: See `?glmnet` for more details.
+
+```{r boston_prep, warning=FALSE, message=FALSE}
+library(glmnet)
+## model matrix (standardized) and response
+medv <- Boston$medv
+model_mat <- Boston[ , -13]
+model_mat <- scale(model_mat)
+model_mat <- as.matrix(model_mat)
+```
+
+```{r boston_ridge_fit}
+## Fit ridge regression for a grid of lambda
+grid <- 10^seq(-2, 10, length = 100)
+boston_ridge <- glmnet(y = medv, x = model_mat,
+                       alpha = 0,
+                       lambda = grid)
+betahat <- coef(boston_ridge)
+```
+
+```{r}
+dim(betahat)
+```
+
+We constructed the model matrix by excluding intercept since it will be
+automatically included by `glmnet()` as well as excluding `medv`. Here
+we have used a custom grid of $\lambda$ values.[^28] For each value of
+$\lambda$, the output `betahat` contains the corresponding estimates of
+the regression coefficients. Figure \ref{fig:ridge} shows the estimated
+coefficients for different values of $\lambda$.
+
+[^28]: `glmnet()` has a default way to set $\lambda$ values as well if
+    we do not specify $\lambda$ manually.
+
+How do we choose the "optimal" value of $\lambda$? We again come back to
+*bias-variance trade-off*. Note that the penalty parameter $\lambda$
+effectively controls the model complexity: small values of $\lambda$
+results in close to least squares fit (lower bias, higher variance),
+while large values of $\lambda$ results in almost an intercept-only
+model (higher bias, lower variance). Figure \ref{fig:ridgebv} shows
+bias-variance trade-off of ridge regression.
+
+```{r ridgebv, echo=FALSE, fig.cap="Bias-variance trade-off of ridge regression. Figure taken from \textit{Introduction to Statistical Learning}. Displayed are squared bias (black), variance (green), and test mean squared error (purple) for the ridge regression predictions on a simulated data set. The horizontal dashed lines indicate the minimum possible MSE.", fig.margin = FALSE, fig.width=8, fig.height=4}
+knitr::include_graphics("img/6_5.png")
+```
+
+Ideally, we would like to select $\lambda$ that minimizes test MSE. We
+can use data splitting methods such as cross-validation (or holdout) to
+do so. We choose a grid of candidate values of $\lambda$, and compute
+the cross-validation (or holdout) error for each value. The optimal
+$\lambda$ is the one with minimum test error. Finally, we refit the
+model to the full data using the optimal $\lambda$.
+
+We can use `glmnet.cv()` function to perform cross-validation. By
+default, `glmnet.cv()` uses 10-fold CV.[^29]
+
+[^29]: See `?glmne.cv()` for details. We can use `nfolds` argument to
+    specify number of folds while using CV.
+
+```{r}
+set.seed(1001)
+grid <- 10^seq(-2, 10, length = 100)
+cv_out <- cv.glmnet(x = model_mat, y = medv, 
+                    alpha = 0, 
+                    lambda = grid)
+```
+
+```{r, echo=FALSE, eval=FALSE}
+####
+## Function to perform CV to select lambda
+## Input:
+#         x: model matrix excluding intercept
+#         y: response vector
+#         lambda_grid: lambda values to search over
+## Outout: a list
+#         lambda_min: lambda with minimum error
+#         cv_out: output object from cv.glmnet()
+#         best_fit: fitted model with best lambda
+####
+reg_cv <- function(x, y, lambda_grid, alpha){
+  # Perform cross-validation
+  cv.out <- cv.glmnet(x, y, 
+                      alpha = alpha, 
+                      lambda = grid)
+  # lambda with minimum CV error
+  bestlam <- cv.out$lambda.min
+  # Refit using best lambda
+  out <- glmnet(x, y, 
+                alpha = alpha,
+                lambda = bestlam)
+  # Return relevant objects
+  return(list(lambda_min = bestlam,
+              cv_out = cv.out,
+              best_fit = out))
+}
+
+## Apply the function above
+set.seed(1001)
+# lambda values
+grid <- 10^seq(-5, 10, length = 200)
+# perform cv
+out <- reg_cv(x, y,
+                lambda_grid = grid,
+                alpha = 0)
+```
+
+We can plot the results from CV process using the output of
+`cv.glmnet()` output. Figure \ref{fig:boscv} shows the results.
+
+```{r boscv, fig.cap="Cross-validation results for Boston data using ridge regression."}
+# Plot cv results
+plot(cv_out)
+```
+
+The "best" value of $\lambda$ can chosen by minimizing the CV error. The
+left vertical line in Figure \ref{fig:boscv} represents this value. From
+Figure \ref{fig:boscv}, we see that there are a range of $\lambda$
+values that give similar CV errors, and the dip in CV errors is not very
+pronounced. This suggests that we might just as well use least squares
+estimate in this case. Alternatively, we can also us the *one standard
+error* rule to choose $\lambda$: rather than choosing the $\lambda$ that
+gives the minimum test MSE, we would pick the largest $\lambda$ (less
+model complexity) whose test MSE is within one standard error of the
+minimum test MSE. The right vertical line in Figure \ref{fig:boscv}
+represents this value. The two values $\lambda$ are shown below, along
+with the estimated coefficients as well as estimated least squares
+coefficients for comparison.
+
+```{r}
+## lambda with minimum CV error/1 - SE
+bestlam <- data.frame(min = cv_out$lambda.min,
+             one_se = cv_out$lambda.1se)
+bestlam
+## Refit ridge regression
+# The cv_out object already has the full data fit
+# for each lambda
+ridge_min = predict(cv_out$glmnet.fit, 
+                    type = "coefficients", 
+                    s = bestlam$min)
+ridge_1se = predict(cv_out$glmnet.fit, 
+                    type = "coefficients", 
+                    s = bestlam$one_se)
+# Least squares
+ols <- coef(lm(medv ~ model_mat))
+betahat <- cbind(ridge_min, ridge_1se, ols)
+colnames(betahat) <- c("min", "1se", "ols")
+betahat
+## norm of betahat
+sqrt( colSums(betahat^2) )
+```
+
+```{r, echo=FALSE, fig.width=3, fig.cap="Predictors arranged by absolute values of their estimated coefficients using 1-SE rule."}
+tb <- tibble(pred = rownames(betahat)[-1],
+            est = abs(betahat[-1,2]))
+tb <- tb %>% arrange(est)
+
+ggplot(tb) + 
+  geom_point(aes(y = pred, 
+                 x = est),
+             stat = "identity") + 
+  theme_minimal(base_size = 18) + 
+  xlab("abs(coefficient)") + 
+  ylab("Predictor") + 
+  scale_y_discrete(limits = tb$pred)
+```
+
+In general, when the true relationship between predictors and response
+is linear, least squares estimates will have low bias but can have high
+variance, especially when $p$ is close to $n$. When $p>n$, least squares
+estimates are not unique. In contrast, ridge regression will still
+perform well by trading off a small increase in bias for a large
+decrease in variance. Thus, ridge regression works best in situations
+where the least squares estimates have high variance.
+
+```{r, echo=FALSE, eval=FALSE}
+#split <- initial_split(cbind(), prop = 0.8)
+#test <- testing(split)
+#train <- training(split)
+
+index <- sample(1:nrow(Boston), 
+                size = round(0.8*nrow(Boston)), 
+                replace = FALSE)
+
+cv.out <- cv.glmnet(x[index, ], 
+                    y[index], 
+                    alpha = 0, 
+                    lambda = grid)
+bestlam <- cv.out$lambda.min
+train_out <- glmnet(x, y, alpha = 0, lambda = grid)
+predict(train_out, type = "coefficients", s = bestlam)
+pred <- predict(train_out, s = bestlam, newx = x[-index, ])
+MSE <- mean((y[-index] - pred)^2)
+#MSE
+
+pred <- predict(train_out, s = 0, newx = x[-index, ], exact = TRUE,
+                x = x[index,], y = y[index])
+MSE <- mean((y[-index] - pred)^2)
+#MSE
+
+```
+
+A major disadvantage of ridge regression is that it does not exclude any
+variables from the final fitted model, that is, it always produces
+non-zero estimates of the regression coefficients. Ridge regression will
+not set any coefficients to exactly zero for any finite value of
+$\lambda$. Thus ridge regression can not be considered as a *variable
+selection* method. This is not a problem for prediction, but
+interpreting of a model fit with many small but non-zero coefficients
+can be difficult.
+
+### Lasso regression
+
+The lasso regression is another shrinkage method like ridge regression,
+but LASSO uses a penalty term involving sum of the absolute values of
+the regression coefficients, instead of sum of their squares. In
+particular, LASSO estimates of $\beta_j$ are obtained by minimizing\
+$$
+\sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots  - X_{ip}\beta_p)^2 + \lambda\sum_{j=1}^p|\beta_j|,
+$$ for $\lambda \geq 0$. Due to the $L_1$ penalty term, there is no
+closed form solution to the lasso problem.[^30] An equivalent way to
+write the LASSO problem is in the form of a constrained minimization
+problem, $$
+\mbox{minimize } \sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots - X_{ip}\beta_p)^2 
+$$ subject to the constraint $$
+\sum_{j=1}^p |\beta_j| \leq t,
+$$ for some $t > 0$.
+
+[^30]: Computing the lasso solution is a
+    \textit{quadratic programming problem}. Efficient algorithms are
+    available for computing the entire path of solutions as $\lambda$ is
+    varied. These algorithms have the same computational cost as for
+    ridge regression. Interested readers should see
+    \textit{Elements of Statistical Learning} for details.
+
+Much like ridge regression, lasso also shrinks the regression
+coefficients towards zero. However, due to the $L_1$ penalty term
+$\sum_j|\beta_j|$, some of the coefficients will be shrunk exactly to
+zero. It is easier to see if we have standardized the predictors, and if
+they are orthogonal to each other. In that case, the explicit lasso
+solution is
+$\widehat\beta_j^{\rm lasso} = sign(\widehat\beta_j)(|\widehat\beta_j| - \lambda)_+$.
+Thus lasso does perform variable selection. As a result, models
+generated from the lasso are generally much easier to interpret than
+those produced by ridge regression. In other words, lasso generates
+*sparse models* -- some coefficients are estimated to be *exactly zero*.
+
+From the point of view of the constrained formulation, for large values
+of $t$, we will effectively get the least squares estimates.
+Specifically, it can be shown that if $t$ is chosen larger that
+$t_0 = \sum_{j=1}^p |\widehat\beta_j|$, then lasso estimates are
+identical to least squares estimates. On the other hand, if we chose
+$t = t_0/2$, then the least squares estimates are shrunk, on average, by
+about $50\%$. Figure \ref{fig:lasso} shows the reason some lasso
+estimates are exactly set to zero while ridge estimates are not. Here
+$\widehat\beta$ represents least squares solution while while the blue
+diamond and circle represent the lasso and ridge regression constraints.
+For large values of $t$, the constraint region will contain
+$\widehat\beta$ and thus both ridge and lasso estimates will be
+identical to least squares (equivalently choosing $\lambda = 0$). For
+smaller values of $t$, the least squares estimate may lie outside the
+constraint region, like we see in Figure \ref{fig:lasso}.
+
+```{r lasso, echo=FALSE, fig.cap="Contours of the error and constraint functions for the lasso (left) and ridge regression (right). The solid blue areas are the constraint regions for lasso and ridge, while the red ellipses are the contours of the RSS. Figure taken from \\textit{Introduction to Statistical Learning}.", fig.margin = FALSE, fig.width=8, fig.height=4}
+knitr::include_graphics("img/6_7.png")
+```
+
+```{r lassohidden, warning=FALSE, message=FALSE, eval=FALSE, echo=FALSE}
+
+<<boston_prep>>
+
+## Fit lasso regression for a grid of lambda
+grid <- 10^seq(-3, 7, length = 100)
+boston_lasso <- glmnet(x = model_mat, y = medv,
+                       alpha = 1,
+                       lambda = grid)
+beta_hat <- coef(boston_lasso)
+```
+
+The ridge and lasso estimates are the points where the contours
+(ellipses) of the RSS intersect with the corresponding constraint
+region. Since the constraint region of ridge regression is circular with
+no sharp points, this intersection will not generally occur on an axis.
+Thus ridge regression coefficient estimates will be non-zero. On the
+other hand, the lasso constraint region has corners at each of the axes.
+So the ellipse will often intersect the constraint region at an axis.
+When this occurs, one of the coefficients will equal zero. In higher
+dimensions, many of the coefficient estimates may equal zero
+simultaneously. In Figure \ref{fig:lasso}, we have $\beta_1 = 0$.
+
+In R, we can use `glmnet()` with argument `alpha=1` to fit lasso
+regression. The code presented in the ridge regression section will work
+here with only change being `alpha=1`. The lasso fit for `Boston` data
+is done below. Figure \ref{fig:lassopath} shows the estimated regression
+coefficients as $\lambda$ changes. The left extreme of the plot
+corresponds to least squares fit ($\lambda = 0$).
+
+```{r lassopath, echo=FALSE, fig.cap="Lasso regression coefficients for different values of lambda (log10 scale) for Boston data.", message=FALSE, warning=FALSE, fig.width=9, fig.height=7, cache=TRUE}
+<<lassohidden>>
+  
+betahat <- t(as.matrix(beta_hat)[-1,])
+lam <- boston_lasso$lambda
+df <- data.frame(lam = lam, betahat)
+cc <- coef(boston_lasso, s = min(lam))
+dflab <- data.frame(lab = rownames(cc)[-1],
+                    ypos = cc[-1],
+                    xpos = -3.5)
+gg <- gather(df, "Variable", "Beta", -lam)
+ggplot() + 
+  geom_line(aes(log(lam, base = 10), Beta, col = Variable), lwd = 1.2, data = gg) + 
+  #geom_point(aes(log(lam), Beta, shape = Variable), lwd = 1.2) +
+  theme_bw(base_size = 18) + 
+  scale_color_viridis_d(option = "magma") + 
+  xlab("log(lambda)") + 
+  ylab("Estimated beta") +
+  geom_text(aes(xpos, ypos, label = lab), 
+            data = dflab, size = 5) + 
+  theme(legend.position = "None")
+```
+
+```{r, warning=FALSE, message=FALSE}
+<<lassohidden>>
+dim(beta_hat)
+```
+
+Like ridge regression, we need to carefully select $\lambda$. We can use
+cross-validation (or holdout) methods to do so, as before.
+
+```{r}
+##  Lasso cross-validation
+set.seed(1001)
+grid <- 10^seq(-3, 7, length = 100)
+cv_out <- cv.glmnet(x = model_mat, y = medv, 
+                    alpha = 1,
+                    lambda = grid)
+```
+
+```{r lassocv, fig.cap="Cross-validation results for Boston data using lasso regression."}
+# Plot cv results
+plot(cv_out)
+```
+
+Figure \ref{fig:lassocv} shows the results of selection of $\lambda$
+using 10-fold cross-validation. The $\lambda$ values with minimum CV
+error and chosen by the one standard rule are shown below, along with
+the corresponding coefficient estimates.
+
+```{r}
+## lambda with minimum CV error/1 - SE
+bestlam <- data.frame(min = cv_out$lambda.min,
+                      one_se = cv_out$lambda.1se)
+bestlam
+```
+
+```{r, fig.width=3, fig.cap="Predictors arranged by absolute values of their estimated coefficients using 1-SE rule from a lasso fit.", echo=FALSE}
+
+<<gagan>>
+  
+<<chegi>>
+
+```
+
+```{r gagan}
+## ## Refit lasso regression
+# The cv_out object already has the full data fit
+# for each lambda
+lasso_min = predict(cv_out$glmnet.fit,
+                    type = "coefficients",
+                    s = bestlam$min)
+lasso_1se = predict(cv_out$glmnet.fit,
+                    type = "coefficients",
+                    s = bestlam$one_se)
+# Least squares
+ols <- coef(lm(medv ~ model_mat))
+betahat_lasso <- cbind(lasso_min,
+                       lasso_1se,
+                       ols)
+colnames(betahat_lasso) <- c("min", "1se", "ols")
+```
+
+```{r}
+betahat_lasso
+```
+
+```{r chegi, echo=FALSE, eval=FALSE}
+tb <- tibble(pred = rownames(betahat_lasso)[-1],
+            est = abs(betahat_lasso[-1,2]))
+tb <- tb %>% arrange(est)
+
+ggplot(tb) + 
+  geom_point(aes(y = pred, 
+                 x = est),
+             stat = "identity") + 
+  theme_minimal(base_size = 18) + 
+  xlab("abs(coefficient)") + 
+  ylab("Predictor") + 
+  scale_y_discrete(limits = tb$pred)
+```
+
+\noindent Notice that the coefficient of `indus` is exactly set to zero,
+and is thus excluded from the final model, when we choose $\lambda$ by
+minimizing CV error. The one standard error rule gives a much larger
+$\lambda$, and thus a sparser fit, excluding `indus`, `age` and `rad`
+from the final model.
+
+### Elastic net
+
+A generalization of lasso and ridge is *elastic net*,[^31] which
+minimizes $$  
+\sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots  - X_{ip}\beta_p)^2 + \lambda((1-\alpha)\sum_{j=1}^p\beta_j^2 + \alpha\sum_{j=1}^p|\beta_j|),
+$$ for $\lambda \geq 0$ and $\alpha \in [0,1]$. Note that lasso and
+ridge regressions are special cases of elastic net for $\alpha = 1$ and
+$\alpha = 0$, respectively.[^32] Zhou and Hastie (2005) suggests that
+elastic net deals with correlated predictors more effectively than lasso
+or ridge. The ridge penalty tends to shrink coefficients of correlated
+variables towards each other, while lasso tends to pick one predictor to
+be kept in the model while ignoring the rest.[^33] The elastic net
+penalty is a compromise between these two phenomena. The first term the
+the penalty encourages the correlated features to be averaged, while the
+second penalty term encourages sparsity in the estimated coefficients of
+the averaged features.
+
+[^31]: Zou H, Hastie T (2005). Regularization and Variable Selection via
+    the Elastic Net. Journal of the Royal Statistical Society, Series B,
+    67(2), 301--320.
+
+[^32]: This is the formulation `glmnet()` uses with the `alpha`
+    argument.
+
+[^33]: See \textit{Elements of Statistical Learning} for more
+    discussion.
+
+Elastic net often finds application in genomics (high-dimensional
+problems) where $p>n$, and predictors (genes) are often have high
+correlation among them.
+
+As usual, we need to tune both $\lambda$ and $\alpha$ in this case. We
+can use `glmnet()` to fit elastic net as well.
+
+### Other variable selection methods
+
+There are *many* other variable selection models in literature,
+including several variations of lasso, such as
+
+-   *adaptive lasso*:[^34] for estimation with less bias than ordinary
+    lasso. It requires an initial estimate of the coefficients. The
+    penalty term for each coefficient is then inversely weighted by the
+    corresponding initial estimates. We can use the *penalty.factor*
+    argument in glmnet() to do so.
+
+-   *group lasso*:[^35] for variable selection in groups of variables.
+    For example, we might have a categorical variable with more than two
+    levels. In variable selection, we might exclude/include all the
+    dummy variable together. We can use R package `grpreg` for fitting
+    group lasso.
+
+-   *fused lasso*:[^36] does variable selection when the predictors have
+    a natural ordering. For example, the predictors can be genes ordered
+    by their chromosome location. Another example is when predictor is a
+    function of time (functional data or time series). We can use the
+    `genlasso` package here.
+
+-   *Smoothly clipped absolute deviations (SCAD)*[^37] and *Minimax
+    concave penalty (MCP)*: produce sparse set of solution and
+    approximately unbiased coefficients for large coefficients. Both
+    methods are available in the `ncvreg` package.
+
+[^34]: Zou, H (2012). The Adaptive Lasso and Its Oracle Properties,
+    JASA, 101, 1418 - 1429
+
+[^35]: Yuan, M. & Lin, Y. (2007), Model selection and estimation in
+    regression with grouped variables, Journal of the Royal Statistical
+    Society, Series B 68(1), 49 - 67
+
+[^36]: Tibshirani, R., Saunders, M., Rosset, S., Zhu, J. and Knight, K.
+    (2005), "Sparsity and smoothness via the fused lasso", Journal of
+    the Royal Statistics Society: Series B 67(1), 91 - 108.
+
+[^37]: Fan J and Li R. (2001). Variable Selection via Nonconcave
+    Penalized Likelihood and its Oracle Properties. Journal of American
+    Statistical Association, 96:1348 - 1360.
+
+There are many other methods available in literature. Readers are
+encouraged to explore according to their needs.
+
+## Dimension Reduction Methods
+
+The variable selection and shrinkage methods discussed so far attempts
+to reduce model variance in two ways: by reducing number of variables in
+the model (subset selection, lasso) and by shrinking regression
+coefficients toward zero (ridge, lasso). Another method to control model
+variance is to transform the original predictors to obtain new ones, and
+use them as covariates in the regression model. Typically, the number of
+new variables are less than the number of the original predictors. Thus
+these methods are called *dimension reduction* techniques.
+
+Suppose our original predictors are $X_{i1}, \ldots, X_{ip}$. A typical
+dimension reduction method has two steps:
+
+1.  Create new predictors $Z_{i1}, \ldots, Z_{iM}$ by
+    transforming/combining the original predictors. Usually we choose
+    $M < p$, and thus reducing the dimension of the problem.
+
+2.  Fit the regression model with the new $M$ predictors: $$
+    Y_i = \theta_0 + Z_{i1}\theta_1 + \ldots + Z_{iM}\theta_M + \epsilon_i.
+    $$
+
+Depending on how we construct the new predictors gives rise to different
+dimension reduction techniques.
+
+In this section, we will discuss dimension reduction in the context of
+building linear regression models. We will discuss dimension reduction
+methods as a part of unsupervised learning in a later chapter.
+
+### Principal Components Regression
+
+Principal components regression uses *Principal Components Analysis
+(PCA)* to derive new features from the original predictors. For now, we
+will only briefly discuss PCA -- it will be covered in a future chapter.
+
+> For simplicity of the following discussion, we will henceforth assume
+> that each predictor variable has been centered.
+
+\noindent \textit{Overview of PCA}
+
+The objective of PCA is to condense the information that is present in
+the original set of variables via linear combinations of the variables
+while losing as little information as possible. Suppose we have a $p$
+predictors $\X_i = (X_{i1},\ldots X_{ip})^T$. The main goal of PCA is to
+identify *linear combinations* of the form $$
+Z_{im} = a_{m1}X_{i1} + \ldots + a_{mp}X_{ip}, m = 1, 2, \ldots, M,
+$$ that explain most of the variability in the data.[^38] Typically we
+choose $M < p$, and the new variables, $Z_{im}$, are ordered according
+to their importance. Specifically, $Z_{i1}$ is designed to capture the
+most variability in the original variables by any linear combination --
+this is called the *first principal component (PC)*. Then $Z_{i2}$, the
+*second PC*, captures the most of the *remaining* variability while
+being *uncorrelated* to $Z_{i1}$. We continue until we have the $p$-th
+PC $Z_{ip}$. In the end, we hope that the first few PCs,
+$Z_{i1}, \ldots, Z_{iM}$, will capture most of the variability in the
+original predictors.
+
+[^38]: Mathematically, we need to *normalize* the weights, that is, we
+    ensure that $a_{m1}^2 + \ldots + a_{mp}^2 = 1$.
+
+\mydefbox{Principal component directions and Loadings}{The vectors $\ab_m = (a_{m1}, \ldots, a_{mp})^T$ are called the \textit{principal component (PC) directions}. The individual components (the weights $a_{m1}, \ldots, a_{mp}$) of each PC direction are called \textit{loadings}. The loadings tell us how the original variables are weighted to get the new variables.}
+
+Let us look at the `Boston` data for a demonstration. In R we can use
+the function `prcomp()` to perform PCA. Here we can approximate *total
+variation* in the original data as the sum of the variances of each
+predictors.
+
+```{r}
+# Extract only predictors and center them
+X <- scale(Boston[, -13], 
+           center = TRUE, scale = FALSE)
+dim(X)
+# Total variation
+TV = sum(apply(X, 2, var))
+TV
+```
+
+\noindent Before proceeding, let us check variances of individual
+predictors.
+
+```{r}
+apply(X, 2, var)
+```
+
+\noindent Here we see an obvious problem -- the variables are not
+comparable in terms of their variability. For example, the variable
+`tax` has a variance `r var(Boston$tax)` while `lstat` has variance
+`r var(Boston$lstat)`. So majority of the total variation is due to
+`tax`. In such a case of imbalance, `tax` will overshadow all other
+variables. This may not be because `tax` is the only important variable
+here, but it is an issue of measurement unit/scale. For example, if we
+multiply `lstat` by $100$, it does not make `lstat` any more important
+than it originally was, but its variance will be inflated by a factor of
+$10,000$ making `lstat` dominant over the rest of the predictors. To
+avoid this issue, we will standardize each predictor. [^39] Since now
+every predictor will have variance one, total variation is simply the
+number of predictor in the data.
+
+[^39]: This is my general recommendation when performing PCA.
+
+```{r}
+# Standardized predictors
+Xstd <- scale(X, center = TRUE, scale = TRUE)
+# TV
+TV = ncol(Xstd)
+TV
+```
+
+Now we perform PCA of the predictors. After performing PCA, we will have
+`r ncol(Xstd)` PCs (linear combinations of the original predictors in
+$\X$). We can access the PCs in the *\$x* component from the `prcomp()`
+output.
+
+```{r}
+# PCA
+pc_out <- prcomp(Xstd)
+names(pc_out)
+# PCs
+Z <- pc_out$x
+dim(Z)
+```
+
+Each column of $Z$ contain one PC -- the first column if for PC1, the
+second for PC2 and so on. First we note that the combined variation in
+$Z$ is exactly the same as total variation in the original predictors.
+
+```{r}
+sum(apply(Z, 2, var))
+```
+
+\noindent Thus the ratio of variance of the 1st PC (first column of `Z`)
+to the total variation quantifies how much of the total variation is
+captured by the 1st PC. We can do similar calculations for each of the
+PCs. $$
+\mbox{Proportion of TV captured by $j$-th PC} = \frac{var(Z_j)}{TV}.
+$$
+
+```{r}
+# Proportion of TV captured by PC1
+var(Z[,1])/TV
+```
+
+The PCs are ordered by their variance. By construction, PCs are
+uncorrelated. So total variation captured by the first few PCs is simply
+the sum of their individual variances. We can define proportion of
+variation similarly. $$
+\mbox{Proportion of TV captured by first $j$ PCs} = \frac{var(Z_1) + \ldots + var(Z_j)}{TV}.
+$$
+
+```{r}
+# Cumulative proportion of TV captured by successive PCS
+cumsum(apply(Z, 2, var)) / TV
+```
+
+\noindent In the example above we can see that the first three PCs
+together explain
+`r tm <- cumsum(apply(Z, 2, var)) / TV; round(tm[3]*100, 3)` percent of
+total variation.
+
+We can use the `summary()` function to see the perfromance of PCA.
+
+```{r}
+summary(pc_out)
+```
+
+Note that we need all the `r ncol(Xstd)` PCs to capture $100\%$ of $TV$,
+but doing so will not perform dimension reduction. Thus we will have
+discard the last few PCs and in the process sacrifice some of the
+variation in the original data. For example, if we are willing to
+sacrifice $15\%$ of TV (i.e., capture $85\%$ of TV), we will only need 6
+PCs. *In principal component regression, we will treat the number of PCs
+to retain as a tuning parameter.*
+
+Let us not briefly look at the *loadings* for the PCs.[^40]
+
+[^40]: We will discuss more about interpreting the loadings in a later
+    chapter.
+
+```{r}
+loadings <- pc_out$rotation
+# PC1 loadings
+round(loadings[,1], 2)
+```
+
+\noindent It seems PC1 has two groups of variables, (zn, rm and dis) vs.
+the rest of the variables excluding `chas`, with loadings with opposite
+signs but roughly similar magnitude. Investigation of correlation plot
+(Figure \ref{fig:cplot}) of the predictors gives insight about PC1
+loadings. We can see there are two groups of variables that have
+positive correlation within each group, but have negative correlation
+between the groups. PC1 essentially quantifies this pattern.
+
+```{r cplot, echo=FALSE, fig.cap="Correlation plot of Boston data.", fig.height=6, fig.width=6}
+ggcorrplot::ggcorrplot(cor(Xstd), 
+                       hc.order = TRUE, 
+                       ggtheme =  theme_bw(
+                         base_size = 12), 
+                       colors = c("steelblue", 
+                                  "white", 
+                                  "#990000")
+                       )
+```
+
+From a geometric point of view, PCA attempts to find the *directions
+along which most of the variability is present*. Let us consider the
+simple case with number of variables $p = 2$. Thus for PC1 we need to
+determine loading $a_{11}, a_{12}$ so that variance of
+$a_{11}X_1 + a_{12}X_2$ is maximized. The condition on the loadings is
+$$
+a_{11}^2 + a_{12}^2 = 1.
+$$ This is the equation of a circle, centered at zero, with radius one.
+So we only need to look at points $(a_{11}, a_{12})^T$ that are on the
+perimeter of the circle. This is what we mean by *direction*; see Figure
+\ref{fig:AA}.
+
+```{r AA, echo=FALSE, fig.width=5, fig.height=5, fig.margin = TRUE, fig.cap = "First PC direction.", warning=FALSE, message=FALSE}
+library(MASS)
+# Put a circle of unit radius
+theta = seq(0, 2*pi, len=101)
+x <- sin(theta)
+y <- cos(theta)
+eqscplot(x, y, lwd=2, type = "l")
+points(0, 0, pch=19)
+abline(h = 0, col = "darkgrey", lty=2)
+abline(v = 0, col ="darkgrey", lty=2)
+# arrow
+arrows(0, 0, 0.6, 0.8, col = "#990000", lwd=2, angle = 10)
+text(0.6, 0.8, labels = "a", pos = 4)
+points(0.6, 0.8, pch=19)
+```
+
+Thus, given a data scatterplot, the 1st PC points to the direction along
+with most of the variation lies. In Figure \ref{fig:BB}, the grey points
+represent a data scatter. PCA first places a circle of unit length at
+the center of the data (the black circle in the plot) and finds the
+direction with the most variation (the red arrow). The direction
+orthogonal to PC1 containing the second largest amount of variation is
+PC2 (the blue arrow).
+
+```{r BB, echo=FALSE, fig.width=14, fig.height=7, fig.cap="Geometry of PCA in two and three dimensions (left and right panels, respectively).", fig.fullwidth=TRUE, fig.margin = FALSE, message=FALSE, warning=FALSE}
+
+library(plot3D)
+library(MASS)
+set.seed(1001)
+par(mfrow = c(1,2), mar = c(4, 4, 2, 2))
+
+
+## 2-D plot
+# Generate data chol( cbind(c(2, 1.5), c(1.5, 1.5)) )
+dat <- diag(c(sqrt(2),0.4)/2) %*% matrix(rnorm(500*2), nrow=2)
+r <- pi/6 # rotation angle 
+R <- cbind( c(cos(r), sin(r)), c(-sin(r), cos(r)) )
+dat <- R %*% dat
+eqscplot( t(dat), cex=0.5, pch=19, 
+          col = rgb(0,0,0, alpha = 0.2), tol=0.2,
+          xlab = "X1", ylab = "X2", cex.lab = 1.6)
+
+# Put a circle of unit radius
+theta = seq(0, 2*pi, len=101)
+x <- sin(theta)
+y <- cos(theta)
+lines(x, y, lwd=2)
+points(0, 0, pch=19)
+abline(h = 0, col = "darkgrey", lty=2)
+abline(v = 0, col ="darkgrey", lty=2)
+
+# PCA and get PC1 and PC2
+pcout = prcomp(t(dat))
+pc1 <- -pcout$rotation[, 1]
+pc2 <- pcout$rotation[, 2]
+
+#Arrows toward the direction of PCs
+arrows(0, 0, pc1[1], pc1[2], col = "#990000", lwd=2, angle = 10)
+arrows(0, 0, pc2[1], pc2[2], col = "steelblue", lwd=2, angle = 10)
+text(pc1[1], pc1[2], labels = "PC 1", pos = 4, col = "#990000")
+text(pc2[1], pc2[2], labels = "PC 2", pos = 3, col = "steelblue")
+
+# 3-D plot
+set.seed(1001)
+n <- 500
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+x3 <- rnorm(n)
+
+D <- sqrt(diag(c(1,1,1))/2)
+Sig <- cbind( c(1, 0.7, 0.7), c(0.7, 1, 1), c(0.7, 0.7, 1))
+sm <- chol(Sig)
+dat <- D %*% t(sm) %*% rbind(x1, x2, x3)
+
+r <- pi/6
+Rx = cbind( c(1, 0, 1), c(0, cos(r), sin(r)), c(0, -sin(r), cos(r)) )
+#Ry = cbind
+  
+dat <- Rx %*% dat
+
+pcout <- prcomp( t(dat) )
+pc1 <- -pcout$rotation[,1]
+pc2 <- pcout$rotation[,2]
+pc3 <- -pcout$rotation[,3]
+
+ind <- which(abs(dat[3,]) > 2.5)
+
+dat <- dat[, -ind]
+
+scatter3D(dat[1,], dat[2,], dat[3,], 
+          pch=19, col=rgb(0,0,0, alpha = 0.03),
+          xlim = c(-1.5,1.5), #range(dat),
+          ylim = c(-1.5,1.5), #range(dat),
+          zlim = c(-1.5,1.5), #range(dat),
+          phi=30, theta = 30, bty = "b2", xlab = "X1", ylab = "X2", zlab = "X3",
+          cex.lab = 1.6)
+
+points3D(0,0,0, pch=19, add=T,col = "black")
+
+
+arrows3D(0,0,0, pc1[1], pc1[2], pc1[3], col = "#990000", add=T, lwd=4)
+arrows3D(0,0,0, pc2[1], pc2[2], pc2[3], col = "steelblue", add=T, lwd=4)
+arrows3D(0,0,0, pc3[1], pc3[2], pc3[3], col = "darkgreen", add=T, lwd=4)
+
+# sphere
+M  <- mesh(seq(0, 2*pi, length.out = 70), 
+           seq(0,   pi, length.out = 70))
+u  <- M$x ; v  <- M$y
+
+x <- cos(u)*sin(v)
+y <- sin(u)*sin(v)
+z <- cos(v)
+
+# full  panels of box are drawn (bty = "f")
+scatter3D(x, y, z, pch = ".", col = "lightblue", 
+          bty = "f", cex = 2, colkey = FALSE, add=T)
+```
+
+Let us now consider the case with three variables, $p=3$. In this case,
+the loadings are $a_{11}, a_{12}, a_{13}$ and the constraint becomes $$
+a_{11}^2 + a_{12}^2 + a_{13}^2 = 1.
+$$ This is the equation of a sphere, centered at zero, with radius one.
+Thus we only need to look at points $(a_{11}, a_{12}, a_{13})^T$ that
+are on the *surface of the sphere*.
+
+Now consider a data scatter in three dimensions (gray points in Figure
+\ref{fig:BB}, right panel). We first place a sphere of unit radius at
+the center of the data (the light-blue sphere). Then the first PC points
+to the direction (represented by the vector on the surface of the
+sphere) with the most variation (the red arrow). The second PC is the
+direction orthogonal to the first PC containing the second largest
+amount of variation. The third PC is the direction orthogonal to both
+the first and second PCs.
+
+Note that any direction represented by the vector $\ab$ is also
+represented by $-\ab$ (just like "x-axis" corresponds to both positive
+and negative directions). Thus if $\ab$ is a PC then so is $-\ab$. In
+other words, if $Z_1 = a_{11}X_1 + \ldots + a_{1p}X_p$ is a PC, then so
+is $Z_1' = -a_{11}X_1 - \ldots - a_{1p}X_p$. Thus it is not advisable to
+interpret the loadings as they are (since the sign is unidentifiable) --
+we need to interpret them *relative to* other loadings. For example, we
+can say `crim` has opposite relationship to PC1 compared to `zn`.
+
+\noindent \textit{Performing Principal Components Regression (PCR)}
+
+Now that we have constructed the PCs, we can choose the first $M$ PCs,
+$Z_{i1}, \ldots, Z_{iM}$, and build a regression model with the PCs as
+predictors. Here we are assuming that the direction that the original
+predictors, $X_1, \ldots, X_p$ show most variation are in fact the
+directions associated with the response.[^41]
+
+[^41]: There is no assurance such an assumption actually holds.
+
+If the assumption above holds true, then using PCR with
+$Z_{i1}, \ldots, Z_{iM}$ as predictors will give a better result than
+using all the $p$ original predictors. PCR may also help mitigating
+overfitting.
+
+The number of retained PCs, $M$, is considered to be a tuning parameter
+and can be chosen by cross-validation (or other data splitting methods).
+Once the optimal $M$ is chosen, we fit the model to the full data with
+the chosen $M$ to obtain the final model.
+
+In R, we can use the `pcr()` function in the `pls` package.[^42] Note
+the usage of arguments `center = TRUE` and `scale = TRUE`.
+
+[^42]: Other packages such as `caret` can also so this.
+
+```{r, warning=FALSE, message=FALSE}
+library(pls)
+set.seed(1001)
+pcr_lm <- pcr(medv ~ ., 
+              data = Boston,
+              center = TRUE, scale = TRUE,
+              validation = "CV")
+```
+
+When using `pcr()`, we do not need to explicitly obtain the PCs -- it is
+automatically done by `pcr()`. Here we use the original Boston data, and
+use the `scale` and `center` arguments to standardize. The `validation`
+argument specifies the method to choose $M$.
+
+```{r}
+summary(pcr_lm)
+```
+
+The cross-validation results suggest that the lowest RMSE corresponds to
+using all 12 PCs. In other words, in this example, PCR did not provide
+any benefit.
+
+```{r pcrse, echo=FALSE, fig.cap="Cross-validation error with one SE error bars.",}
+<<pcrcaret>>
+<<pcrse2>>
+```
+
+Let us now investigate the one standard error rule in this situation.
+Specifically, we can choose a smaller model whose test error is within
+one standard error of the minimum test error. For computational ease,
+let us refit PCR and perform cross-validation using `caret`.
+
+```{r pcrcaret, eval=FALSE}
+set.seed(1001)
+model <- train(medv ~ ., 
+               data = Boston,
+               method = "pcr",
+               trControl = trainControl("cv", number = 10),
+               tuneLength = 12,
+               preProcess = c("center", "scale")
+  )
+```
+
+```{r}
+model$results
+```
+
+Since we are using 10-fold CV, the standard error of the estimate of the
+test error (average of the 10 test errors) is simply the standard
+deviation divided by square-root of number of folds.[^43]
+
+[^43]: Recall, for a random sample $X_1, \ldots, X_n$, standard error of
+    sample mean is
+    $$SE(\bar X) = \frac{\mbox{sample SD of X values}}{\sqrt{\mbox{sample size}}}.$$
+
+```{r}
+SE <- model$results$RMSESD/sqrt(10)
+round(SE, 2)
+```
+
+Thus we can plot the estimated test errors and error bars representing
+plus/minus one standard error, see Figure \ref{fig:pcrse}.
+
+```{r pcrse2, echo=FALSE,  eval=FALSE}
+
+df <- tibble(ncp = model$results$ncomp,
+             RMSE = model$results$RMSE) %>%
+  mutate(up = RMSE + model$results$RMSESD/sqrt(model$control$number),
+         down = RMSE - model$results$RMSESD/sqrt(model$control$number))
+
+ggplot(df) + 
+  geom_point(aes(x = ncp, y = RMSE)) + 
+  geom_line(aes(x = ncp, y = RMSE)) + 
+  geom_errorbar(aes(x = ncp, y = RMSE, 
+                    ymin = down, ymax = up)) + 
+  theme_bw(base_size = 18) + 
+  geom_hline(yintercept = df$up[11], lty=2) + 
+  geom_hline(yintercept = df$down[11], lty=2)
+
+```
+
+```{r, echo=FALSE}
+nop <- min(which(df$RMSE <= df$up[11]))
+```
+
+Now we see that a model with `r nop` PCs can be chosen with the one
+standard error rule. From the PCA output shown earlier, first `r nop`
+PCs explain
+`r round(cumsum(pc_out$sdev^2)[nop]/sum(pc_out$sdev^2)*100,2)` percent
+of total variation in the original data. Finally, we fit the model
+chosen number of PCs.
+
+```{r}
+pcr_final <- pcr(medv ~ .,
+                 data = Boston,
+                 center = TRUE, scale = TRUE,
+                 ncomp = 4, validation = "none")
+summary(pcr_final)
+```
+
+While PCR performs dimension reduction, it does *not* perform variable
+selection since each PC can be a combination of all the original
+variables. For example, in our final model with 4 leading PCs, the model
+is $$
+Y_i = \theta_0 + \sum_{m=1}^4 Z_{im}\theta_m + \epsilon_i
+$$ Since $Z_{im} = a_{m1}X_{i1} + \ldots + a_{mp}X_{ip}$, we can write
+the model above in terms of the original variables as $$
+Y_i = \theta_0 + [\sum_{m=1}^4 a_{m1}\theta_m] X_{i1} + \ldots + [\sum_{m=1}^4a_{mp}\theta_m] X_{ip} + \epsilon_i.
+$$ Therefore, PCR includes all the original variables in the final
+model. In our example, the coefficients for the standardized original
+coefficients can be obtained follows.
+
+```{r}
+coef(pcr_final)
+```
+
+Note that none of the original variables has zero coefficients.
+
+### Partial Least Squares
+
+In PCR, we are assuming that the direction that the original predictors,
+$X_1, \ldots, X_p$ show most variation are in fact the directions
+associated with the response. Such an assumption need to hold true since
+the PC directions are computed in an unsupervised way.
+
+In contrast, partial least squares (PLS)[^44] is a *supervised*
+approach, that is, PLS determines the linear combinations of the
+original predictors by making use of the response. Roughly speaking, the
+PLS approach attempts to find directions that help explain both the
+response and the predictors.
+
+[^44]: Originally, Herman Wold developed the nonlinear iterative partial
+    least squares (NIPALS) algorithm (Wold 1966, 1982) algorithm for
+    nonlinear models. Later, Wold et al. (1983) adapted the NIPALS
+    method for regression setting with correlated predictors -- this
+    adaptation was named `PLS.`
+
+Recall, we are still operating under the assumption that the predictors
+have been standardized. PLS begins by performing a *simple linear
+regression* of $Y_i$ on the $j$-th original predictor, $X_{ij}$, for
+each $j = 1, \ldots, p$. The resulting estimates of slopes are denoted
+as $a_{11}, \ldots, a_{1p}$, respectively. Then the first PLS component
+is constructed as $$
+Z_{i1} = a_{11}X_{i1} + \ldots + a_{1p}X_{ip}.
+$$ Thus the first PLS component places the highest weight on the
+variables that are most strongly related to the response.
+
+To construct the second PLS component, we regress each predictor
+variable on the first PLS component, and take the residuals. We can view
+these residuals as the remaining information that has not been captured
+by the first PLS component. The the second PLS component is computed in
+the same manner as before:
+$Z_{i2} = a_{21}X_{i1} + \ldots + a_{2p}X_{ip},$ where $a_{2j}$ if
+estimated regression coefficient of $X_{ij}$ from the simple linear
+regression of the residuals (obtained above) on $X_{ij}$. We continue
+this process until we have all the $p$ PLS components. As in PCR, we
+take the leading $M$ PLS components. A multiple linear regression is
+then fitted with $Y$ as response and the $M$ PLS components as
+predictors.
+
+We can use the `plsr()` function in `pls` package, or use `caret` with
+`mehod = "pls"`. The number of PLS components, $M$ can be chosen using
+data splitting methods, such as CV.
+
+```{r}
+set.seed(1001)
+model <- train(medv ~ ., 
+               data = Boston,
+               preProcess = c("center", "scale"),
+               method = "pls",
+               trControl = trainControl("cv", number = 10),
+               tuneLength = 12
+  )
+model
+```
+
+```{r plsrse, echo=FALSE, fig.cap="Cross-validation error with one SE error bars."}
+<<pcrse2>>
+```
+
+We can plot the estimated test errors and error bars representing
+plus/minus one standard error as we did in PCR -- see Figure
+\ref{fig:plsrse}. Using minimum test error, we can use 8 PLS components.
+Using one standard error rule, it seems two PLS components are
+sufficient.
+
+```{r, echo=FALSE, eval=FALSE}
+model$results
+```
+
+We can finally fit the PLS regression model on the full data using the
+chosen number of PLS components. Using 8 PLS components, the final fit
+is shown below.
+
+```{r}
+pls_final <- plsr(medv ~ .,
+                  data = Boston,
+                  center = TRUE, scale = TRUE,
+                  ncomp = 8)
+summary(pls_final)
+```
+
+We can extract the values of PLS components (scores), that is, $Z_{im}$
+values using the `scores()` function. The weights (loadings) of the
+original variables for each PLS components can be extracted using
+`loadings()` function.
+
+```{r}
+pls_scores <- scores(pls_final)
+load <- loadings(pls_final)
+```
+
+It can be shown that PLS computes directions that have high variance and
+have high correlation with the response. In contrast, PCA seeks
+directions only with high variance.[^45] $\mbox{ }$[^46] In practice PLS
+often produces performance similar to ridge regression or PCR. While the
+supervised dimension reduction of PLS can reduce bias, it also has the
+potential to increase variance.
+
+[^45]:  Stone M, Brooks R (1990). Continuum Regression: Cross-validated
+    Sequentially Constructed Prediction Embracing Ordinary Least
+    Squares, Partial Least Squares, and Principal Component Regression.
+    Journal of the Royal Statistical Society, Series B, 52, 237 - 269.
+
+[^46]: Frank, I.E. and Friedman, J.H. (1993) An Statistical View of Some
+    Chemometrics Regression Tools. Technometrics, 35, 109 - 135.
+
+# High-dimensional data
+
+So far, all the methods we discussed assume that the number of
+predictors ($p$) is (much) less than the sample size ($n$). The
+performance of these methods deteriorate as $p$ gets closer or exceed
+$n$. Data sets containing more features than observations (or sometimes
+number of features slightly smaller than $n$) are often referred to as
+*high-dimensional*. In many fields, such as genomics and bioinformatics,
+such high-dimensional data are common. For example, in genomics we
+measure *single nucleotide polymorphisms (SNPs)*[^47] and investigate
+their association with an outcome of interest. Typically, the number of
+SNPs are in hundred of thousands, but sample size is in hundreds.
+
+[^47]: These are individual DNA mutations that are relatively common in
+    the population
+
+When we have $p>n$, usual least squares regression should not be
+performed. This is because as $p>n$, the model matrix will not have full
+column rank, and as such least squares does not provide unique
+solutions. Furthermore, training set measures such as $R^2$ and $RSE$
+will keep getting better and better as we add more predictors to the
+model *regardless whether the predictors are actually associated with
+the response*. Suppose we have $p$ predictors. When $p + 1 \geq n$ (or
+$p \geq n$ if intercept is not in the model), least squares gives a
+perfect fit with zero residuals ($R^2 = 1$ and $RSE = 0$). However, such
+a model will perform extremely poorly in a test set due to very high
+model variance. Figure \ref{fig:hdlm} further illustrates the risk of
+carelessly applying least squares when the number of features is large.
+
+```{r hdlm, echo=FALSE, fig.margin = FALSE, fig.height=3, fig.width=9, fig.cap="Risk of carelessly applying least squares when the number of features is high. Data were simulated with n = 20 observations, and regression was performed with between 1 and 20 features, each of which was completely unrelated to the response."}
+knitr::include_graphics("img/6_23.png")
+```
+
+In fact, the model evaluation approaches that do not require a test set
+(AIC, BIC, adjusted $R^2$), are also not appropriate for in the
+high-dimensional setting due to instability of estimation of
+$\widehat\sigma^2$ and RSS, both of which will be zero when
+$p + 1 \geq n$. Thus we need alternative methods in this situation.
+
+## Regression in high-dimensions
+
+We can still apply *dimension reduction approaches* such as forward
+stepwise selection[^48], ridge regression, the lasso, and principal
+components regression. These methods avoid overfitting data using a less
+flexible model.
+
+[^48]: Backward selection can not be used here since we can not a fit
+    the full model with all the predictors.
+
+```{r hdlasso, echo=FALSE, fig.margin = FALSE, fig.height=3, fig.width=9, fig.cap="The lasso was performed with n = 100 observations and three values of p, the number of features. Of the $p$ features, 20 were associated with the response. The boxplots show the test MSEs that result using three different values of the tuning parameter $\\lambda$. For ease of interpretation, rather than reporting $\\lambda$, the degrees of freedom are reported; for the lasso this turns out to be simply the number of estimated non-zero coefficients. When $p = 20$, the lowest test MSE was obtained with the smallest amount of regularization. When $p = 50$, the lowest test MSE was achieved when there is a substantial amount of regularization. When $p = 2000$ the lasso performed poorly regardless of the amount of regularization, due to the fact that only $20$ of the $2000$ features truly are associated with the outcome."}
+knitr::include_graphics("img/6_24.png")
+```
+
+Figure \ref{fig:hdlasso} illustrates the performance of the lasso in a
+simple simulated example (figure taken from *Introduction to Statistical
+Learning*). The *degrees of freedom* used in the plot is simply the
+number of non-zero coefficients in the lasso model. Large degrees of
+freedom indicate a more flexible model. The sample size uses the
+simulation is $n = 100$. It is evident that *test error increases as the
+the number of predictors increases*, unless the additional features are
+truly associated with the response. This phenomenon is called the *curse
+of dimensionality*.
+
+In general, test MSE will decrease by adding predictors that are truly
+associated with the response. Adding noise predictors that are not
+related to the response at all will lead to an increase of test MSE.
+This is because adding such noise predictors increases dimensionality of
+the problem and results in overfitting.
+
+## Interpreting Results in High Dimensions
+
+Another issue in high-dimensional problem is multicollinearity, that is,
+when one predictor can be expressed as a linear combination of the
+others. When $p + 1 \geq n$, the predictors will *always* have
+multicollinearrity -- any predictor can be written as a linear
+combination of the others. This implies that we can not identify the
+best coefficient in the regression model. At most, we can hope to assign
+large regression coefficients to variables that are correlated with the
+variables that truly are predictive of the outcome.
+
+We should also be careful in reporting measures of model fit. We quote
+the following paragraph from Chapter 6.4 of *Introduction to Statistical
+Learning*.
+
+> We have seen that when $p > n$, it is easy to obtain a useless model
+> that has zero residuals. Therefore, one should never use sum of
+> squared errors, p-values, $R^2$ statistics, or other traditional
+> measures of model fit on the training data as evidence of a good model
+> fit in the high-dimensional setting.
+
+> It is important to instead report results on an independent test set,
+> or cross-validation errors. For instance, the MSE or $R^2$ on an
+> independent test set is a valid measure of model fit, but the MSE on
+> the training set certainly is not.
