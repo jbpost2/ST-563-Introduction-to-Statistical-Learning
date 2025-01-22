@@ -1,0 +1,282 @@
+---
+title: "Homework 1 Key"
+always_allow_html: yes
+format: docx
+editor_options: 
+  chunk_output_type: console
+---
+
+# Conceptual Problems
+
+## Problem 1
+
+Consider the supervised learning setup. Recall, we have $i = 1, 2, ..., n$ observations and a model given by
+
+$$Y_i = f(X_i)+\epsilon_i$$
+
+We'll consider doing a **regression task**. Let's assume that the errors ($\epsilon$'s) are independent and identically distributed, following a Normal distribution with mean zero and variance $\sigma^2$. Mathematically, we write this as
+
+$$\epsilon_i \stackrel{iid}\sim N(0,\sigma^2)$$
+
+We'll assume that the predictors, $X_i$, are fixed, known values.
+
+Suppose we apply the KNN model with a pre-specified value of $K$ and a fixed point $x_0$ of interest. We have an interest in the properties of $\hat{f}(x_0)$ from this model.
+
+a. Compute the variance of $\hat{f}(x_0)$ (we wrote down a form for this quantity in the week 2 notes). 
+
+  Hint: Recall from previous coursework - If we have $n$ independent observations (call them $Y_i$) and are interested in the variability of a mean (call it $\bar{Y} = \frac{1}{n}\sum_{i=1}^{n}Y_i$), we know
+
+  $$Var(\bar{Y}) = Var(Y)/n$$
+  In the second set of notes we wrote the solution for $\hat{f}(x_o)$ as 
+  $$\hat{f}(x_o) = \frac{1}{K}\sum_{i\in S_K(x_0)}Y_i$$
+  As this is an average of iid terms, we can apply a similar result to that of $Var(\bar{Y})$,
+$$Var\left(\hat{f}(x_o)\right) = Var\left(\frac{1}{K}\sum_{i\in S_K(x_0)}Y_i\right) = Var(Y)/K$$
+
+b. Using your answer from (a), what happens to the variance of our estimate as we increase $K$? What happens as we decrease $K$? Explain why this makes sense.
+
+As we increase $K$ our variance decreases since $K$ is in the denominator. As we decrease $K$, the variance likewise increases. This makes sense because we should have less variability if we include more 'neighbors' and more variablity for including fewer.
+
+c. Suppose we run two separate KNN regressions on the same data set. One model uses $K = 10$ and one model uses $K = 30$. For each model we compute the training MSE and the test MSE on an independent test set. 
+
+    i) Which model ($K$) will have lower training MSE? Explain.
+    
+    The model that includes fewer neighbors should have a lower training MSE. This is because the model is more flexible and able to train closely to the data in the training set. The more neighbors we include, the less flexible the model becomes as we borrow across more observations.
+    
+    ii) Do we know which one will have lower test MSE? Explain.
+    
+    We don't know which will have lower test MSE! This is problem dependent. Usually, there is some optimal $K$ that we can estimate using CV, bootstrap resampling, or a validation set.
+    
+## Book Problems
+
+Complete the following problems from the Introduction to Statistical Learning with R book (I'm not sure if the problems are in the same order in the python book so use the R book to identify which problems to do).
+
+Section 2.4
+
+- Book Problem 1
+
+  a) Flexible since a lot of observations with few predictors will allow us to estimate most $f()$ functions well
+  b) Inflexible as there likely aren't enough observations to estimate a complicated function
+  c) Flexible to obtain a more reasonable fit to the complicated structure
+  d) Inflexible as when we have higher variance this implies we need more observations to see the signal and learn with our model.
+
+- Book Problem 2
+
+  a) Inference as we want to understand the relationship. A regression task with $n =500$ and $p=3$
+  b) Prediction as we aren't looking at relationships but mainly if we have success or failure. A classification task with $n=20$ and $p=13$
+  c) Prediction as we want to get the percent change. A regression task with $n=52$ and $p=3$
+  
+- Book Problem 5
+
+Flexible approaches can better fit more complicated structures and nonlinear type relationships. Less flexible methods are better when you have less data generally.
+
+- Book Problem 7. Note: For the KNN classification model, the predicted classification is given by the class the occurs the most for the K neighbors.
+
+  a)
+  
+     - For observations 1, the distance is $\sqrt{0^2+3^2+0^2} = 3$
+     - For observations 2, the distance is $\sqrt{2^2+0^2+0^2} = 4$
+     - For observations 3, the distance is $\sqrt{0^2+1^2+3^2} = \sqrt{10}$
+     - For observations 4, the distance is $\sqrt{0^2+1^2+2^2} =\sqrt{5}$
+     - For observations 5, the distance is $\sqrt{(-1)^2+0^2+1^2} = \sqrt{2}$
+     - For observations 6, the distance is $\sqrt{1^2+1^2+1^2} = \sqrt{3}$
+
+  b) When $K=1$, we use the closest point for prediction. This is observation 5. Therefore, we would predict Green.
+  c) When $K=3$, we would use the three closest points for prediction. These are observations 2, 5, and 6. We have two red and one green in these three so we would predict Red.
+  d) The optimal value for $K$ would likely be small since we would need our decision boundary to be more variable.
+
+
+# Implementation Problems 
+
+## Problem 2
+
+Consider the `Boston` housing data from the `ISLR2` package (a similar package exists in python). Suppose we want to build a prediction model for the `medv` variable. We did this in our notes using the `lstat` variable as our predictor.
+
+a. Split the data into a training and test set using a 70/30 split. Using SRSWOR.
+
+```{r, message= FALSE, warning = FALSE}
+library(ISLR2)
+library(caret)
+library(tidyverse)
+Boston <- as_tibble(Boston) #not needed, but I like how tibbles print!
+#Use the caret package to split the data
+set.seed(50)
+index <- createDataPartition(Boston$medv,
+                             p = 0.7,
+                             list = FALSE,
+                             times = 1)
+
+train <- Boston[index, ]
+test <- Boston[-index, ]
+```
+
+b. Consider three separate simple linear regression models: one using `age` as the predictor, one using `rm` as the predictor, and one using `ptratio` as the predictor. 
+
+    - Compare these models on the training data set only using 10 fold CV and RMSE as your metric. Note: CV isn't needed to tune a hyperparameter here but we can still use it to choose between our three candidate SLR models!
+    - With your best model, fit it using the entire training data set.
+  
+```{r}
+tc <- trainControl(method = "cv",
+                   number = 10)
+mod1 <- train(medv ~ age, 
+              data = train,
+              method = "lm",
+              trControl = tc)
+mod2 <- train(medv ~ rm, 
+              data = train,
+              method = "lm",
+              trControl = tc)
+mod3 <- train(medv ~ ptratio, 
+              data = train,
+              method = "lm",
+              trControl = tc)
+mod1
+mod2
+mod3
+```
+
+Model 2 with `rm` as the predictor has the lowest CV error on the training set. This is actually contained in the `mod2$finalModel` element but we can refit that model to the entire data set manually if we want.
+
+```{r}
+mod2_fit <- train(medv ~ rm, 
+              data = train,
+              method = "lm",
+              trControl = trainControl(method = "none"))
+mod2_fit$finalModel
+#or just use
+mod2$finalModel
+```
+
+
+c. Consider three separate KNN models, each using one of the three predictors above. 
+
+    - Find the optimal $K$ for each of these models using 10 fold CV on the training data only
+    - Compare the CV error for the three tuned models and select a best model.
+    - With your best model, fit it using the entire training data set.
+  
+```{r}
+mod1_knn <- train(medv ~ age, 
+              data = train,
+              method = "knn",
+              trControl = tc, 
+              tuneGrid = data.frame(k = 1:60))
+mod2_knn <- train(medv ~ rm, 
+              data = train,
+              method = "knn",
+              trControl = tc, 
+              tuneGrid = data.frame(k = 1:60))
+mod3_knn <- train(medv ~ ptratio, 
+              data = train,
+              method = "knn",
+              trControl = tc, 
+              tuneGrid = data.frame(k = 1:60))
+mod1_knn$results |>
+  filter(k == mod1_knn$bestTune$k)
+mod2_knn$results |>
+  filter(k == mod2_knn$bestTune$k)
+mod3_knn$results |>
+  filter(k == mod3_knn$bestTune$k)
+```
+
+The overall best model on the training set uses `rm` as a predictor and has $k=$`r mod2_knn$bestTune$k`. This model is actually contained in the `mod2_knn$finalModel` object but we can refit it explicitly.
+
+```{r}
+mod2_knn_fit <- train(medv ~ rm, 
+              data = train,
+              method = "knn",
+              trControl = trainControl(method = "none"),
+              tuneGrid = mod2_knn$bestTune)
+mod2_knn_fit$finalModel
+#or just use
+mod2_knn$finalModel
+```
+
+
+d. Predict on your test set using both of your 'best' models. Compute the test set RMSEs. Which model is the overall best?
+
+```{r}
+#slr model
+sqrt(mean((test$medv - predict(mod2_fit, test))^2))
+# or use caret
+postResample(predict(mod2_fit$finalModel, test), test$medv)
+#knn model
+sqrt(mean((test$medv - predict(mod2_knn_fit, newdata = test))^2))
+postResample(predict(mod2_knn_fit, test), test$medv)
+```
+
+The best model in terms of test error is the knn model! Of course, we'd likely want to have more than one predictor considered in each model. We'll get there!
+
+## Problem 3
+
+It is important to really understand cross-validation as it is used in many situation. In this problem we'll do our own basic cross-validation.
+
+Consider the `iris` data set built into `R`. This data set can be read into python via the `sklearn` package using the following code:
+
+```
+from sklearn import datasets
+
+# Load the dataset
+iris = datasets.load_iris()
+```
+
+a. Randomly split the data into five distinct folds.
+
+```{r}
+indices <- sample(1:nrow(iris), nrow(iris), replace = FALSE)
+fold1 <- iris[indices[1:30], ]
+fold2 <- iris[indices[31:60], ]
+fold3 <- iris[indices[61:90], ]
+fold4 <- iris[indices[91:120], ]
+fold5 <- iris[indices[121:150], ]
+```
+
+b. Using the first four folds, fit an SLR model with `Sepal.Length` as the predictor and `Petal.Length` as the response. Predict on the fifth fold and compute the MSE on those predictions.
+
+```{r}
+one_two_three_four_fit <- lm(Petal.Length ~ Sepal.Length, 
+                     data = rbind(fold1, 
+                                  fold2,
+                                  fold3,
+                                  fold4))
+fifth_MSE <- mean((fold5$Petal.Length-predict(one_two_three_four_fit, newdata = fold5))^2)
+```
+
+
+c. Repeat this process, using the fourth fold as the test fold. Then again, with the third fold as the test fold, etc.
+
+```{r}
+one_two_three_five_fit <- lm(Petal.Length ~ Sepal.Length, 
+                     data = rbind(fold1, 
+                                  fold2,
+                                  fold3,
+                                  fold5))
+fourth_MSE <- mean((fold4$Petal.Length-predict(one_two_three_five_fit, newdata = fold4))^2)
+
+one_two_four_five_fit <- lm(Petal.Length ~ Sepal.Length, 
+                     data = rbind(fold1, 
+                                  fold2,
+                                  fold4,
+                                  fold5))
+third_MSE <- mean((fold3$Petal.Length-predict(one_two_four_five_fit, newdata = fold3))^2)
+
+one_three_four_five_fit <- lm(Petal.Length ~ Sepal.Length, 
+                     data = rbind(fold1, 
+                                  fold3,
+                                  fold4,
+                                  fold5))
+second_MSE <- mean((fold2$Petal.Length-predict(one_three_four_five_fit, newdata = fold2))^2)
+
+two_three_four_five_fit <- lm(Petal.Length ~ Sepal.Length, 
+                     data = rbind(fold2, 
+                                  fold3,
+                                  fold4,
+                                  fold5))
+first_MSE <- mean((fold1$Petal.Length-predict(two_three_four_five_fit, newdata = fold1))^2)
+```
+
+d. Combine the MSE across the folds (averaging them is fine here) to create a CV error.
+
+```{r}
+#CV error
+mean(c(first_MSE, second_MSE, third_MSE, fourth_MSE, fifth_MSE))
+```
+
