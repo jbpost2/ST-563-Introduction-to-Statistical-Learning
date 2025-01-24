@@ -38,301 +38,379 @@ knitr::opts_chunk$set(tidy = FALSE,
                       fig.height = 5, 
                       fig.width = 6)
 options(htmltools.dir.version = FALSE)
+
+#read in data from previous set of notes
+bike_share <- read_csv("https://www4.stat.ncsu.edu/online/datasets/SeoulBikeData.csv",
+                       local = locale(encoding = "latin1"))
+
+bike_share <- bike_share |>
+  rename("date" = "Date",
+         "rented_bike_count" = `Rented Bike Count`,
+         "hour" = "Hour",
+         "temperature" = `Temperature(°C)`,
+         "humidity" = `Humidity(%)`,
+         "wind_speed" = `Wind speed (m/s)`,
+         "visibility" = `Visibility (10m)`,
+         "dew_point_temperature" = `Dew point temperature(°C)`,
+         "solar_radiation" = `Solar Radiation (MJ/m2)`,
+         "rainfall" = `Rainfall(mm)`,
+         "snowfall" = `Snowfall (cm)`,
+         "seasons" = "Seasons",
+         "holiday" = "Holiday",
+         "functioning_day" = "Functioning Day" 
+         ) |>
+  mutate(date = dmy(date), #convert the date variable from character
+         seasons = factor(seasons),
+         holiday = factor(holiday),
+         functioning_day = factor(functioning_day),
+         log_rented_bike_count = log(rented_bike_count)) |>
+  filter(functioning_day == "Yes")
 ```
 
 \newpage
 
-# Methods for Selecting Variables
+# Methods for Selecting Variables & Evaluating Model Performance
 
-# Evaluating model performance
+Like any other learner, we need ways to evaluate the model performance and, in this case, determine which variables we want to include in our model. We can use
 
-Like any other learner, we need ways to evaluate model performance of
-linear regression. We will discuss how to assess model fit in the
-training data, and then in unseen test observations.
+- inference-based methods
+- model fitting criteria that do not require a test set
+- training/test set ideas with a metric
+
+Before we get into those, let's first recap how we would use our fitted linear regression model to do prediction.
 
 ## Prediction
 
-As mentioned before, we can predict the response associated with a set
-of predictors $x_1, \ldots, x_p$ as $$
+As mentioned before, we can predict the response associated with a set of predictors $x_1, \ldots, x_p$ as 
+
+$$
 \widehat Y = \widehat\beta_0 + x_1\widehat\beta_1 + \ldots + x_p\widehat\beta_p.
 $$
 
-In order to quantify uncertainty of the prediction, we can use a
-*prediction interval*. We can use the function `predict()` to compute
-both the prediction and the corresponding prediction interval. The
-following code produces both for the new data point $lstat = 5$ for the
-simple linear regression of `medv` on `lstat`: `fit` is the point
-predcition, `lwr` and `upr` are the lower and upper bound of the
-prediction interval, respectively. Note the function argument
-`interval = "prediction"`.[^19]
+This is our prediction for two separate quantities:
 
-[^19]: See `?predict.lm` for details.
+- The mean response at this setting of predictors, $E(Y|x_1,...,x_p)$
+- A future response at this setting of predictors, $Y_{new}$
+
+To visualize this, we can consider an SLR model. Recall our `bike_share` data set. Here we fit a model using `temperature` to predict `log_rented_bike_count`. 
+
+**Note: I've removed observations where `functioning_day` was "No" as there were no bike rentals on these days. These were the set of points that always looked weird in our diagnostic plots!**
 
 ```{r}
-simple_ols <- lm(medv ~ lstat, data = Boston)
-pred_int <- predict(simple_ols, 
-        newdata = data.frame(lstat = 5),
-        interval = "prediction",
-        level = 0.95)
-pred_int
+SLR_fit <- lm(log_rented_bike_count ~ temperature, data = bike_share)
+summary(SLR_fit)$coefficients |>
+  kable()
 ```
 
-Note that the point prediction is simply estimate of
-$E(Y|x_1, \ldots, x_p)$. However, the prediction interval is not the
-same as the confidence interval of $E(Y|x_1, \ldots, x_p)$. This is
-because predicting the actual response $Y$ is more difficult that
-estimating the mean $E(Y|X)$. For the ideal case where we know the exact
-values of $\beta_0, \ldots, \beta_p$, then $E(Y|x_1, \ldots, x_p)$ is
-exactly determined. But even then, the response $Y$ has some variability
-due to error $\epsilon$. Thus, even if we fully know the regression
-line, we can not predict the response exactly. The prediction interval
-captures this additional uncertainty. For example, the confidence
-interval of $E(Y|x_1, \ldots, x_p)$ for the example shown above is as
-follows. Note the confidence interval is narrower than the prediction
-interval.
+If we are interested in predicting the **mean rented bike count at a temperature of 22.22 degrees** (72 degree Fahrenheit), we'd plug 22.22 into our equation:
 
 ```{r}
-conf_int <- predict(simple_ols, 
-        newdata = data.frame(lstat = 5),
-        interval = "confidence",
-        level = 0.95)
+summary(SLR_fit)$coefficients[1, 1] + summary(SLR_fit)$coefficients[2, 1]*22.22
+#or use predict()
+predict(SLR_fit, 
+        newdata = data.frame(temperature = 22.22))
 ```
 
-We can interpret these intervals as: when `lstat = 5`, we have $95\%$
-confidence that the *mean* value of `medv` will fall in
-(`r round(conf_int[2],2)`, `r round(conf_int[3],2)`) -- this is the
-confidence interval. But `medv` of a *randomly chosen new observation*
-with fall in (`r round(pred_int[2],2)`, `r round(pred_int[3],2)`).
+Likewise, if we wanted to predict a **future rented bike count at a temperature of 22.22 degrees**, we'd simply plug 22.22 into our equation!
 
-## Training set performance
+The difference comes in the variability around the prediction. The variability associated with predicting a mean is generally far less than the variability associated with predicting a future observation!
+
+Consider the scatterplot with an SLR fit below. If the graph is inspected very closely, one may notice a 'confidence band' around the line. This is a confidence interval that attempts to capture the **mean response** at a given temperature.
+
+- With this type of interval, we are trying to capture the value of the line, across repeated samples, when the temperature is 22.22 degrees.
+
+```{r, message = FALSE, out.width='350px', fig.cap="Scatterplot with fitted SLR model overlayed", fig.alt = "A scatterplot between temperature on the x-axis and rented bike count on the y-axis. The plots shows a general upward trend with more spread in the rented bike count as the temperature increases. The overlayed SLR line has a positive slope and shows a strong linear relationship. The line does not fit the data well for temperatures below -10 degrees as it predicts a negative rented bike count in that region."}
+bike_share |>
+  ggplot(aes(x = temperature, y = log_rented_bike_count)) +
+  geom_point(size = 0.5) +
+  geom_smooth(method = "lm")
+```
+
+Alternatively, we can try to capture a **new observation** when temperature is 22.22. 
+
+- We can produce a prediction interval using the `predict()` function in `R` and adding that to our graph
+
+```{r}
+predictions <- predict(SLR_fit,
+                       newdata = bike_share,
+                       interval="prediction")
+predictions[1:4, 1:3]
+bike_share_preds <- cbind(bike_share, predictions)
+```
+
+- With this type of interval, we are trying to capture an observation about the line, across repeated samples, when the temperature is 22.22 degrees.
+
+```{r, message = FALSE, out.width='350px', fig.cap="Scatterplot with fitted SLR model overlayed", fig.alt = "A scatterplot between temperature on the x-axis and rented bike count on the y-axis. The plots shows a general upward trend with more spread in the rented bike count as the temperature increases. The overlayed SLR line has a positive slope and shows a strong linear relationship. The line does not fit the data well for temperatures below -10 degrees as it predicts a negative rented bike count in that region."}
+bike_share |>
+  ggplot(aes(x = temperature, y = log_rented_bike_count)) +
+  geom_point(size = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) + 
+  geom_line(data = bike_share_preds,
+            aes(y = lwr), 
+            color = "red", 
+            linetype = "dashed") + 
+    geom_line(data = bike_share_preds,
+            aes(y = upr), 
+            color = "red", 
+            linetype = "dashed") 
+```
+
+While we produced confidence bands above, we can get these individual predictions using `predict()` in `R`:
+
+```{r}
+conf_for_mean <- predict(SLR_fit, 
+                         newdata = data.frame(temperature = 22.22), 
+                        interval = "confidence")
+conf_for_mean
+pred_for_future <- predict(SLR_fit,
+                           data.frame(temperature = 22.22), 
+                           interval = "prediction")
+pred_for_future
+```
+
+We can interpret these intervals with statements such as
+
+- when `temperature = 22.22`, we have $95\%$ confidence that the *mean* value of `rented_bike_count` will fall between
+(`r round(conf_for_mean[2],2)`, `r round(conf_for_mean[3],2)`)
+
+- when `temperature = 22.22`, we have $95\%$ confidence that a future value of `rented_bike_count` will fall between (`r round(pred_for_future[2],2)`, `r round(pred_for_future[3],2)`).
+
+# Model Selection
+
+We now move into how to quantify model performance and, ultimately, how to choose which predictors, interactions, polynomial terms, etc. we should have in our model.
+
+We've seen the use of hypothesis testing to understand the importance of predictors. We'll investigate a few other options now:
+
+- Comparing differing MLR models using CV or a train/test split
+- Considering variable selection methods such as best subset selection, forward/backward selection, or combinations of these methods
+
+    + With those methods, we can use p-values or other model performance metrics ($R^2$, Adjusted $R^2$, AIC, BIC, etc.) to choose the model form which don't require a test set!
+    + However, we could use the CV or train/test set idea to do these methods as well
+    
+- Utilizing penalized or regularized regression methods to choose fit our model
+
+    + Some of these methods lead to automatic variable selection!
+    + These methods require tuning of parameters
+    
+- Using dimension reduction techniques prior to model specification, or in conjunction with our model fitting
+
+## Test Set Performance
+
+As we discussed earlier, we can use the data splitting methods (CV, Bootstrap, holdout, etc.) to evaluate model performance on unseen test data. 
+
+This gives us a way to compare and choose between models when prediction performance is our major goal.
+
+For example, the code below uses 5-fold CV, repeated 10 times, to estimate the test error for three competing models for predicting `rented_bike_count`. By repeating the CV process 10 times, we get a more stable estimate of prediction error.
+
+- A model using only main effects. 
+
+```{r}
+set.seed(1001)
+# control params
+cv <- trainControl(method = "repeatedcv", 
+                   number = 5, 
+                   repeats = 10)
+# training main effects
+res_main <- train(log_rented_bike_count ~ hour + temperature + humidity + 
+               wind_speed + visibility + rainfall + 
+               snowfall + seasons + holiday, 
+             data = bike_share, 
+             method = "lm", 
+             trControl = cv)
+```
+
+- A model with fewer variables with all main effects and their interactions.
+
+    + In our `R` formula, we can pass `(pred + pred2)^2` to do this concisely!
+
+```{r}
+#training interaction model
+res_interaction <- train(log_rented_bike_count ~ (hour + temperature + wind_speed + rainfall +  snowfall + holiday)^2, 
+             data = bike_share, 
+             method = "lm", 
+             trControl = cv)
+```
+
+- Now a simpler model that may be more interpretable
+
+```{r}
+#training simpler model
+res_simple <- train(log_rented_bike_count ~ hour + temperature + wind_speed + rainfall + seasons, 
+             data = bike_share, 
+             method = "lm", 
+             trControl = cv)
+```
+
+Now we can investigate their repeated CV error to compare their fits.
+
+```{r}
+rbind(c("Main effect", res_main$results),
+      c("Interaction", res_interaction$results),
+      c("Simple", res_simple$results))
+```
+
+The main effects only model wins here! (This won't always be the case across problems you consider.)
+
+## Metrics Used with Traditional Variable Selection Methods
+
+In this section, we discuss methods to select a *subset* of the available covariates that we believe to be related to the response. We look at more traditional methods that don't focus on predictive accuracy but use other model metrics or p-value based approaches to do so.
+
+The final model selected through this method will be built by using least squares on the selected subset of variables.
+
+### Metrics That Don't Adjust for Complexity
 
 We can measure how well the model fits the training data by using the
 following measures:
 
--   Residual squared error (RSE).
+-   Residual squared error (RSE) (Not a good choice!)
 
--   Coefficient of determination, $R^2$.
+-   Coefficient of determination, $R^2$ (Not a good choice!)
 
--   $F$ statistic discussed before
+These aren't good choices. Let's discuss them and then see why.
+
+#### RSE
 
 We have seen RSE as the estimator of $\sigma$ in the previous sections.
 In general, RSE quantifies the uncertainty in prediction on $Y$ from $X$
-*even if the true regression parameters were known.* We can view RSE as
-the amount the response will deviate on average from the true regression
-line. A small RSE would indicate a good regression fit. In the `Boston`
-data example with only `lstat` as predictor described above, we have
-$RSE = `r round(sigma(simple_ols),2)`$. Thus, even if we knew the true
-regression line (assuming that the linear model is correct), a
-prediction of `medv` based on `lstat` would still be off by
-$`r round(sigma(simple_ols),2)`$ units on average. In the `Boston` data,
-the mean value of `medv` over all values of `lstat` is
-`r round(mean(Boston$medv), 2)`. Thus we are making an error in the
-amount of `r round(sigma(simple_ols)/mean(Boston$medv), 2)*100` percent.
+*even if the true regression parameters were known.* 
 
-The RSE is considered a measure of the *lack of fit* of the model. Small
-values of RSE imply the predictions are close to the observed values
-which indicate good model fit. Large values of RSE would indicate that
-the model did not fit the data well. However, it is often not clear what
-values of RSE is acceptable. The coefficient of determination ($R^2$) is
-another option to measure goodness of fit.
+We can view RSE as the amount the response will deviate on average from the true regression line. 
 
-```{=tex}
-\mydefbox{Coefficient of determination: $R^2$}{
-Define the \textit{total sum of squares (TSS)} as $\sum_i(Y_i - \bar Y)^2$. Recall RSS is the residual sum of squares. Then
+A small RSE would indicate a good regression fit. In the `bike_share`
+data example with only `temperature` as predictor of `log_rented_bike_count` described above, we have
+$RSE = `r round(sigma(SLR_fit),2)`$. 
+
+Thus, even if we knew the true
+regression line (assuming that the linear model is correct), a prediction of `log_rented_bike_count` based on `temperature` would still be off by
+$`r round(sigma(SLR_fit),2)`$ units on average. 
+
+In the `bike_share` data,
+the mean value of `log_rented_bike_count` over all values of `temperature` is
+`r round(mean(bike_share$log_rented_bike_count), 2)`. Thus we are making an error in the amount of `r round(sigma(SLR_fit)/mean(bike_share$log_rented_bike_count), 2)*100` percent.
+
+The RSE is considered a measure of the **lack of fit** of the model. 
+
+- Small values of RSE imply the predictions are close to the observed values which indicate good model fit. 
+- Large values of RSE would indicate that
+the model did not fit the data well. 
+
+However, it is often not clear what
+values of RSE is acceptable. 
+
+The coefficient of determination ($R^2$) is another option to measure goodness of fit.
+
+#### $R^2$
+
+Coefficient of determination: $R^2$
+
+- Define the *total sum of squares (TSS)* as $\sum_i(Y_i - \bar Y)^2$. Recall RSS is the residual sum of squares. Then
 $$
 R^2 = 1 - \frac{RSS}{TSS}.
 $$
-}
-```
-TSS measures the total variance in the response[^20]. We can think of
-TSS as the amount of variability inherent in the response before the
-regression is performed. In contrast, RSS measures the amount of
-variability that is left unexplained after performing the regression.
+
+TSS measures the total variance in the response. 
+
+- We can think of TSS as the amount of variability inherent in the response before the regression is performed. 
+- RSS measures the amount of variability that is left unexplained after performing the regression.
+
 Thus we can interpret $R^2$ as the *proportion of variance* in the
-response *explained by the model*. It can be shown that
-$0 \leq R^2 \leq 1$, with larger values indicting better fit. $R^2$
-values close to zero would indicate that perhaps the linear model is
-wrong, and/or the error variance is high. Another way to interpret $R^2$
-is that $$
+response *explained by the model*. 
+
+- It can be shown that $0 \leq R^2 \leq 1$, with larger values indicting better fit. 
+- $R^2$ values close to zero would indicate that perhaps the linear model is wrong, and/or the error variance is high. 
+Another way to interpret $R^2$ is that 
+
+$$
 R^2 = (\mbox{correlation coefficient between observed and predicted values})^2.
 $$
 
-[^20]: Note that TSS is proportional to the sample variance of the
-    $Y$'s.
+#### Issues with RSE and $R^2$
 
-## Test set performance
+Usage of RSE and $R^2$ from the training set in model selection is **undesirable** as they will almost always choose the largest model possible.
 
-We can use the techniques and data splitting methods (CV, Bootstrap,
-holdout etc) to evaluate model performance on unseen test data. For
-example, the code below uses 5-fold CV, repeated 10 times, to estimate
-the test error for the model with `lstat`, `age` and `lstat:age` as
-predictors.
+That is, minimum RSE and maximum $R^2$ will almost always occur when number of predictors is largest.
+
+- $RSE = \sqrt{SSE/(n-p-1)}$. $SSE$ will always decrease with the addition of more predictors.
+
+- Likewise, $R^2$ will always increase with the addition of more predictors.
+
+- To show this, let's just do a silly example. We'll fit an SLR model to the iris data with `Petal.Length` as a predictor and `Sepal.Width` as our response.
 
 ```{r}
-set.seed(1001)
-# control params
-cv <- trainControl(method = "repeatedcv", 
-                   number = 5, 
-                   repeats = 10)
-# training
-res <- train(medv ~ lstat * age, 
-             data = Boston, 
-             method = "lm", 
-             trControl = cv)
-res
+quick_SLR <- lm(Petal.Width ~ Sepal.Length, data = iris)
+#RSE
+sigma(quick_SLR)
+#SSE
+(150-2)*(sigma(quick_SLR))^2
+#R^2
+cor(iris$Petal.Width,
+    quick_SLR$fitted.values)
 ```
 
-We can compare several regression models as well. In the code below, we
-fit five models, and compare their test RMSE values using 10 times
-repeated 5-fold CV. Note the use of the `resample()` function from
-`caret` package. Figure \ref{fig:bw} shows boxplots of estimated test
-errors using CV for the model.
+- Now we'll add in a non-sense predictor that has nothing to do with `Petal.Width`
 
-```{r, cache=TRUE}
-set.seed(1001)
-# control params
-cv <- trainControl(method = "repeatedcv", 
-                   number = 5, 
-                   repeats = 10)
-# training
-model1 <- train(medv ~ lstat + age, 
-             data = Boston, 
-             method = "lm", 
-             trControl = cv)
-
-model2 <- train(medv ~ lstat * age, 
-             data = Boston, 
-             method = "lm", 
-             trControl = cv)
-
-model3 <- train(medv ~ lstat + age + I(lstat^2) + I(age^2), 
-             data = Boston, 
-             method = "lm", 
-             trControl = cv)
-
-model4 <- train(medv ~ lstat * age + I(lstat^2) + I(age^2), 
-             data = Boston, 
-             method = "lm", 
-             trControl = cv)
-
-model5 <- train(medv ~ ., 
-             data = Boston, 
-             method = "lm", 
-             trControl = cv)
-
-# Comparison
-rsm <- resamples(list(model1, model2, model3, model4, model5))
-summary(rsm, metric = "RMSE")
+```{r}
+iris_extra <- mutate(iris, nonsense = rnorm(150, sd = 3))
+#fit the model
+quick_SLR_2 <- lm(Petal.Width ~ Sepal.Length + nonsense, 
+                  data = iris_extra)
+#RSE
+sigma(quick_SLR_2)
+#SSE
+(150-3)*(sigma(quick_SLR_2))^2
+#R^2
+cor(iris$Petal.Width,
+    quick_SLR_2$fitted.values)
 ```
 
-```{r bw, fig.cap="Boxplots of estimated test RMSE for different models."}
-# Comparison plots
-bwplot(rsm, metric = "RMSE")
-```
+We could use training test sets with these metrics but sometimes that is too computationally burdensome.
 
-Models 1 and 2 above are similar in test performance, as are model 3 and
-4. But Models 3 and 4 are better that 1 and 2. Also, it seems that, as
-far as prediction accuracy is concerned, adding `lstat:age` interaction
-term does not improve prediction performance by much. Overall, model 5
-(regression with main effects of all predictors) performs the best among
-the five model considered above.
+### Metrics That Adjust for Complexity
 
-```{r, echo=FALSE, eval=FALSE}
-dat <- Boston[ ,-13]
-y <- Boston[,13]
+Alternatively, there are metrics available that adjusts training performance metrics to balance both goodness of fit and model complexity/size, so that a separate test set is not needed for model comparison.
 
-# control params
-cv <- trainControl(method = "repeatedcv", 
-                   number = 5, 
-                   repeats = 10)
-
-
-res <- vector(mode = "list", length = 12)
-for(ii in 1:12){
-  dat <- data.frame(Boston$medv,
-                    Boston[,1:ii])
-  colnames(dat) <- c("medv", colnames(Boston)[1:ii])
-  
-# training
-  res[[ii]] <- train(medv ~ .,
-                     data = dat,
-               method = "lm", 
-               trControl = cv)
-}
-res
-summary(resamples(res))
-```
-
-
-
-## Subset selection
-
-In practice, many of many of the variables is a dataset may not be
-associated with the response of interest. Including such irrelevant
-predictors in the model may lead to unnecessary complexity in the
-resulting model and therefore more variability in the estimates. Often
-we would like to remove the unnecessary variables before building our
-final model. Such a procedure will also help in interpretation of the
-model as well. This process of selecting relevant variables
-corresponding to a response is called *variable selection* or *feature
-selection*. In this section, we discuss methods to select a *subset* of
-the available covariates that we believe to be related to the response.
-Then the final model will be built by using least squares using the
-selected subset.
-
-### Metrics for model selection
-
-Usage of RSE and $R^2$ from the training set in model selection is
-undesirable as they will always choose the largest model possible --
-minimum RSE and maximum $R^2$ will occur when number of predictors is
-largest.
-
-We can use the data splitting methods to estimate test errors, but
-sometimes they can be computationally expensive. Consider the `Boston`
-data with $p=12$. If we want to investigate performance of all possible
-subsets, we have to go though $2^{12} = `r 2^12`$ models. On top of that
-if we want to use $5$-fold CV, repeated 50 times, we have to fit a total
-of $2^{12}\times 5 \times 50 = `r 2^12 * 5 * 50`$ models.
-
-Alternatively, there are metrics available that adjusts training
-performance metrics such as $RSS$ and $R^2$ to balance both goodness of
-fit and model complexity/size, so that a separate training set is not
-needed for model comparison. These approaches can be used to select
-among a set of models with different numbers of variables. Four such
+These approaches can be used to select among a set of models with different numbers of variables. Four such
 metrics are:
 
 -   Adjusted $R^2$,
 
--   Akaike information criterion (AIC),
+- Information Criteria based metrics
 
--   Bayesian information criterion (BIC), and
+    -   Akaike information criterion (AIC)
+    -   Bayesian information criterion (BIC)
+    -   (Mallow's) $C_p$ statistic.
 
--   $C_p$ statistic.
+Adjusted $R^2$ re-scales total sum of squares and RSS, before taking their ratio, to account for the number of predictors in the model. 
 
-\noindent Adjusted $R^2$ re-scales total sum of squares and RSS, before
-taking their ratio, to account for the number of predictors in the
-model. In contrast, AIC, BIC and $C_p$ *adds a penalty term* involving
-number of predictors to the training RSS to account for model size.
+In contrast, AIC, BIC and $C_p$ *add a penalty term* involving number of predictors to the training RSS to account for model size.
 
-Suppose we have a model with $d$ predictors. Recall that
-$R^2 = 1 - RSS/TSS$. Adjusted $R^2$ is defined as $$
+#### Adjusted $R^2$
+
+Suppose we have a model with $d$ predictors. Recall that $R^2 = 1 - RSS/TSS$. Adjusted $R^2$ is defined as 
+
+$$
 \mbox{Adjusted } R^2 = 1 - \frac{RSS/(n - d - 1)}{TSS/(n-1)},
-$$ where $d$ is the number of predictors in the model. Maximizing the
-adjusted $R^2$ is equivalent to minimizing $RSS/(n - d - 1)$. Unlike
-$RSS$, which monotonically decreases as $d$ increases, $RSS/(n - d - 1)$
-will increase and decrease as $d$ changes. We choose the model with
-maximum adjusted $R^2$.
+$$ 
 
-AIC, BIC and $C_p$ all have the form for a model with $d$ predictors: $$
-[RSS + P(n, d, \widehat\sigma^2)]/n,
-$$ where $P(n, d, \widehat\sigma^2)$ is a penalty term involving sample
-size, number of predictors in the model and estimated error variance
-using the full model containing all predictors. The three metrics use
-the following form of $P$:[^21] $$
+where $d$ is the number of predictors in the model. Maximizing the adjusted $R^2$ is equivalent to minimizing $RSS/(n - d - 1)$. 
+
+- Unlike $RSS$, which monotonically decreases as $d$ increases, $RSS/(n - d - 1)$ will increase and decrease as $d$ changes. 
+- We choose the model with maximum adjusted $R^2$.
+
+#### Information Criteria
+
+AIC, BIC and $C_p$ all have the form for a model with $d$ predictors: 
+$$
+[RSS + P(n, d, \widehat\sigma^2)]/n
+$$ 
+where $P(n, d, \widehat\sigma^2)$ is a penalty term involving sample size, number of predictors in the model and estimated error variance using the full model containing all predictors. 
+
+The three metrics use the following form of $P$:
+$$
 P(n, d, \widehat\sigma^2) = \left\{ \begin{matrix} 2d\widehat\sigma^2,\;\; \mbox{ for } C_p, AIC \\ log(n)\,d\,\widehat\sigma^2, \;\; \mbox{ for } BIC \end{matrix}\right.
-$$ We choose the model which gives minimum AIC/BIC values.
+$$ 
 
-[^21]: See Introduction to Statistical Learning, Chapter 6.1.3.
+We choose the model which gives **minimum** AIC/BIC values.
 
 ```{r aic, echo=FALSE, fig.cap="Example of model selection using AIC/$C_p$, BIC and adjusted $R^2$.", fig.width=9, fig.height=3, fig.margin = FALSE}
 
@@ -350,28 +428,16 @@ than AIC/$C_p$ as $n$ increases. Thus BIC tends to produce smaller
 models compared to AIC/$C_p$. Figure \ref{fig:aic} shows an example of
 model selection using AIC/$C_p$, BIC and adjusted $R^2$.
 
-```{r, eval=FALSE, echo=FALSE}
-BB <- cbind(medv = Boston$medv,
-            Boston[, 1:12], 
-            matrix(rnorm(nrow(Boston)*100), 
-                   nrow = nrow(Boston), 
-                   ncol = 100))
-medv <- Boston$medv
-ff <- matrix(NA, nrow = 100, ncol = 2)
-for (ii in 1:100){
-  out <- lm(medv ~ ., data = BB[, c(1:(ii+1))])
-  ss <- summary(out)
-  ff[ii, ] <- c(ss$adj.r.squared, ss$r.squared)
-}
-```
+
+## Traditional Variable Selection Methods
 
 ### Best subset selection
 
 In this approach, we need to fit a separate least square model to *each*
 of the possible combination of the $p$ predictors in the dataset, that
-is, we need to fit all $2^p$ possible models. We can either use
-CV/holdout or AIC/BIC to choose the best model. The following algorithm
-shows the best subset selection procedure.
+is, we need to fit all $2^p$ possible models. 
+
+- We can either use CV/holdout or AIC/BIC to choose the best model. The following algorithm shows the best subset selection procedure.
 
 1.  Start with the model with only intercept, and no other predictor.
     Denote the model by $M_0$.
@@ -383,35 +449,29 @@ shows the best subset selection procedure.
 3.  Among the models $M_0, M_1, \ldots, M_p$, choose the best model
     using AIC, BIC, adjusted $R^2$ or CV.
 
-Note that we can use cross-validation for the entire set of $2^p$
-possible models if we have such computational resources (for larger $p$,
-this procedure can have tremendous computational burden). The algorithm
-above reduces this computational burden using Step 2, where it
-identifies the best model for each subset size *on the training set*.
-Thus we reduce the problem from $2^p$ possible models to $p + 1$
-possible models. However, performing CV, if possible, has the distinct
-advantage over AIC/BIC that it directly estimates the test error for
-each models.
+Note that we can use cross-validation for the entire set of $2^p$ possible models if we have such computational resources (for larger $p$, this procedure can have tremendous computational burden). The algorithm above reduces this computational burden using Step 2, where it identifies the best model for each subset size *on the training set*.
 
-In R, we can use `regsubsets()` in the `leaps` package to perform best
-subset selection. We demonstrate this procedure using `Boston` data.
+Thus we reduce the problem from $2^p$ possible models to $p + 1$ possible models. However, performing CV, if possible, has the distinct advantage over AIC/BIC that it directly estimates the test error for each model.
+
+In `R`, we can use `regsubsets()` in the `leaps` package to perform best
+subset selection. We demonstrate this procedure using `bike_share` data.
+
 Note the usage of the argument `nvmax = 11`. This ensures that we will
-search of subsets up to size 12 (Since Boston data has 12 predictors).
+search of subsets up to size 11 (Since `bike_share` data has 11 predictors - not including `date`).
 
 ```{r, warning=FALSE, message=FALSE}
 library(leaps)
 # Best model for each model size
-bestmod <- regsubsets(medv ~ ., 
-                      data = Boston,
-                      nvmax = 12)
+bestmod <- regsubsets(log_rented_bike_count ~ hour + temperature + humidity + wind_speed + visibility + dew_point_temperature + solar_radiation + rainfall + snowfall + seasons + holiday, 
+                      data = bike_share,
+                      nvmax = 11)
 # summary
 mod_summary <- summary(bestmod)
-mod_summary
 ```
 
-The summary shows, for each model size, which predictors give the best
-model (based on training set performance). Now we can use either AIC/BIC
-or adjusted $R^2$ to choose the best model among these 12 models.
+If you look at the `summary()` of our `bestmod` object we can see which predictors were included in the subset of each size. The output is not fun to look at though!
+
+Now we can use either AIC/BIC or adjusted $R^2$ to choose the best model among these 11 models. We can pull of the model criterion for each model.
 
 ```{r}
 metrics <- data.frame(aic = mod_summary$cp,
@@ -420,11 +480,31 @@ metrics <- data.frame(aic = mod_summary$cp,
 metrics
 ```
 
-The minimum AIC/BIC as well as maximum adjusted $R^2$ occurs for model
-size $10$. The best fitted model is below.
+```{r, echo=FALSE, fig.cap="AIC, BIC and Adjusted $R^2$ for best subset selection in our bike share data.", fig.margin = TRUE, fig.width=6, fig.height=3}
+dd <- cbind(size = 1:11, metrics)
+p1 <- ggplot(dd, aes(size, aic)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 13) + 
+  ggtitle("AIC") + 
+  scale_x_discrete(limits=as.factor(1:11))
+p2 <- ggplot(dd, aes(size, bic)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 13) + 
+  ggtitle("BIC")+ 
+  scale_x_discrete(limits=as.factor(1:11))
+p3 <- ggplot(dd, aes(size, adjR2)) + geom_point() + 
+  geom_line() + theme_bw(base_size = 13) + 
+  ggtitle("Adjusted R2")+ 
+  scale_x_discrete(limits=as.factor(1:11))
+
+gridExtra::grid.arrange(p1,p2,p3, nrow=1)
+```
+
+The minimum AIC and adjusted $R^2$ occurs for model size $10$. For BIC it occurs for the model of size $9$. These two fitted models are below.
 
 ```{r}
-round( coef(bestmod, 10), 2)
+#BIC best model
+round(coef(bestmod, 9), 3)
+#AIC and adjusted R2 model
+round(coef(bestmod, 10), 3)
 ```
 
 As mentioned before, investigating all off the $2^p$ models can be
@@ -434,36 +514,8 @@ approaches provide computationally efficient alternatives using
 
 ### Forward Stepwise Selection
 
-Recall that the best subset selection procedure considers all $2^p$
-possible models containing subsets of the $p$ predictors. In contrast,
-*forward stepwise selection* considers a much smaller set of models. The
+*Forward stepwise selection* considers a much smaller set of models as compared to best subset selection. The
 algorithm as as follows:
-
-```{r, echo=FALSE, fig.cap="AIC, BIC and Adjusted $R^2$ for best subset selection in Boston data.", fig.margin = TRUE, fig.width=3, fig.height=6}
-dd <- cbind(size = 1:12, metrics)
-p1 <- ggplot(dd, aes(size, aic)) + geom_point() + 
-  geom_line() + theme_bw(base_size = 13) + 
-  ggtitle("AIC") + 
-  scale_x_discrete(limits=as.factor(1:12))
-p2 <- ggplot(dd, aes(size, bic)) + geom_point() + 
-  geom_line() + theme_bw(base_size = 13) + 
-  ggtitle("BIC")+ 
-  scale_x_discrete(limits=as.factor(1:12))
-p3 <- ggplot(dd, aes(size, adjR2)) + geom_point() + 
-  geom_line() + theme_bw(base_size = 13) + 
-  ggtitle("Adjusted R2")+ 
-  scale_x_discrete(limits=as.factor(1:12))
-
-gridExtra::grid.arrange(p1,p2,p3, nrow=3)
-
-#gg <- gather(cbind(size = 1:12, metrics), 
-#             key = metric,
-#             value = value,
-#             -size)
-#ggplot(gg, aes(size, value)) + 
-#  geom_point() + 
-#  facet_wrap(vars(metric))
-```
 
 1.  Start with the model with only intercept, and no other predictor.
     Denote the model by $M_0$.
@@ -482,60 +534,49 @@ Forward stepwise selection involves fitting one intercept-only model,
 along with $p-k$ models in the $k$th iteration, for $k = 0,\ldots, p-1$.
 This reduces the computational complexity substantially from the best
 subset selection, which fits $C_k^p$ models for each $k = 1, \ldots, p$.
+
 We should keep in mind that, since forward stepwise selection does not
 go through all possible models, there is no assurance that it will find
 the best model.
 
-The following code performs forward stepwise selection for Boston data
-example.
+The following code performs forward stepwise selection for `bike_share` data example.
 
 ```{r}
-forward <- regsubsets(medv ~ ., 
-                      data = Boston,
-                      nvmax = 12,
+forward <- regsubsets(log_rented_bike_count ~ hour + temperature + humidity + wind_speed + visibility + dew_point_temperature +  solar_radiation + rainfall + snowfall + seasons + holiday, 
+                      data = bike_share,
+                      nvmax = 11,
                       method = "forward")
-# summary
 mod_summary <- summary(forward)
-mod_summary
 ```
 
-As before, the summary shows which predictors give the best model (based
-on training set performance) for each model size. Next we can choose the
-best model among these 12 models.
+As before, we could look at the `summary()` of this object but it isn't nice to look at. Just as before, we can choose the
+best model among these 11 models by looking at our criteria.
 
 ```{r}
 metrics <- data.frame(aic = mod_summary$cp,
                       bic = mod_summary$bic,
                       adjR2 = mod_summary$adjr2)
-metrics
-round( coef(forward, 10), 2)
 ```
 
-```{r, echo=FALSE, fig.cap="AIC, BIC and Adjusted $R^2$ for forward stepwise selection in Boston data.", fig.margin = FALSE, fig.width=10, fig.height=3}
-dd <- cbind(size = 1:12, metrics)
+```{r, echo=FALSE, fig.cap="AIC, BIC and Adjusted $R^2$ for forward stepwise selection in Boston data.", fig.margin = FALSE, fig.width=10, fig.height=4}
+dd <- cbind(size = 1:11, metrics)
 p1 <- ggplot(dd, aes(size, aic)) + geom_point() + 
   geom_line() + theme_bw(base_size = 18) + 
   ggtitle("AIC") + 
-  scale_x_discrete(limits=as.factor(1:12))
+  scale_x_discrete(limits=as.factor(1:11))
 p2 <- ggplot(dd, aes(size, bic)) + geom_point() + 
   geom_line() + theme_bw(base_size = 18) + 
   ggtitle("BIC")+ 
-  scale_x_discrete(limits=as.factor(1:12))
+  scale_x_discrete(limits=as.factor(1:11))
 p3 <- ggplot(dd, aes(size, adjR2)) + geom_point() + 
   geom_line() + theme_bw(base_size = 18) + 
   ggtitle("Adjusted R2")+ 
-  scale_x_discrete(limits=as.factor(1:12))
+  scale_x_discrete(limits=as.factor(1:11))
 
 gridExtra::grid.arrange(p1,p2,p3, nrow=1)
-
-#gg <- gather(cbind(size = 1:12, metrics), 
-#             key = metric,
-#             value = value,
-#             -size)
-#ggplot(gg, aes(size, value)) + 
-#  geom_point() + 
-#  facet_wrap(vars(metric))
 ```
+
+In this case, we get the same exact results as with best subset selection (the same predictors are chosen in the models of size 9 and 10).
 
 ### Backward Stepwise Selection
 
@@ -560,44 +601,41 @@ backward stepwise selection.
 Like forward stepwise selection, backward stepwise selection is not
 guaranteed to yield the best model containing a subset of the $p$
 predictors. The following code performs backward stepwise selection for
-Boston data example.
+the `bike_share` data example.
 
 ```{r}
-backward <- regsubsets(medv ~ ., 
-                      data = Boston,
-                      nvmax = 12,
+backward <- regsubsets(log_rented_bike_count ~ hour + temperature + humidity + wind_speed + visibility + dew_point_temperature +solar_radiation + rainfall + snowfall + seasons + holiday, 
+                      data = bike_share,
+                      nvmax = 11,
                       method = "backward")
 # summary
 mod_summary <- summary(backward)
-mod_summary
 ```
 
 As before, the summary shows which predictors give the best model (based
 on training set performance) for each model size. Next we can choose the
-best model among these 12 models.
+best model among these 11 models.
 
 ```{r}
 metrics <- data.frame(aic = mod_summary$cp,
                       bic = mod_summary$bic,
                       adjR2 = mod_summary$adjr2)
-metrics
-coef(forward, 10)
 ```
 
-```{r, echo=FALSE, fig.cap="AIC, BIC and Adjusted $R^2$ for backward stepwise selection in Boston data.", fig.margin = FALSE, fig.width=10, fig.height=3}
-dd <- cbind(size = 1:12, metrics)
+```{r, echo=FALSE, fig.cap="AIC, BIC and Adjusted $R^2$ for backward stepwise selection in Boston data.", fig.margin = FALSE, fig.width=10, fig.height=4}
+dd <- cbind(size = 1:11, metrics)
 p1 <- ggplot(dd, aes(size, aic)) + geom_point() + 
   geom_line() + theme_bw(base_size = 18) + 
   ggtitle("AIC") + 
-  scale_x_discrete(limits=as.factor(1:12))
+  scale_x_discrete(limits=as.factor(1:11))
 p2 <- ggplot(dd, aes(size, bic)) + geom_point() + 
   geom_line() + theme_bw(base_size = 18) + 
   ggtitle("BIC")+ 
-  scale_x_discrete(limits=as.factor(1:12))
+  scale_x_discrete(limits=as.factor(1:11))
 p3 <- ggplot(dd, aes(size, adjR2)) + geom_point() + 
   geom_line() + theme_bw(base_size = 18) + 
   ggtitle("Adjusted R2")+ 
-  scale_x_discrete(limits=as.factor(1:12))
+  scale_x_discrete(limits=as.factor(1:11))
 
 gridExtra::grid.arrange(p1,p2,p3, nrow=1)
 
@@ -610,82 +648,80 @@ gridExtra::grid.arrange(p1,p2,p3, nrow=1)
 #  facet_wrap(vars(metric))
 ```
 
-In the `Boston` data example seen so far, results from using AIC, BIC
-and adjusted $R^2$ match -- they all choose the same model. This is not
-the case in general setting. We might have different "best" models
-depending on the evaluation criterion we use. In that case, we will just
-pick the criteria we like the most (e.g. BIC for typically giving
-smaller models), and go with the corresponding best model.
+In the `bike_share` data example seen so far, the results match regardless of method we used. This is generally not going to hold!
 
-### Using the holdout and Cross-Validation for subset selection
+As the model chosen by AIC, adjusted $R^2$, and BIC differ, we can pick the criteria we like the most (e.g. BIC for typically giving smaller models), and go with the corresponding best model.
+
+### Using the Holdout and Cross-Validation for Subset Selection
 
 As mentioned before, apart from AIC/BIC/adjusted $R^2$, it is also
-possible to use data splitting techniques such as holdout or CV for
-model selection. Ideally, we can run CV for each of the $2^p$ models,
-and choose the one with best test error. However, such an approach can
-be computationally expensive.
+possible to use data splitting techniques such as a holdout set or CV for
+model selection. 
+
+Ideally, we can run CV for each of the $2^p$ models, and choose the one with best test error. However, such an approach can be computationally expensive.
 
 Alternatively, we can use the algorithms presented above and use CV on
 them. It is important to recall our discussion in the previous chapters
-about proper implementation of CV: the entire model building process,
-including any tuning, has to be applied to the training set. We **can
-not** simply use steps 1 and 2 on the full data to get
-$M_0, \ldots, M_p$ and then just use CV on the final models. The
-following paragraph is quoted verbatim from the textbook to emphasize
-this important point.
+about proper implementation of CV: 
 
-> In order for these approaches to yield accurate estimates of the test
-> error, we must use *only the training observations* to perform all
-> aspects of model-fitting---including variable selection. Therefore,
-> the determination of which model of a given size is best must be made
-> using *only the training observations*. This point is subtle but
-> important. If the full data set is used to perform the best subset
-> selection step, the validation set errors and cross-validation errors
-> that we obtain will not be accurate estimates of the test error.
->
-> `r tufte::quote_footer('--- Gareth James, Daniela Witten, Trevor Hastie, and Robert Tibshirani, An Introduction to Statistical Learning, second edition, 2021, page 271.')`
+- the entire model building process, including any tuning, has to be applied to the training set. 
+- We **can not** simply use steps 1 and 2 on the full data to get $M_0, \ldots, M_p$ and then just use CV on the final models. 
+- The following paragraph is quoted verbatim from the textbook to emphasize
+this important point (page 271).
 
-\noindent Thus we can think the *model size* as tuning parameter here,
-since each training set might yield different models even if the size
-remains the same. We use holdout/CV to choose the best model size, and
-then choose the best model of that size using the full data.
+> In order for these approaches to yield accurate estimates of the test error, we must use *only the training observations* to perform all aspects of model-fitting---including variable selection. Therefore, the determination of which model of a given size is best must be made using *only the training observations*. This point is subtle but  important. If the full data set is used to perform the best subset selection step, the validation set errors and cross-validation errors that we obtain will not be accurate estimates of the test error.
 
-The algorithm of subset selection using *holdout method* is as follows:
+Thus we can think the **model size** as a tuning parameter here, since each training set might yield different models even if the size (number of predictors) remains the same. We use holdout/CV to choose the best model size, and then choose the best model of that size using the full data.
+
+The algorithm of subset selection using a style *holdout method* is as follows:
 
 -   Split the observations into training and test sets.
 
 -   Apply best/forward/backward selection method on the training set.
 
--   For *each model size*, pick the best model, and compute test error
-    using test set.
+-   For *each model size*, pick the best model, and compute test error using the test set.
 
 -   Choose the optimal model size that has minimum test error.
 
--   Finally, perform best/forward/backward subset selection on the full
-    data set, and select the best model of the size chosen in the
-    previous step.
+-   Finally, perform best/forward/backward subset selection on the **full data set**, and select the best model of the size chosen in the previous step.
+
+Let's illustrate this.
+
+- Obtain the train/test split.
 
 ```{r}
 set.seed(1001)
 ## Create test and training sets
-library(rsample)
-data_split <- initial_split(Boston, prop = 0.8)
-test_set <- testing(data_split)
-train_set <- training(data_split)
+data_split <- createDataPartition(bike_share$log_rented_bike_count, 
+                                  p = 0.8, 
+                                  list = FALSE)
 
+test_set <- bike_share[-data_split, ]
+train_set <- bike_share[data_split, ]
+```
+
+- Apply best subsets on the training data
+
+```{r}
 ## Best subset selection on the training data
-best_train <- regsubsets(medv ~ ., 
+best_train <- regsubsets(log_rented_bike_count ~ hour + temperature + humidity + wind_speed + visibility + dew_point_temperature +solar_radiation + rainfall + snowfall + seasons + holiday,
                          data = train_set,
-                         nvmax = 12)
-train_sum <- summary(best_train)
+                         nvmax = 11)
 
-## For each model size, estimate test performance
-# A function to predict and estimate error 
-#    on the test set. Inputs are 
-#           model size (mod_size),
-#           summary outout of the selection process (reg_summary)
-#           model matrix of the test data (test_model)
-#           test set response (test_resp)
+train_sum <- summary(best_train)
+```
+
+- For each model size, estimate the test performance
+
+    + A function to help us
+    
+```{r}
+#We'll write a function to predict and estimate the error on the test set. 
+#Inputs are 
+#- model size (mod_size),
+#- summary output of the selection process (reg_summary)
+#- model matrix of the test data (test_model)
+#- test set response (test_resp)
 test_err <- function(mod_size, 
                      reg_summary, 
                      test_model,
@@ -694,37 +730,53 @@ test_err <- function(mod_size,
   betahat <- coef(reg_summary$obj, mod_size)
   # get best subset of the specified size
   sub <- reg_summary$which[mod_size, ]
-  # Create test model matrix, predcition, test error
+  # Create test model matrix, prediction, test error
   model <- test_model[, sub]
   yhat <- model %*% betahat
   err <- mean((test_resp - yhat)^2)
   return(err)
 }
+```
 
-## Apply the function above to each model size
-test_model <- model.matrix(~ . - medv, data = test_set)
-test_resp <- test_set$medv
-hold_err <- sapply(1:12, test_err, 
-                   reg_summary = train_sum,
+- Apply the function to each model size
+
+```{r}
+#define the test model
+test_model <- model.matrix(~ hour + temperature + humidity + wind_speed + visibility + dew_point_temperature +solar_radiation + rainfall + snowfall + seasons + holiday,
+                           data = test_set)
+
+#define the test response
+test_resp <- test_set$log_rented_bike_count
+
+#apply the function to each of the model sizes
+hold_err <- sapply(1:11, #apply the function to these 
+                  FUN = test_err, 
+                  reg_summary = train_sum,
                    test_model = test_model, 
                    test_resp = test_resp)
+
+#Let's plot the errors
 plot(hold_err, type = 'b', pch=19, lwd=2)
-## Best model size and refit of full data
+```
+
+- Choose the optimal model size and use that model size on a model fit to the full data set
+
+```{r}
 size_opt <- which.min(hold_err)
-bestmod <- regsubsets(medv ~ .,
-                      data = Boston,
-                      nvmax = 12)
+size_opt
+#fit on the full data set
+bestmod <- regsubsets(log_rented_bike_count ~ hour + temperature + humidity + wind_speed + visibility + dew_point_temperature +solar_radiation + rainfall + snowfall + seasons + holiday,
+                      data = bike_share,
+                      nvmax = 11)
+#Use the optimal size
 coef(bestmod, size_opt)
 ```
 
-In this particular example, we have the same 10-variable model as
-before. We refit the full data set in order to obtain more accurate
-estimates of the regression coefficient estimates. It is important that
-we perform best/forward/backward subset selection on the full data set
-and select the best model with 10 variables (for this example), rather
-than simply using the variables that were obtained from the training
-set. This is because the best model with 10 predictors on the full data
-set may be different from the corresponding model on the training set.
+In this particular example, we chose a 9-variable model. We refit to the full data set in order to obtain more accurate
+estimates of the regression coefficient estimates. 
+
+- It is important that we perform best/forward/backward subset selection on the full data set and select the best model with 9 variables (for this example), rather than simply using the variables that were obtained from the training set. 
+- This is because the best model with 9 predictors on the full data set may be different from the corresponding model on the training set.
 
 We can similarly use $V$-fold cross-validation as follows:
 
@@ -732,162 +784,37 @@ We can similarly use $V$-fold cross-validation as follows:
 
 -   For $v = 1, \ldots, V$:
 
-    -   Set $v$-th fold as test set, and the remaining folds as training
-        set.
-    -   Apply best/forward/backward selection method on the training
-        set.
-    -   For *each model size*, pick the best model, and compute test
-        error using test set.
+    -   Set $v$-th fold as test set, and the remaining folds as training set.
+    -   Apply best/forward/backward selection method on the training set.
+    -   For *each model size*, pick the best model, and compute test error using test set.
 
--   Choose the optimal model size that has minimum average test error
-    over $V$ folds.
+-   Choose the optimal model size that has minimum average test error over $V$ folds.
 
--   Finally, perform best/forward/backward subset selection on the full
-    data set, and select the best model of the size chosen in the
-    previous step.
+-   Finally, perform best/forward/backward subset selection on the full data set, and select the best model of the size chosen in the previous step.
 
-```{r cvsub, echo=FALSE, fig.cap="Best subset selection using 5-fold cross-validation. The gray lines are test MSE profiles for the 5 folds. The black line is the mean test MSE over the folds. The red error bars indicate test MSE +/- one SE."}
-set.seed(1001)
-fl <- 10
-cvsplit <- vfold_cv(Boston, v = fl, repeats = 1)
+As a final note on correctly implementing cross-validation in general, we quote the following paragraph verbatim from *Elements of Statistical Learning*, **Section 7.10.2: The Wrong and Right Way to Do Cross-validation**:
 
-f <- function(sp){
-  test <- testing(sp)
-  train <- training(sp)
-  
-  
-  best_train <- regsubsets(medv ~ ., 
-                         data = train,
-                         nvmax = 12)
-  train_sum <- summary(best_train)
+> Consider a classification problem with a large number of predictors, as may arise, for example, in genomic or proteomic applications. A typical strategy for analysis might be as follows:
 
-  test_model <- model.matrix(~ . - medv, data = test)
-  test_resp <- test$medv
-  hold_err <- sapply(1:12, test_err, 
-                   reg_summary = train_sum,
-                   test_model = test_model, 
-                   test_resp = test_resp)
-  
-  return(hold_err)
+> 1.  Screen the predictors: find a subset of "good" predictors that show fairly strong (univariate) correlation with the class labels
 
-}
+> 2.  Using just this subset of predictors, build a multivariate classifier.
 
-ss <- data.frame(sapply(cvsplit$splits, f))
-names(ss) <- cvsplit$id
-mn <- rowMeans(ss)
-se <- apply(ss, 1, sd)/sqrt(fl)
-ss <- cbind(ss, size = 1:12)
-kmin <- which.min(mn)
-k1se <- min(c(1:12)[mn < (mn + se)[which.min(mn)]])
+> 3.  Use cross-validation to estimate the unknown tuning parameters and to estimate the prediction error of the final model.
 
+> Is this a correct application of cross-validation? Consider a scenario with N = 50 samples in two equal-sized classes, and p = 5000 quantitative predictors (standard Gaussian) that are independent of the class labels. The true (test) error rate of any classifier is 50%.
 
-best_train <- regsubsets(medv ~ ., 
-                         data = Boston,
-                         nvmax = 12)
+> We carried out the above recipe, choosing in step (1) the 100 predictors having highest correlation with the class labels, and then using a 1-nearest neighbor classifier, based on just these 100 predictors, in step (2). Over 50 simulations from this setting, the average CV error rate was 3%. This is far lower than the true error rate of 50%.
 
-# matplot(ss, lwd=2, col = "gray", type = "b", pch=19, lty=1,
-#        xlab = "Model size", ylab = "CV test error")
-# 
-# points(mn, lwd = 2, type = "b", pch=19)
-# points(which.min(mn), mn[which.min(mn)], pch=25, col="red", cex=2, bg = "red")
-# 
-# 
-# points(mn + se, lwd = 2, type = "b", pch=19, lty=2)
-# points(mn - se, lwd = 2, type = "b", pch=19, lty=2)
+> What has happened? The problem is that the predictors have an unfair advantage, as they were chosen in step (1) on the basis of all of the samples. Leaving samples out after the variables have been selected does not correctly mimic the application of the classifier to a completely independent test set, since these predictors "have already seen" the left out samples.
 
-gg <- gather(ss, "Fold", "Error", -size)
+Even though the discussion above is in the context of classification, the idea still applies to regression problems. Instead of misclassification error rate, we will be concerned about test MSE.
 
-df <- data.frame(err = mn, lwr = mn - se, upr = mn + se, 
-                 size = 1:12, ss)
+If we do need to screen predictors for a specific regression model, we need to do so *without involving response*, that is, using *unsupervised* methods. This should be done *before splitting data*. Again we quote a paragraph from *Elements of Statistical Learning*:
 
-ggplot() + 
-  geom_point(aes(size, Error), data = gg, col = "gray") +
-  geom_line(aes(size, Error, group = Fold), data = gg, col = "gray") +
-  geom_point(aes(size, mn), data = df, cex=3) +
-  geom_line(aes(size, mn), data = df, lwd=1.3) + 
-  geom_errorbar(aes(size, mn, ymin = lwr, ymax = upr), data = df, col = "red", lwd=1.1) + 
-  theme_bw(base_size = 18) + 
-  scale_x_discrete(limits=as.factor(1:12)) + 
-  geom_hline(yintercept = (mn + se)[kmin], lty = 2, col = "red") + 
-  geom_hline(yintercept = (mn - se)[kmin], lty = 2, col = "red")
-  
-```
+> In general, with a multistep modeling procedure, cross-validation must be applied to the entire sequence of modeling steps. In particular, samples must be "left out" before any selection or filtering steps are applied. There is one qualification: initial unsupervised screening steps can be done before samples are left out. For example, we could select the 1000 predictors with highest variance across all 50 samples, before starting cross-validation. Since this filtering does not involve the class labels, it does not give the predictors an unfair advantage.
 
-\noindent Figure \ref{fig:cvsub} shows the results best subset selection
-using a 10-fold CV. The resulting model has size 10, and in fact is the
-same as the one chosen by holdout in this example.
-
-Notice that even though the model with 10 predictors give the lowest
-test MSE, the models containing 5 -- 9 predictors also have similar
-(slightly higher) MSE values. Surely, if we repeated CV using different
-folds, the exact minimum might change. In this setting, we often use the
-*one-standard-error rule*: calculate the standard error of the estimated
-test MSE from the 10 folds for each model size, and then select the
-smallest model for which the estimated test error is within one standard
-error of the minimum estimated MSE. If a set of models are essentially
-equal in performance, then one-standard-error rule would chose the the
-model with the smallest number of predictors. In our example in Figure
-\ref{fig:cvsub}, one-standard-error rule chooses a model with 5
-predictors:
-
-```{r, echo=FALSE}
-coef(best_train, k1se)
-```
-
-As a final note on correctly implementing cross-validation in general,
-we quote the following paragraph verbatim from *Elements of Statistical
-Learning*, **Section 7.10.2: The Wrong and Right Way to Do
-Cross-validation**:
-
-> Consider a classification problem with a large number of predictors,
-> as may arise, for example, in genomic or proteomic applications. A
-> typical strategy for analysis might be as follows:
->
-> 1.  Screen the predictors: find a subset of "good" predictors that
->     show fairly strong (univariate) correlation with the class labels
-> 2.  Using just this subset of predictors, build a multivariate
->     classifier.
-> 3.  Use cross-validation to estimate the unknown tuning parameters and
->     to estimate the prediction error of the final model.
->
-> Is this a correct application of cross-validation? Consider a scenario
-> with N = 50 samples in two equal-sized classes, and p = 5000
-> quantitative predictors (standard Gaussian) that are independent of
-> the class labels. The true (test) error rate of any classifier is 50%.
-> We carried out the above recipe, choosing in step (1) the 100
-> predictors having highest correlation with the class labels, and then
-> using a 1-nearest neighbor classifier, based on just these 100
-> predictors, in step (2). Over 50 simulations from this setting, the
-> average CV error rate was 3%. This is far lower than the true error
-> rate of 50%.
-
-> What has happened? The problem is that the predictors have an unfair
-> advantage, as they were chosen in step (1) on the basis of all of the
-> samples. Leaving samples out after the variables have been selected
-> does not correctly mimic the application of the classifier to a
-> completely independent test set, since these predictors "have already
-> seen" the left out samples.
-
-Even though the discussion above is in the context of classification,
-the idea still applies to regression problems. Instead of
-misclassification error rate, we will be concerned about test MSE.
-
-If we do need to screen predictors for a specific regression model, we
-need to do so *without involving response*, that is, using
-*unsupervised* methods. This should be done *before splitting data*.
-Again we quote a paragraph from *Elements of Statistical Learning*:
-
-> In general, with a multistep modeling procedure, cross-validation must
-> be applied to the entire sequence of modeling steps. In particular,
-> samples must be "left out" before any selection or filtering steps are
-> applied. There is one qualification: initial unsupervised screening
-> steps can be done before samples are left out. For example, we could
-> select the 1000 predictors with highest variance across all 50
-> samples, before starting cross-validation. Since this filtering does
-> not involve the class labels, it does not give the predictors an
-> unfair advantage.
-
-## Regularization/Shrinkage methods
+## Regularization/Shrinkage Methods
 
 Another approach to selecting relevant predictors is to fit a model with
 all $p$ predictors but put *constraints* on the regression coefficients.
@@ -909,11 +836,14 @@ such estimation methods.
 ### Ridge regression
 
 Ridge regression shrinks the regression coefficients towards zero by
-imposing a *quadratic penalty*. The ridge regression coefficient
-estimates are obtained by minimizing[^22] $$
+imposing a *quadratic penalty* or $L2$ penalty. The ridge regression coefficient
+estimates are obtained by minimizing
+$$
 \sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots - X_{ip}\beta_p)^2 + \lambda\sum_{j=1}^p\beta_j^2,
-$$ where $\lambda \geq 0$ is a tuning parameter. The penalty term
-$\lambda\sum_{j=1}^p\beta_j^2$ is called a *shrinkage penalty*.[^23]
+$$ 
+where $\lambda \geq 0$ is a tuning parameter. (Note that the intercept $\beta_0$ is not penalized.) The penalty term
+$\lambda\sum_{j=1}^p\beta_j^2$ is called a *shrinkage penalty*. (The idea of using the sum-of-squares of the parameters as penalty is also used in neural networks -- it is known as *weight decay*.)
+
 Here $\lambda$ controls the relative impact of the two terms on the
 regression coefficient estimates. For large values of $\lambda$, the
 quadratic penalty term dominates the criterion, and the resulting
@@ -922,27 +852,19 @@ thus we get exactly the ordinary least squares estimates. Thus we must
 select a reasonable value of $\lambda$ to balance both the terms.\
 Recall that $\mathbf{X}$ denotes the model matrix of the regression
 problem. We can show that ridge regression solutions have a closed form
-expression (if we also penalize intercept):[^24] $$
-\widehat\beta^{\rm ridge} = (\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I})^{-1}\mathbf{X}^T\mathbf{Y}.
-$$ Notice again that setting $\lambda = 0$ gives us the least squares
+expression (if we also penalize intercept):
+
+$$
+\widehat\beta^{ridge} = (\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I})^{-1}\mathbf{X}^T\mathbf{Y}.
+$$ 
+Here $\mathbf{I}$ denotes the identity matrix: a diagonal matrix with all diagonal elements being 1.
+
+Notice again that setting $\lambda = 0$ gives us the least squares
 estimates, $\widehat\beta$. Also note that, for $\lambda > 0$, the
 matrix $(\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I})$ always has an
 inverse *even if* $\mathbf{X}$ does not have full column rank. Thus,
 even in presence of collinearity/redundant columns in $\mathbf{X}$,
-ridge regression will still produce unique regression estimates.[^25]
-
-[^22]: Note that the intercept $\beta_0$ is not penalized.
-
-[^23]: The idea of using the sum-of-squares of the parameters as penalty
-    is also used in neural networks -- it is known as
-    \textit{weight decay}.
-
-[^24]: Here $\mathbf{I}$ denotes the identity matrix: a diagonal matrix
-    with all diagonal elements being 1.
-
-[^25]: This was the original motivation behind development of ridge
-    regression, see Hoerl and Kennard (1970), Ridge Regression: Biased
-    Estimation for Nonorthogonal Problems, Technometrics, 12, 55 -- 67.
+ridge regression will still produce unique regression estimates. (This was the original motivation behind development of ridge regression, see Hoerl and Kennard (1970), Ridge Regression: Biased Estimation for Nonorthogonal Problems, Technometrics, 12, 55 -- 67.)
 
 Figure \ref{fig:ridge} shows the estimated ridge regression coefficients
 for different values of $log(\lambda)$ in `Boston` data with `medv` as
@@ -1054,17 +976,15 @@ ridge regression without intercept.
 
 \noindent Under this assumption, we still have the same form of the
 solution:
-$(\widehat\beta_1, \ldots, \widehat\beta_p) = (\X^T\X + \lambda \mathbf{I})^{-1} \X^T\Y$.
+$(\widehat\beta_1, \ldots, \widehat\beta_p) = (\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I})^{-1} \mathbf{X}^T\mathbf{Y}$.
 Furthermore, if we standardize predictors beforehand and if they are
 orthogonal to each other, it can be shown that
-$\widehat\beta_j^{\rm ridge} = \widehat\beta/(1 + \lambda)$.
+$\widehat\beta_j^{ridge} = \widehat\beta/(1 + \lambda)$.
 
-In R, we can use the `glmnet()` function in the `glmnet` library.[^27]
+In R, we can use the `glmnet()` function in the `glmnet` library.
 Let us use the Boston data for example. Note the usage of `alpha = 0`
 (ensures we are fitting ridge regression as `glmnet()` can fit other
 models like LASSO and elastic net as well).
-
-[^27]: See `?glmnet` for more details.
 
 ```{r boston_prep, warning=FALSE, message=FALSE}
 library(glmnet)
@@ -1215,7 +1135,7 @@ betahat
 sqrt( colSums(betahat^2) )
 ```
 
-```{r, echo=FALSE, fig.width=3, fig.cap="Predictors arranged by absolute values of their estimated coefficients using 1-SE rule."}
+```{r, echo=FALSE, fig.width=5, fig.cap="Predictors arranged by absolute values of their estimated coefficients using 1-SE rule."}
 tb <- tibble(pred = rownames(betahat)[-1],
             est = abs(betahat[-1,2]))
 tb <- tb %>% arrange(est)
@@ -1304,7 +1224,7 @@ $\sum_j|\beta_j|$, some of the coefficients will be shrunk exactly to
 zero. It is easier to see if we have standardized the predictors, and if
 they are orthogonal to each other. In that case, the explicit lasso
 solution is
-$\widehat\beta_j^{\rm lasso} = sign(\widehat\beta_j)(|\widehat\beta_j| - \lambda)_+$.
+$\widehat\beta_j^{lasso} = sign(\widehat\beta_j)(|\widehat\beta_j| - \lambda)_+$.
 Thus lasso does perform variable selection. As a result, models
 generated from the lasso are generally much easier to interpret than
 those produced by ridge regression. In other words, lasso generates
@@ -1417,7 +1337,7 @@ bestlam <- data.frame(min = cv_out$lambda.min,
 bestlam
 ```
 
-```{r, fig.width=3, fig.cap="Predictors arranged by absolute values of their estimated coefficients using 1-SE rule from a lasso fit.", echo=FALSE}
+```{r, fig.width=5, fig.cap="Predictors arranged by absolute values of their estimated coefficients using 1-SE rule from a lasso fit.", echo=FALSE}
 
 <<gagan>>
   
@@ -1787,7 +1707,7 @@ direction with the most variation (the red arrow). The direction
 orthogonal to PC1 containing the second largest amount of variation is
 PC2 (the blue arrow).
 
-```{r BB, echo=FALSE, fig.width=14, fig.height=7, fig.cap="Geometry of PCA in two and three dimensions (left and right panels, respectively).", fig.fullwidth=TRUE, fig.margin = FALSE, message=FALSE, warning=FALSE}
+```{r BB, eval= FALSE, echo=FALSE, fig.width=14, fig.height=7, fig.cap="Geometry of PCA in two and three dimensions (left and right panels, respectively).", fig.fullwidth=TRUE, fig.margin = FALSE, message=FALSE, warning=FALSE}
 
 library(plot3D)
 library(MASS)
