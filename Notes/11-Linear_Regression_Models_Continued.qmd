@@ -956,28 +956,38 @@ constraint formulation are connected via an one-to-one relationship.
 
 Based on the second formulation, we can think of ridge regression as
 minimizing RSS of a linear regression while preventing the regression
-coefficients from getting too large or small. The parameter $t$
-determines how large/small regression coefficients can become. If $t$ is
-set to very large, then we are effectively allowing $\beta$'s to take
-any value (equivalent to setting a small $\lambda$). On the other hand,
-a small $t$ will force the $\beta$'s to be smaller and closer to zero
-(equivalent to setting large $\lambda$).
+coefficients from getting too large or small. 
 
-In presence of multicollinearity, the corresponding $\beta$'s can become
-wildly variable. A very large positive $\beta$ on one variable can be
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+- In presence of multicollinearity, the corresponding $\beta$'s can become
+wildly variable. 
+
+    + A very large positive $\beta$ on one variable can be
 canceled by a similarly large negative $\beta$ on another predictor
-correlated to the first one. A size constraint imposed by $t$, fixes
+correlated to the first one. 
+    + A size constraint imposed by $t$, fixes
 this issue.
 
 Before fitting the ridge regression model, we need to aware that scaling
-the predictors is often needed. In least squares estimation,
+the predictors is often needed. 
+
+- In least squares estimation,
 scaling/standardizing a predictor does *not* change the overall
-quality of the fit (e.g., $R^2$, $MSE$ etc). If we multiply a predictor
+quality of the fit (e.g., $R^2$, $MSE$ etc). 
+
+    + If we multiply a predictor
 by a constant $c$, then the resulting least square coefficient estimate
-will get multiplied by $1/c$. In other words, using least squares, the
+will get multiplied by $1/c$. 
+    + Using least squares, the
 quantity $X_j\widehat\beta_j$ will remain the same no matter how we
-scale the $j$-th predictor. This is the reason we call least squares estimators *scale
-    equivariant*.
+scale the $j$-th predictor. 
+    + This is the reason we call least squares estimators *scale equivariant*.
 
 Consider the simple example below where we use `lstat` and `5*lstat` as predictors. The coefficient estimate for the `5*lstat` model is simply $1/5$ the value for the `lstat` model.
 
@@ -991,21 +1001,28 @@ cbind(original = mod1$coefficients[2],
 
 \noindent  In contrast, ridge regression estimates can change
 substantially depending on scaling of the predictors. In fact, ridge
-regression estimators $\widehat\beta^{ridge}_j$ will depend on the
-scaling of the $j$-th predictor, the value of the tuning parameter
-$\lambda$, *and* the scaling of the *other* predictors as well.
+regression estimators $\widehat\beta^{ridge}_j$ will depend on 
+
+- the scaling of the $j$-th predictor
+- the value of the tuning parameter $\lambda$
+- the scaling of the *other* predictors
+
 Therefore it is best to apply ridge regression *after we have
 standardized each of the predictors*. This way, each predictor has
 variance 1, and the final fit will not depend on the scale on which the
 predictors are measured.
 
 In addition, the ridge formulation does not penalize the intercept
-$\beta_0$. This is due to the fact that the ridge estimates depend on
-the center chosen for the responses. Specifically, in least squares
-regression, if we add a constant $c$ to each of the responses $Y_i$, the
-resulting predictions also shift by the same amount $c$. But this does
-not happen in ridge regression if we penalize the intercept -- therefore
-we do not penalize $\beta_0$.
+$\beta_0$. 
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 
 It can be shown that, if we center each covariate, that is, we use
 $X_{ij} - \bar X_j$ as predictors, then the estimator of the intercept
@@ -1017,10 +1034,19 @@ ridge regression without intercept.
 
 \noindent Under this assumption, we still have the same form of the
 solution:
-$(\widehat\beta_1, \ldots, \widehat\beta_p) = (\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I})^{-1} \mathbf{X}^T\mathbf{Y}$.
+
+$$(\widehat\beta_1, \ldots, \widehat\beta_p) = (\mathbf{X}^T\mathbf{X} + \lambda \mathbf{I})^{-1} \mathbf{X}^T\mathbf{Y}
+$$
 Furthermore, if we standardize predictors beforehand and, if they are
 orthogonal to each other, it can be shown that
-$\widehat\beta_j^{ridge} = \widehat\beta/(1 + \lambda)$.
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+\newpage
 
 In R, we can use the `glmnet()` function in the `glmnet` library.
 Let us use the `Boston` data for example. Note the usage of `alpha = 0`
@@ -1050,9 +1076,6 @@ betahat <- coef(boston_ridge)
 dim(betahat)
 ```
 
-We constructed the model matrix by excluding intercept since it will be
-automatically included by `glmnet()`. 
-
 Here we have used a custom grid of $\lambda$ values. For each value of
 $\lambda$, the output `betahat` contains the corresponding estimates of
 the regression coefficients. The figure below shows the estimated
@@ -1071,10 +1094,16 @@ effectively controls the model complexity:
 
 Ideally, we would like to select $\lambda$ that minimizes test MSE. We
 can use data splitting methods such as cross-validation (or holdout) to
-do so. We choose a grid of candidate values of $\lambda$, and compute
-the cross-validation (or holdout) error for each value. The optimal
-$\lambda$ is the one with minimum test error. Finally, we refit the
-model to the full data using the optimal $\lambda$.
+do so:
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 We can use `glmnet.cv()` function to perform cross-validation. By
 default, `glmnet.cv()` uses 10-fold CV.
@@ -1134,13 +1163,22 @@ We can plot the results from CV process using the output of
 plot(cv_out)
 ```
 
-The "best" value of $\lambda$ can chosen by minimizing the CV error. The
-left vertical line in the figure represents this value. We can see that there are a range of $\lambda$ values that give similar CV errors, and the dip in CV errors is not very
-pronounced. This suggests that we might just as well use least squares
-estimate in this case. 
+The "best" value of $\lambda$ can chosen by minimizing the CV error. 
 
-Alternatively, we can also us the *one standard error* rule to choose $\lambda$: rather than choosing the $\lambda$ that gives the minimum test MSE, we would pick the largest $\lambda$ (less
-model complexity) whose test MSE is within one standard error of the minimum test MSE. 
+- The left vertical line in the figure represents this value.
+
+    + We can see that there are a range of $\lambda$ values that give similar CV errors
+    + the dip in CV errors is not very pronounced
+    + this suggests that we might just as well use least squares estimate in this case. 
+
+Alternatively, we can also us the *one standard error* rule to choose $\lambda$: 
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 The right vertical line in the figure represents this value. The two values $\lambda$ are shown below, along with the estimated coefficients and the least squares coefficients for comparison.
 
@@ -1189,7 +1227,7 @@ is linear, the least squares estimates will have low bias but can have high
 variance, especially when $p$ is close to $n$. When $p>n$, least squares
 estimates are not unique. 
 
-In contrast, ridge regression will still perform well by trading off a small increase in bias for a large decrease in variance. Thus, ridge regression works best in situations  where the least squares estimates have high variance.
+In contrast, ridge regression will still perform well by trading off a small increase in bias for a large decrease in variance. Thus, ridge regression works best in situations where the least squares estimates have high variance.
 
 ```{r, echo=FALSE, eval=FALSE}
 #split <- initial_split(cbind(), prop = 0.8)
@@ -1220,12 +1258,13 @@ MSE <- mean((y[-index] - pred)^2)
 
 A major disadvantage of ridge regression is that it does not exclude any
 variables from the final fitted model, that is, it always produces
-non-zero estimates of the regression coefficients. Ridge regression will
-not set any coefficients to exactly zero for any finite value of
+non-zero estimates of the regression coefficients. 
+
+Ridge regression will not set any coefficients to exactly zero for any finite value of
 $\lambda$. Thus ridge regression can not be considered as a *variable
-selection* method. This is not a problem for prediction, but
-interpreting of a model fit with many small but non-zero coefficients
-can be difficult.
+selection* method. 
+
+This is not a problem for prediction, but interpreting of a model fit with many small but non-zero coefficients can be difficult.
 
 ### LASSO regression
 
@@ -1233,25 +1272,37 @@ LASSO regression is another shrinkage method like ridge regression,
 but LASSO uses a penalty term involving sum of the absolute values of
 the regression coefficients, instead of sum of their squares. In
 particular, LASSO estimates of $\beta_j$ are obtained by minimizing\
-$$
-\sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots  - X_{ip}\beta_p)^2 + \lambda\sum_{j=1}^p|\beta_j|,
-$$ for $\lambda \geq 0$. Due to the $L_1$ penalty term, there is no
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+for $\lambda \geq 0$. Due to the $L_1$ penalty term, there is no
 closed form solution to the lasso problem. An equivalent way to
 write the LASSO problem is in the form of a constrained minimization
-problem, $$
-\mbox{minimize } \sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots - X_{ip}\beta_p)^2 
-$$ subject to the constraint $$
-\sum_{j=1}^p |\beta_j| \leq t,
-$$ for some $t > 0$.
+problem, 
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 Much like ridge regression, lasso also shrinks the regression
-coefficients towards zero. However, due to the $L_1$ penalty term
-$\sum_j|\beta_j|$, some of the coefficients will be shrunk exactly to
-zero. It is easier to see if we have standardized the predictors, and if
+coefficients towards zero. 
+
+However, due to the $L_1$ penalty term $\sum_j|\beta_j|$, some of the coefficients will be shrunk exactly to zero. It is easier to see if we have standardized the predictors, and if
 they are orthogonal to each other. In that case, the explicit lasso
 solution is
 
-$$\widehat\beta_j^{lasso} = sign(\widehat\beta_j)(|\widehat\beta_j| - \lambda)_+$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 
 Thus lasso does perform variable selection. As a result, models
 generated from the lasso are generally much easier to interpret than
@@ -1260,13 +1311,11 @@ those produced by ridge regression. In other words, lasso generates
 
 From the point of view of the constrained formulation, for large values
 of $t$, we will effectively get the least squares estimates.
-Specifically, it can be shown that if $t$ is chosen larger that
-$t_0 = \sum_{j=1}^p |\widehat\beta_j|$ (where $\widehat{\beta_j}$ are the OLS estimates), then lasso estimates are
-identical to least squares estimates. 
 
-On the other hand, if we chose
-$t = t_0/2$, then the least squares estimates are shrunk, on average, by
-about $50\%$. 
+Specifically, it can be shown that if $t$ is chosen larger that
+$t_0 = \sum_{j=1}^p |\widehat\beta_j|$ (where $\widehat{\beta_j}$ are the OLS estimates), then lasso estimates are identical to least squares estimates. 
+
+On the other hand, if we chose $t = t_0/2$, then the least squares estimates are shrunk, on average, by about $50\%$. 
 
 The figure below shows the reason some lasso estimates are exactly set to zero while ridge estimates are not. Here $\widehat\beta$ represents least squares solution while while the blue
 diamond and circle represent the lasso and ridge regression constraints.
@@ -1303,6 +1352,8 @@ So the ellipse will often intersect the constraint region at an axis.
 When this occurs, one of the coefficients will equal zero. In higher
 dimensions, many of the coefficient estimates may equal zero
 simultaneously.
+
+\newpage
 
 In `R`, we can use `glmnet()` with argument `alpha=1` to fit lasso
 regression. The code presented in the ridge regression section will work
@@ -1432,10 +1483,15 @@ $\alpha = 0$, respectively.
 
 The creators of this method, Zhou and Hastie (2005), suggest that
 elastic net deals with correlated predictors more effectively than lasso
-or ridge. The ridge penalty tends to shrink coefficients of correlated
+or ridge. 
+
+- The ridge penalty tends to shrink coefficients of correlated
 variables towards each other, while lasso tends to pick one predictor to
-be kept in the model while ignoring the rest. The elastic net
-penalty is a compromise between these two phenomena. The first term the
+be kept in the model while ignoring the rest. 
+- The elastic net
+penalty is a compromise between these two phenomena. 
+
+    + The first term the
 the penalty encourages the correlated features to be averaged, while the
 second penalty term encourages sparsity in the estimated coefficients of
 the averaged features.
@@ -1446,6 +1502,8 @@ correlation among them.
 
 As usual, we need to tune both $\lambda$ and $\alpha$ in this case. We
 can use `glmnet()` to fit elastic net as well.
+
+\newpage
 
 ### Other variable selection methods
 
@@ -1494,7 +1552,14 @@ to reduce model variance in two ways:
 - by reducing the number of variables in the model (subset selection, lasso) 
 - by shrinking regression coefficients toward zero (ridge, lasso). 
 
-Another method to control model variance is to transform the original predictors to obtain new ones, and use them as covariates in the regression model. Typically, the number of new variables are less than the number of the original predictors. Thus these methods are called *dimension reduction* techniques.
+Another method to control model variance is to 
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 
 Suppose our original predictors are $X_{i1}, \ldots, X_{ip}$. A typical
 dimension reduction method has two steps:
@@ -1521,9 +1586,10 @@ Principal components regression uses *Principal Components Analysis
 
 This essentially means we find linear combinations of the original predictors
 
-$$
-Z_{im} = a_{m1}X_{i1} + \ldots + a_{mp}X_{ip}, m = 1, 2, \ldots, M,
-$$ 
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 that explain most of the variability in the data, where each linear combination is uncorrelated to each other. 
 
@@ -1633,5 +1699,5 @@ the following paragraph from Chapter 6.4 of *Introduction to Statistical
 Learning*.
 
 > We have seen that when $p > n$, it is easy to obtain a useless model that has zero residuals. Therefore, one should never use sum of squared errors, p-values, $R^2$ statistics, or other traditional measures of model fit on the training data as evidence of a good model fit in the high-dimensional setting.
-
+K
 > It is important to instead report results on an independent test set, or cross-validation errors. For instance, the MSE or $R^2$ on an independent test set is a valid measure of model fit, but the MSE on the training set certainly is not.
