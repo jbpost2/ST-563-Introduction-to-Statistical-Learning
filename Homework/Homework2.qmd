@@ -1,0 +1,198 @@
+---
+title: "Homework 2"
+always_allow_html: yes
+format: docx
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+#for nicer table output
+library(knitr)
+```
+
+# Conceptual Problems
+
+## Book Problems
+
+Complete the following problems from the Introduction to Statistical Learning with R book (I'm not sure if the problems are in the same order in the python book so use the R book to identify which problems to do).
+
+Section 3.7
+
+- Book Problem 3
+
+- Book Problem 4
+
+Section 6.6
+
+- Book Problem 1
+
+- Book Problem 2
+
+- Book Problem 3
+
+- Book Problem 4
+
+
+# Implementation Problems 
+
+## Problem 1
+
+### Optional - `caret` Walkthrough
+
+Again, I'm fine with you using any software to complete these problems. I'll provide guidance on using the [`caret` package](http://topepo.github.io/caret/index.html) here. If you plan to use another package or other software, feel free to skip this section!
+
+Common tasks when fitting our **predictive** models: 
+
+1. Split data into train and test sets
+2. Preprocess data (transformations)
+3. Fit and tune models on the training set
+4. Predict on the test set  
+
+
+1. Split data into train and test sets using `createDataPartition()`. We've seen how to do this in our notes!
+
+```{r}
+library(caret)
+set.seed(31)
+train_index <- createDataPartition(iris$Sepal.Length, p = 0.7, list = FALSE)
+iris_train <- iris[train_index, ]
+iris_test <- iris[-train_index, ]
+```
+
+2. Preprocess data. We can easily do transformations on our data. Notes:
+
+- If you use a transformation that relies on the data (i.e. centering or scaling), you must do the transformation only using the training set data!
+- When transforming the test set, you must use the training set transformation(s) exactly
+
+    - For instance, if you center and scale a predictor using the training set's mean and standard deviation, you should use that **same mean and standard deviation from the training set** to standardize the test set values  
+
+We can use `preProcess()` for this purpose!
+
+```{r}
+#standardize all numeric columns  
+pre_process <- preProcess(iris_train, method = c("center", "scale"))
+pre_process
+```
+
+- We can manually transform data if we want (but this isn't usually necessary):
+
+```{r}
+iris_train_transformed <- predict(pre_process, iris_train)
+iris_test_transformed <- predict(pre_process, iris_test) 
+head(iris_train_transformed) |>
+  kable()
+```
+
+Instead, `caret` allows us to pass a `preProcess` argument within the `train()` function. This will automatically take care of preprocessing prediction made by the model!
+
+3. Fit and tune models on the training set. We've seen how to do this in our notes using the `train()` function. We can use `trainControl()` to specify our tuning process and use `tuneGrid` to specify our candidate tuning parameter values.
+
+Set up our training process with `trainControl()`: 
+
+```{r}
+train_control <- trainControl(method = "cv", number = 3)
+```
+
+Set up our tuning grid for a LASSO model:
+
+```{r}
+tune_grid <- data.frame(alpha = 1, lambda = seq(from = 0.0005, to = 0.5, by = 0.0005))
+head(tune_grid) |>
+  kable()
+```
+
+Now we add our training and preprocessing info to our `train()` call (I tend to just define these things in the call). The `method = "glmnet"
+
+```{r}
+iris_fit <- train(Sepal.Length ~ ., data = iris_train, 
+         method = "glmnet", 
+         preProcess = c("center", "scale"),
+         tuneGrid = tune_grid,
+         trControl = trainControl(method = "cv", number = 3))
+head(iris_fit$results[, c("alpha", "lambda", "RMSE", "Rsquared")]) |>
+  kable()
+```
+
+
+4. We can easily predict on future observations via `predict()`. The `$finalModel` object is used for predictions and `caret` preserves the proper preprocessing results for us.
+
+```{r}
+pred <- predict(iris_fit, newdata = iris_test)
+```
+
+We can find common metrics on the test set with `postResample()`  
+
+```{r}
+postResample(pred, obs = iris_test$Sepal.Length) |>
+  kable()
+```
+
+For a classification task we'll see how `confusionMatrix()` can be useful here as well.
+
+**End optional section.**
+
+### Fitting an Elastic Net Model
+
+For this problem we'll fit an Elastic net model to our bike sharing data set. The code below reads the data in and does the modifications from the notes:
+
+```{r}
+library(tidyverse)
+#read in data from previous set of notes
+bike_share <- read_csv("https://www4.stat.ncsu.edu/online/datasets/SeoulBikeData.csv",
+                       local = locale(encoding = "latin1"))
+
+bike_share <- bike_share |>
+  rename("date" = "Date",
+         "rented_bike_count" = `Rented Bike Count`,
+         "hour" = "Hour",
+         "temperature" = `Temperature(°C)`,
+         "humidity" = `Humidity(%)`,
+         "wind_speed" = `Wind speed (m/s)`,
+         "visibility" = `Visibility (10m)`,
+         "dew_point_temperature" = `Dew point temperature(°C)`,
+         "solar_radiation" = `Solar Radiation (MJ/m2)`,
+         "rainfall" = `Rainfall(mm)`,
+         "snowfall" = `Snowfall (cm)`,
+         "seasons" = "Seasons",
+         "holiday" = "Holiday",
+         "functioning_day" = "Functioning Day" 
+         ) |>
+  mutate(date = dmy(date), #convert the date variable from character
+         seasons = factor(seasons),
+         holiday = factor(holiday),
+         functioning_day = factor(functioning_day),
+         log_rented_bike_count = log(rented_bike_count)) |>
+  filter(functioning_day == "Yes")
+```
+
+
+a. First, split the data into a train/test set. 
+
+b. Create your own grid of tuning parameter values (in `R` the `expand.grid()` function can be useful for creating a data frame at every combination of two vectors), use 5 fold CV, preprocess your numeric predictors, and select your optimal tuning parameters on the training set.
+
+c. Determine the RMSE on the test data set using your best model.
+
+
+## Problem 2
+
+The `datasets` package in `R` has a data set called `trees` (`datasets::trees` in `R`). The data is also available at <https://www4.stat.ncsu.edu/online/datasets/trees.csv> if you are using another software.
+
+a. First, create scatter plots between the predictors and the response (two scatter plots).
+
+Now we want to fit a couple of linear regression models to predict `Height` of the trees. 
+
+b. Fit a model with main effects for both `Girth` and `Volume`. Are either of these predictors statistically significant? Report the relevant hypothesis tests, p-values, and interpretations. Are the assumptions of inference met (at least roughly) here? Provide evidence (plots!).
+
+c. Produce a predicted height for a tree with a `Girth` of 10 and a `Volume` of 12.
+
+d. Fit a model with main effects for both `Girth` and `Volume` along with their interaction. Are either of these predictors statistically significant? Report the relevant hypothesis tests, p-values, and interpretations. Are the assumptions of inference met (at least roughly) here? Can you explain any discrepancies in the importance of the predictors in this model as compared to the first model we fit?
+
+e. Produce a predicted height for a tree with a `Girth` of 10 and a `Volume` of 12.
+
+f. Fit two different models. First a model with just `Volume` as a predictor. Second a model with `Volume`, `Volume` squared, and `Volume` cubed. Recall the `I()` function if you are using `R`. Perform the F-test discussed in the notes to determine if the squared and cubic terms are important for the model.
+
+## Problem 3
+
+Using the `Carseats` data from the `ISLR2` package, split the data into a training and a test set (80/20). Then use best subset, backward, and forward selection to determine the optimal model size for each type of model (similar to how we did this in the notes, no need to use CV here). Once you've determined the best size for each model, fit that to the entire data set.
+
