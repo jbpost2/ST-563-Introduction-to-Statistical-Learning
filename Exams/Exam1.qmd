@@ -1,0 +1,35 @@
+---
+title: "Exam 1"
+format: docx
+---
+
+- What is the difference between supervised and unsupervised learning?
+
+- What is meant by statistical inference? prediction/classification? pattern finding?
+
+- Generally, what does n represent? p?
+
+- Write down the Multiple linear regression model. Specify the meaning of each term in the model and the common assumptions we would make in order to conduct inference about the model.
+
+    + What kind of plot might we look at to investigate the distributional assumption on the errors?
+    + What kind of plot might we look at to investigate the constant variance assumption?
+    + What equation do we usually optimize to 'fit' the model?
+    + What would be the benefit of using a different function to optimize the fit?
+    + Residual definition. Calculate/estimate from table or graph?
+
+
+- Output from an MLR model. State things (hypotheses, conclusions). Give fitted equation, equation for a prediction. What does the SE mean?
+
+- Regression vs Classification task
+
+- Parametric vs non-parametric models. Advantages/disadvantages. Requirements/best choices for different situations
+
+- overfit vs underfit, bias variance tradeoff
+
+- kNN description/idea. Perhaps finding an estimate and residual from that model
+
+- Tuning or hyperparameter idea
+
+- Curse of dimensionality idea
+
+
