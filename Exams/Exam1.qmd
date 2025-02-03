@@ -1,28 +1,21 @@
 ---
-title: "Practice Exam 1 Questions"
+title: "Exam 1"
 format: docx
 ---
 
-Your actual exam will have questions similar to those below with space below each question to give answers. I've tried to emulate that here but I haven't taken the time to print the questions out and hand write the answers, which means there may be too much or too little space in this document. I'll make sure an appropriate amount of space is given on the actual exam (which can also help you guage how detailed of an answer to give!)
+Please write your answers below each question. You should not have access nor use any materials during this exam. 
 
-- Please note that the example questions below are not exhaustive! 
-- You may notice there are no programming questions below (that is no R or python syntax at all)
-- There are some pseudo code questions. Here you are writing out the logic of the process and how you would go about doing it within a programming language without worrying about the syntax or the process.
-- There is very little calculation required for these questions. For most answers that involve output and reading/using it, you do not need to simplify calculations. 
-- If you have any other questions about the content or structure of the exam, please post to the discussion forum!  
+A reminder that, by taking this exam, you are required to uphold the NC State honor pledge:
+
+"I have neither given nor received unauthorized aid on this test or assignment."
 
 &nbsp;  
 
-1. When considering the statistical learning paradigm, we discussed supervised and unsupervised learning. What is the major difference between supervised and unsupervised learning?
+1. In the statistical learning paradigm, we discussed three major goals: statistical inference, predictive modeling, and pattern finding. 
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+    Give a brief real world example for each of these goals. Specify a possible model or method we discussed in class that would help answer the question from each real world example.
 
-2. When considering predictive modeling as our goal, what is the difference between a regression and classification task?
+- Statistical Inference (4 pts)
 
 &nbsp;  
 &nbsp;  
@@ -33,18 +26,10 @@ Your actual exam will have questions similar to those below with space below eac
 &nbsp;  
 &nbsp;  
 
+- Predictive Modeling (4 pts)
 
-3. In the statistical learning paradigm, we discussed three major goals: statistical inference, predictive modeling, and pattern finding. Give a real world example for each of these goals. Specify a possible model or method we discussed in class that would help answer the question from each real world example.
-
-    - Statistical Inference
 &nbsp;  
 &nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-
-    - Predictive Modeling
 &nbsp;  
 &nbsp;  
 &nbsp;  
@@ -52,224 +37,270 @@ Your actual exam will have questions similar to those below with space below eac
 &nbsp;  
 &nbsp;  
 
-    - Pattern Finding
-&nbsp;  
+- Pattern Finding (4 pts)
+
 &nbsp;  
 &nbsp;  
 &nbsp;  
 &nbsp;  
 &nbsp;  
 
+2. Consider having models characterized by flexibility with the scale going from not very flexible to very flexible. 
 
-4. Consider having models characterized by flexibility. Say going from not very flexible to very flexible. 
-
-    a. What type of relationship between flexibilty and squared bias would we expect? Why?
-    &nbsp;  
-    &nbsp;  
-    &nbsp;  
-    &nbsp;  
-    b. What type of relationship between flexibilty and variance would we expect? Why?
-    &nbsp;  
-    &nbsp;  
-    &nbsp;  
-    &nbsp;  
-    c. What type of relationship between flexibilty and training error would we expect? Why?
-    &nbsp;  
-    &nbsp;  
-    &nbsp;  
-    &nbsp;  
-    d. What type of relationship between flexibilty and test error would we expect? Why?
-    &nbsp;  
-    &nbsp;  
-    &nbsp;  
-    &nbsp;  
-
-5. Suppose we collect data to understand how the background of graduate school applicants relates to their graduation status (graduated or failed to graduate). We collect the following information on 200 past students:
-
-    - undergraduate major (Mathematics, Statistics, Other STEM field, Non-STEM field)
-    - undergraduate GPA (a continuous 0-4 scale)
-    - the time since receiving their undergraduate degree in months
-    - whether or not they previously conducted academic research (yes or no). 
+    a. What type of relationship between flexibilty and squared bias would we expect? Why? (4 pts)
     
-    a. Would this be a regression or classification task?
-    &nbsp;  
-    &nbsp;  
-    b. What is the response variable in this scenario?
-    &nbsp;  
-    &nbsp;  
-    c. Suppose we wanted to turn the undergraduate major predictor into numeric predictors for the purposes of modeling. How many indicator (or dummy) variables are needed to account for this variable? Define these indicator variables.
     &nbsp;  
     &nbsp;  
     &nbsp;  
     &nbsp;  
     &nbsp;  
     &nbsp;  
-    d. Considering your answer to c carefully, what are $n$ and $p$ in this scenario?
-    &nbsp;  
-    &nbsp;  
-
-6. Suppose we want to use a multiple linear regression model but the relationships between the predictors and response are non-linear. What are strategies for using a multiple linear regression model to account for these non-linear relationships?  
-
-
-7. Give an example of a non-linear regression model. 
-
-8. What is meant by the term 'parametric model' vs the term 'non-parametric model'? 
-
-    a. What are the advantages of using a parametric model over a non-parametric model? What are the disadvantages?
     
-    b. Give an example of a situation where a non-parametric model would be a preferable choice. The example doesn't need to be in a real-world context but should be detailed enough to ensure the non-parametric model is a good choice.
+    b. What type of relationship between flexibilty and variance would we expect? Why? (4 pts)
     
-9. We discussed the terms overfit and underfit models. Describe these two terms, especially as they relate to bias and variance of the model and training and test errors.
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
     
+    c. What type of relationship between flexibilty and training error would we expect? Why? (4 pts)
 
-10. What is a tuning parameter or hyperparameter? How does this differ from a 'regular' parameter in a parametric model?
-
-11. Suppose we have a large data set where we want to perform a regression task. We want to determine the best overall model between a kNN model and a ridge regression model. We want to use a train test split and compare the best kNN and ridge regression model on the test set. We wish to determine the appropriate tuning parameters on the training set only using the bootstrap. Fully outline the process for splitting the data, tuning, comparing, and fitting a final overall best model.
-
-12. Describe the curse of dimensionality. Where does this cause problems when doing predictive modeling?
-
-13. When doing predictive modeling, what is a model metric? What is the most commonly used model metric for a regression task?
-
-14. When using the bootstrap for tuning or training our model, what is an out of bag observation and why are they useful?
-
-15. When doing a regression task and considering prediction as our goal, we discussed the expected squared test error given a particular observation, 
-$$
-E[\{Y - \widehat f(X)\}^2 | X = x_0]
-$$
-We were able to show this could be decomposed into three pieces. Give those three pieces (non-mathematically is fine) and describe what each term represents.
-
-16. Consider fitting a multiple linear regression model. We discussed using least squares to fit our model. We also discussed the idea of fitting the model using mean absolute error. When might we prefer the fit found using mean absolute error to the least squares solution?
-
-17. Consider the multiple linear regression setting. We discussed using $R^2$ as a way to judge the effectiveness of a model solely on the data on which the model was trained. We saw that use of $R^2$ can be misleading. However, we noted that we could use $R^2$ in the screening step of the best subset selection procedure in order to choose the best model of each size. Fully describe this screening step of the algorithm and explain why the use of $R^2$ here is defensible. 
-
-18. Suppose we are fitting a kNN model for a regression task. 
-
-    a. Describe how leave-one-out cross-validation (LOOCV) can be used in this setting to choose $K$. 
-
-    b. What are two drawback of LOOCV as compared to 5 or 10 fold cross-validation?
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
     
-19. In the multiple linear regression setting, we discussed a number of model selection methods. State four model selection methods that can be used in the $p>n$ situation.
+    d. What type of relationship between flexibilty and test error would we expect? Why? (4 pts)
+    
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
 
-20. Consider the LASSO procedure for fitting a multiple linear regression model. With this model we minimize the following criterion (recall $\lambda\geq 0$):
-$$
-\sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots  - X_{ip}\beta_p)^2 + \lambda\sum_{j=1}^p|\beta_j|
-$$
+3. What is a tuning parameter or hyperparameter? How does this differ from a 'regular' parameter in a parametric model? (4 pts)
 
-    a. What are the benefits of fitting a LASSO model as compared to an ordinary least squares model?
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
-    b. What happens to our coefficient estimates for a 'large' value of the tuning parameter? What happens for a tuning parmeter value near 0?
 
-21. Consider the Ridge Regression procedure for fitting a multiple linear regression model. With this model we minimize the following criterion (recall $\lambda\geq 0$):
+5. In the multiple linear regression setting, we discussed a number of model selection methods. State four model selection methods that can be used in the $p>n$ situation. (4 pts)
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+6. State true or false (no need to explain). (3 pts each)
+
+    a. Ordinary least squares performs variable selection.
+    
+    &nbsp;  
+    &nbsp;  
+    
+    b. Ordinary least squares performs shrinkage of coefficient estimates.
+
+    &nbsp;  
+    &nbsp;  
+    
+    c. Best subset selection performs variable selection.
+
+    &nbsp;  
+    &nbsp;  
+    
+    d. Best subset selection performs shrinkage of coefficient estimates.
+
+    &nbsp;  
+    &nbsp;  
+    
+    e. Ridge Regression performs variable selection.
+
+    &nbsp;  
+    &nbsp;  
+    
+    f. Ridge Regression performs shrinkage of coefficient estimates.
+
+    &nbsp;  
+    &nbsp;  
+    
+    g. LASSO performs variable selection.
+
+    &nbsp;  
+    &nbsp;  
+    
+    h. LASSO performs shrinkage of coefficient estimates.
+    
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+7. Suppose we have a large data set where we want to perform a regression task. We want to determine the best overall model between a LASSO model and a kNN regression model. We want to use a train test split and compare the best kNN and LASSO model on the test set. We wish to determine the appropriate tuning parameters on the training set only using cross-validation. Fully outline the process for splitting the data, tuning, comparing, and fitting a final overall best model. (10 pts)
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+8. Consider the Ridge Regression procedure for fitting a multiple linear regression model. With this model we minimize the following criterion (recall $\lambda\geq 0$):
 $$
 \sum_{i}(Y_i - \beta_0 - X_{i1}\beta_1 - \ldots  - X_{ip}\beta_p)^2 + \lambda\sum_{j=1}^p\beta_j^2
 $$
 
-    a. What are the benefits of fitting a Ridge Regression model as compared to an ordinary least squares model?
+a. What are the benefits of fitting a Ridge Regression model as compared to an ordinary least squares model? (4 pts)
 
-    b. What happens to our coefficient estimates for a 'large' value of the tuning parameter? What happens for a tuning parmeter value near 0?
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
-22. Why is it important to standarize our predictor values when doing a ridge regression, LASSO, or elastic net model?
+b. What happens to our coefficient estimates for a 'large' value of the tuning parameter? What happens for a tuning parameter value near 0? (4 pts)
 
-23. When fitting a regularized or penalized regression model such as the LASSO we discussed using the 'one-standard error' method for selecting the tuning parameter. Explain this idea and describe the effect of using this method on the selected model.
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
-24. What are the benefits of using forward selection as compared to best subset selection when selecting a multiple linear regression model?
+9. Suppose we fit a multiple linear regression model to data about how much people earn. Our response variable is the `wage` (in 1000's of dollars) and our predictors are `marital_status` (`married`, `never_married`, or `divorced`), and `age`. 
 
-25. State true or false. 
-
-    a. Ordinary least squares performs variable selection.
-    b. Ordinary least squares performs shrinkage of coefficient estimates.
-    c. Best subset selection performs variable selection.
-    d. Best subset selection performs shrinkage of coefficient estimates.
-    c. Ridge Regression performs variable selection.
-    d. Ridge Regression performs shrinkage of coefficient estimates.
-    c. LASSO performs variable selection.
-    d. LASSO performs shrinkage of coefficient estimates.
-    
-
-26. We perform best subset, forward stepwise, and backward stepwise selection on a single data set with $p$ predictors. For each approach we obtain $p+1$ models containing. One model containing 0 predictors, one containing 1 predictor, etc.
-
-    a. Which of the three models with exactly $k$ predictors has the smallest training RSS or are we unable to tell?
-    b. Which of the three models with exactly $k$ predictors has the smallest test RSS or are we unable to tell?
-    
-    - Indicate whether the following statements are true or false
-    
-          i. The predictors in the $k$-variable model identified by **forward** stepwise selection are a subset of the predictors in the $(k+1)$-variable model identified by **forward** stepwise selection.
-          ii. The predictors in the $k$-variable model identified by **backward** stepwise selection are a subset of the predictors in the $(k+1)$-variable model identified by **backward** stepwise selection.
-          iii. The predictors in the $k$-variable model identified by **backward** stepwise selection are a subset of the predictors in the $(k+1)$-variable model identified by the **best subset** method.
-          iv. The predictors in the $k$-variable model identified by **best subset** selection are a subset of the predictors in the $(k+1)$-variable model identified by the **best subset** method.
-          
-
-27. Suppose we fit a multiple linear regression model to data about how much people earn. Our response variable is the `wage` (in 1000's of dollars) and our predictors are `marital_status` (`married`, `never_married`, or `divorced`), `age`, and `year` that the data was collected. We include an interaction between `marital_status` and `age` in the model. Output for the model is given below.
+    We fit a linear and quadratic term for age and include an interaction between `marital_status` and `age` and an interaction between `marital_status` and `age` squared in the model. Output for the model is given below.
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE}
 library(ISLR2)
 library(dplyr)
 library(knitr)
 wage_data <- ISLR2::Wage |>
-  mutate(marital_status = ifelse(maritl == "1. Never Married", "never_married", ifelse(maritl == "2. Married", "married", "divorced")))
-fit <- lm(wage ~ marital_status + age + year + marital_status*age, data = wage_data)
+mutate(marital_status = ifelse(maritl == "1. Never Married", "never_married", ifelse(maritl == "2. Married", "married", "divorced")))
+fit <- lm(wage ~ marital_status + age + marital_status*age + I(age^2) + marital_status*I(age^2), data = wage_data)
 summary(fit)$coefficients |>
-  kable()
+round(3) |>
+kable()
 ```
 
-    a. Write down the fitted equation for $\hat{y}$. Define any indicator variables as needed.
-    b. One column of the output represents the standard error. What is a standard error generally?
-    c. Write down the form of a predicted value for somone that is `married`, has an `age` of 30, and had a `year` of data collection of 2008. No need to simplify.
-    d. Write down the form of a predicted value for somone that is `divorced`, has an `age` of 30, and had a `year` of data collection of 2008. No need to simplify.
-    e. Consider creating a confidence interval for the mean wage as compared to a prediction interval for a future wage. Which would be wider? Why?
-    f. Conceptually, what does including an interaction between `marital_status` and `age` have do to our model as compared to a model without that interaction (that still includes main effects for both)?
-    g. Based on the above output, which of the three predictors would you deem important for the model? State the hypotheses and p-values you used to make this determination.
-    h. Suppose we wanted to check whether the interaction term between `marital_status` and `age` was important for the response, given the other variables in the model. Describe how we could investigate this (you can't tell with the output above and I'm not expecting you to give the exact formulas - describe the idea of the inferential method we looked at in class for answering this question).
-    i. What type of plot might we look at to investigate the distributional assumption on the errors?
-    j. A few observed values and predicted values are given in the table below. What is the residual for the first observation. No need to simplify.
+a. Write down the fitted equation for $\hat{y}$. Define any indicator variables as needed. (4 pts)
     
-    ```{r echo = FALSE}
-preds <- data.frame(wage = wage_data$wage[1:3], predicted = predict(fit, wage_data[1:3, ]))
-row.names(preds) <- NULL
-preds |> 
-  kable()
-    ```
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+b. One column of the output represents the t-value or t-statistic. What is the usefulness of this t-value? (2 pts)
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+c. Write down the form of a predicted value for somone that is `married` and has an `age` of 30. No need to simplify. (2 pts)
+
+&nbsp;  
+&nbsp;  
+
+d. Write down the form of a predicted value for somone that is `divorced` and has an `age` of 30. No need to simplify. (2 pts)
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+f. Conceptually, what does including an interaction between `marital_status` and `age` and an interaction between `marital_status` and `age` squared do to our model as compared to a model without those interactions (that still includes a main effect for `marital_status` and a linear and quadratic term for `age`)? (3 pts)
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+g. The F-statistic for the global model test is 46.26 on 8 numerator and 2991 denominator degrees of freedom. The p-value for the test is very close to zero.
+
+    i. Write down the null and alternative hypotheses for this global test. (3 pts)
     
-- Write down the Multiple linear regression model. Specify the meaning of each term in the model and the common assumptions we would make in order to conduct inference about the model.
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
+    &nbsp;  
 
+    ii. We see a significant global test but none of the coefficient tests are significant. What do you think could be causing this issue? (3 pts)
+ 
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
-    + What equation do we usually optimize to 'fit' the model?
-    + What kind of plot might we look at to investigate the constant variance assumption?
-    + Residual definition. Calculate/estimate from table or graph?
-    
-    + What is meant by least squares regression?
-    - What does an interaction between two predictors mean?
+h. What type of plot might we look at to investigate the homogenous error variance (i.e. the assumption of equal error variance)? (3 pts)
 
-    + Inference
-    
-        - What is meant by a standard error? 
-        - Interpret a CI for beta
-        - Conduct a HT for beta
-        - Conduct an HT for a subset of betas
-        - Interpret prediction vs confidence interval
-        - Why is the global F-test needed?
-    
-    + Model heredity idea
-    - Interp R^2
-
-- General process of building a statistical model
-
-    - Why do we need a training/test split?
-    - Ideally response variable has the same distribution in train and test set
-    - Train/test error relationship, which is likely bigger/smaller in different situations
-    - Last step once final model is chosen (fit to entire data set)
-    - Explain the resampling procedures (CV, bootstrap) for data splitting and why they appropriately handle the train/test issues discussed.
-    - Why might we just use CV or just use bootstrap rather than a train/test split and these?
-    - pseudo code for implementing some of these
-    - Why do we need to avoid 'touching' or using the data set often?
-    
-- kNN description/idea. Perhaps finding an estimate and residual from that model
-
-    - Use L1 distance instead
-    - Small k implies, large k implies (relate to bias and variance)
-    - Training MSE when k = 1?
-    - Estimate when k = n?
-    
-
+&nbsp;  
+&nbsp;  
 
 
