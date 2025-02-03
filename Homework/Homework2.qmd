@@ -138,6 +138,7 @@ For this problem we'll fit an Elastic net model to our bike sharing data set. Th
 
 ```{r}
 library(tidyverse)
+library(lubridate)
 #read in data from previous set of notes
 bike_share <- read_csv("https://www4.stat.ncsu.edu/online/datasets/SeoulBikeData.csv",
                        local = locale(encoding = "latin1"))
