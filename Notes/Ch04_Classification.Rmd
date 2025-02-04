@@ -1,0 +1,1438 @@
+---
+title: "Classification"
+author: "Arnab Maity"
+date: 'NCSU Statistics ~ 5240 SAS Hall ~ amaity[at]ncsu.edu'
+always_allow_html: yes
+output:
+  tufte::tufte_handout:
+    highlight: tango
+    toc: true
+    includes:
+      in_header: header.tex
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(MASS)
+library(klaR)
+library(tufte)
+library(tidyverse)
+library(caret)
+library(rsample)
+library(ISLR2)
+library(knitr)
+library(AppliedPredictiveModeling)
+library(kableExtra)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, 
+                      cache.extra = packageVersion('tufte'),
+                      kable.force.latex = TRUE,
+                      fig.margin = TRUE, 
+                      fig.height = 5, 
+                      fig.width = 6)
+options(htmltools.dir.version = FALSE)
+```
+
+
+
+\newpage
+
+# Introduction
+
+
+The problems of separating two or more groups/classes, and allocating new objects in previously defined classes are called discrimination and classification.
+
+
++ **Discrimination:** finding the features that *separate* known groups in a multivariate sample. This can be either done graphically or algebraically. We try to find *discriminants* (features) whose numeric values can separate the classes as much as possible.
+
++ **Classification:** developing a rule to *allocate* a new object into one of a number of known groups. We use such classification rules to classify objects into pre-defined classes. Here the emphasis is on defining the rule to optimally assigning objects to classes. 
+
+
+\noindent A classification rule is based on the features that separate the groups, so the two goals often (but not always) overlap. For example, KNN classifier gives us a rule to allocate objects to classes, but does not give us any discriminants. 
+
+Recall that we have learned about the Bayes rule/classifier before. Suppose that we have a classification problem with $K$ classes. Here $Y$ denotes the class label, taking possible value among $1, \ldots, K$, and $\X = (X_{1}, \ldots, X_{p})^T$ denotes the set of predictors. The *Bayes classifier*, predicts a new observation $\x_0$ by $\widehat Y$ such that 
+
+>> $\widehat Y = k$ if $P(Y = k | \X = \x_0)$ is maximum among $P(Y = 1 | \X = \x_0), \ldots, P(Y = K | \X = \x_0).$
+
+\noindent We also know that the Bayes classifier minimizes^[Interested readers can consult *Elements of Statistical Learning* by Hastie et al. (2017).] the expected prediction error for classification,
+$$
+E[I(Y \neq \widehat Y)].
+$$
+The misclassification error rate of the Bayes classifier is called the *Bayes error rate*. For a given $x_0$, Bayes error rate is $$1 -  max\{P(Y = 1 | \X = \x_0), \ldots, P(Y = K | \X = \x_0)\}$$ The overall Bayes error rate is
+$$
+1 -  E[max\{P(Y = 1 | \X = \x_0), \ldots, P(Y = K | \X = \x_0)\}].
+$$
+The Bayes rate is analogous to the irreducible error that we encountered in the regression setting. 
+
+Thus, it is natural to try to estimate/model the conditional probabilities $P(Y = k | \X)$ using the data, and use them to create classifiers. In this chapter, we discuss two approaches of obtaining estimates of $P(Y = k | \X)$:
+
++ *Directly estimating/modeling $P(Y = k | \X)$*: An example of direct estimation of $P(Y = k | \X)$ is the KNN classification technique, where the conditional probability is estimated by taking a majority vote from $K$ nearest point to $\x_0$. Another example is *logistic* regression model, where the conditional probability is modeled using transformations of linear combinations of $\X$ of the form:^[In general, we can use $g(\beta_0 + X_1\beta_1 + \ldots + X_p\beta_p)$ where $g(\cdot)$ is a known function, called a \textit{link function}. Logistic regression uses $g(t) = e^t/(1 + e^t)$. Choosing a different $g(\cdot)$ gives rise to other regression technique such as \textit{probit} regression which uses the CDF of a standard normal distribution as $g(\cdot)$.]
+$$
+P(Y = k | \X) = \frac{e^{\beta_0 + X_1\beta_1 + \ldots + X_p\beta_p}}{1 + e^{\beta_0 + X_1\beta_1 + \ldots + X_p\beta_p}}.
+$$
+Therefore it is sufficient to estimate the coefficients $\beta_0,\beta_1, \ldots, \beta_p$ to obtain estimates of $P(Y = k | \X)$.
+
++ *Generative models*: In this approach, we model the distribution of $\X | Y = k$ for $k = 1, \ldots, K$, that is, we model how the input features are distributed/generated in each class. Then we apply *Bayes theorem*^[Not to be confused with Bayes rule/classifier. Given two events $A$ and $B$, with $P(B) > 0$, Bayes theorem states:
+$$
+P(A | B) = \frac{P(B|A)P(A)}{P(B)}.
+$$] to obtain expression for $P(Y = k | \X)$. This approach is the basis of many *discriminant analysis* methods. 
+
+In what follows, we start our discussion with generative models, and then explore logistic regression. 
+
+
+# Generative Models
+
+In general, we have the following setup: 
+
++ For $i$-th item, we observe predictors $\X_i = (X_{i1}, \ldots, X_{ip})^T$, and a class label $Y_i$ (taking values in $1, 2, \ldots, K$).^[Even though we specify the groups by "1" and "2", they are not numbers. $Y$ is actually a categorical variable.] 
+
++ The conditional density function of $\X_i | Y_i = k$ is $f_k(\cdot)$, $k = 1, 2, \ldots, K$.
+
++ $\text{P}(Y_i = k) = p_k$, such that $p_1 + \ldots + p_K=1$. These are the *prior probabilities* of the classes. In other words, probability that a randomly chosen observation comes from the prior $k$-th class is $p_k$. 
+
+\noindent Assume that the sample size of the $k$-th group is $n_k$. Denote $n = n_1 + \ldots + n_K$. 
+
+A **classification rule** must give an prediction of group membership for any $\X$. By *Bayes theorem*, we obtain
+$$
+P(Y_i = k | \X_i = \x) = \frac{p_kf_k(\x)}{p_1f_1(\x) + \ldots + p_Kf_K(\x)}
+$$
+Thus, given a data vector $\x$, we can compute the posterior probability of being classified into class "$k$" using the formula above. Thus a sample will be classified to a class that has the *highest posterior probability*.^[Recall that this is the Bayes rule.] 
+
+Notice that the denominator in the expression of $P(Y_i = k | \X_i = \x)$ is same for any value of $k$. Thus $P(Y_i = k | \X_i = \x)$ is highest if the numerator $p_kf_k(\x)$ is highest. The the classification rule above is equivalent to assigning $\x$ to class $k$ if $p_kf_k(\x)$ is maximum. 
+
+However, the density functions $f_k(\x)$ and the prior probabilities $p_k$ are unknown. We can estimate $p_k$ by relative proportion of the sample size of the $k$-th class compared to total sample size,
+$$
+\widehat p_k = n_k/n.
+$$
+For the unknown densities, we need to estimate them from the data. 
+
+## Example: one predictor
+
+To illustrate the basic ideas, consider the `wines` data set available at the UCI machine learning repository.^[https://archive.ics.uci.edu/ml/datasets/wine; also available with the textbook Applied Multivariate Statistics with R by Zelterman]. The dataset contains quantities of 13 constituents found in each of the three types (cultivars) of wines.
+
+```{r}
+# Read the data
+wines <- read.table("data/Wines.txt", header = TRUE)
+# classes of wine
+table(wines$Class)
+```
+```{r winepair, fig.width=6, fig.height=6, fig.cap="Pair-wise scatterplots of the wine data.", fig.margin=T, echo=FALSE, fig.cap="Pairs-plot of a few variables of the wine data."}
+# pairs plot
+colors <- c("darkgreen", "darkorange", "#990000")[wines$Class]
+pairs(wines[, c(2:5, 14)], pch = 16, cex = .5, gap = 0, col = colors, xaxt = "n", yaxt = "n")
+```
+
+\noindent A pairs-plot of a few variables of the wine data is shown in Figure \ref{fig:winepair}. To fix our ideas, consider the `wine` data with only $K = 2$ classes (1 and 2) and with only the `Alcohol` variable. 
+```{r, tidy=FALSE}
+# Alcohol for classes 1 and 2
+alc <- wines$Alcohol[wines$Class == 1 | wines$Class == 2]
+newclass <- wines$Class[wines$Class == 1 | wines$Class == 2]
+# new data set
+wine_small <- data.frame(Alcohol = alc,
+                         Class = newclass)
+```
+
+```{r, echo=FALSE}
+a <- aggregate(Alcohol ~ Class, length, data = wine_small)
+n1 <- a$Alcohol[1]
+n2 <- a$Alcohol[2]
+```
+
+```{r qqa, fig.height=4, fig.width=8, fig.margin=T, echo=FALSE, fig.cap="QQ plot for Alcohol for the two groups."}
+# Normal Q-Q plots
+par(mfrow=c(1,2))
+qqnorm(alc[newclass==1], main = "Class = 1", pch=19)
+qqline(alc[newclass==1])
+qqnorm(alc[newclass==2], main = "Class = 2", pch=19)
+qqline(alc[newclass==2])
+```
+The Q-Q plots of `Alcohol` for the two groups (Figure \ref{fig:qqa}) show fairly linear pattern (except may be only a few points). It is not unreasonable to assume that the data from both classes follow normal distributions with possibly different means and variances. Thus in this case we have:
+
+
+```{r winealc, echo=FALSE, fig.cap="Estimated density functions of Alcohol for the two classes in wine data.", eval=FALSE}
+ggplot(wine_small) + 
+  geom_density(aes(x = Alcohol, group = Class, fill = as.factor(Class)), lwd=2, alpha = 0.3) + 
+  theme_bw(base_size = 18) + 
+  scale_color_viridis_d(option = "magma") + 
+  labs(fill='Class') + 
+  theme(legend.position = "top")
+```
+
++ Two classes: $K=2$
++ One predictor: $X_i =$ Alcohol content of a wine sample
++ The conditional density function of $X_i | Y_i = k$ is normal:
+$$
+X_i | Y_i = 1 \sim N(\mu_1, \sigma_1^2), \;\;\; X_i | Y_i = 2 \sim N(\mu_2, \sigma_2^2)
+$$
+where we have possibly different means, $\mu_k$, and variance, $\sigma_k^2.$ The normal density function has the form
+$$
+f_k(x) = \frac{1}{\sqrt{2\pi\sigma_k^2}}exp\left\{-\frac{1}{2\sigma_k^2}(x - \mu_k)^2   \right\}.
+$$
+\noindent Here the sample sizes are $n_1 = `r n1`$ and $n_2 = `r n2`$, with $n = `r n1+n2`$.
+
+To estimate the densities, we need to estimate the unknown mean and variance parameters:
+$$
+\widehat\mu_k = \hbox{sample mean of $X_i$'s from the $k$-th group}
+$$
+$$
+\widehat\sigma_k^2  = \hbox{sample variance of $X_i$'s from the $k$-th group}
+$$
+
+
+```{r}
+# sample means
+mean_class <- aggregate(Alcohol ~ Class, mean, data = wine_small)
+mean_class 
+# sample variances
+var_class <- aggregate(Alcohol ~ Class, var, data = wine_small)
+var_class
+```
+
+```{r, echo=FALSE}
+# sample means
+mn <- aggregate(Alcohol ~ Class, mean, data = wine_small)
+xbar <- mn$Alcohol
+xbar.1 <- xbar[1]
+xbar.2 <- xbar[2]
+
+# sample sd
+vr <- aggregate(Alcohol ~ Class, sd, data = wine_small)
+sdev <- vr$Alcohol
+var.1 <- sdev[1]^2
+var.2 <- sdev[2]^2
+
+var.p <- ( (n1-1)*var.1 + (n2-1)*var.2 )/(n1+n2-2)
+sd.p <- sqrt(var.p)
+```
+
+```{r dda, fig.width=8, fig.height=5, echo=FALSE, fig.cap="Estimated distribution of Alcohol for the two groups.", fig.margin=T}
+# set up the grid over which to plot
+grid <- seq(10, 16, length.out = 101)
+
+# Normal pdfs of two groups
+f1 <- dnorm(grid, mean = xbar[1], sd = sdev[1])
+f2 <- dnorm(grid, mean = xbar[2], sd = sdev[2])
+df <- data.frame(grid, f1, f2)
+gg <- gather(df, "Class", "Density", -grid)
+ggplot(gg) + 
+  geom_line(aes(grid, Density, col = Class), lwd = 2) + 
+  theme_bw(base_size = 18) + 
+  labs(col=guide_legend(title="Class")) + 
+  scale_color_discrete(labels = 1:2)
+# Plot the pdfs
+#matplot(grid, cbind(f1, f2), lwd=3, type = "l", lty=1:2, col = c("#990000", "steelblue"), ylab = "Density", xlab = "Alcohol")
+#abline(h=0, lwd=2, col="lightgray")
+#points(alc[newclass==1], 0*alc[newclass==1], pch=19, cex=0.5)
+#points(alc[newclass==2], 0*alc[newclass==2], pch=17, cex=0.5)
+#legend(15, 0.7, legend = c("Group 1", "Group 2"), col = c("#990000", "steelblue"), lwd=2, lty=1)
+```
+
+\noindent With the assumption of normality, the estimated density functions are
+$$
+\widehat f_k(x) = \frac{1}{\sqrt{2\pi\widehat\sigma_k^2}}exp\left\{-\frac{1}{2\widehat\sigma_k^2}(x - \widehat\mu_k)^2   \right\},
+$$
+which are shown in Figure \ref{fig:dda}. 
+
+Finally, the estimated prior probabilities, $\widehat p_k$, are as follows.
+
+```{r}
+p <- table(wine_small$Class)/nrow(wine_small)
+p
+```
+
+Thus for a given wine sample with Alcohol value, $x$, we will classify the sample to group 1 if $\widehat p_1\widehat f_1(x) > \widehat p_2\widehat f_2(x)$, assign to class 2 otherwise. For example, suppose we have new data $x = 12$. 
+
+```{r}
+# new data
+x <- 12
+# density evaluated at x
+f <- dnorm(x, 
+           mean = mean_class$Alcohol, 
+           sd = sqrt(var_class$Alcohol))
+# p_k * f_k
+pf <- p * f
+round(pf, 3) 
+```
+
+\noindent We see that $\widehat p_2\widehat f_2(x) > \widehat p_1\widehat f_1(x)$. Thus the sample with $x = `r x`$ will be assigned to class 2. The posterior probabilities are as follows.
+
+```{r}
+post_prob <- pf / sum(pf)
+round(post_prob,3)
+```
+
+\noindent Thus $\widehat P(Y = 1  | X = 12) = `r round(post_prob[1],3)`$, and $\widehat P(Y = 2  | X = 12) = `r round(post_prob[2],3)`$. We can see from Figure \ref{fig:dda} that $x = `r x`$ lies in the middle of the domain of the density function of class 2 (blue). Thus it is much more likely that the new data if generated from the blue density compared to the red density. 
+
+
+
+```{r postx, echo=FALSE, fig.cap="Estimated posterior probability of class 1 for a range of values of alcohol content."}
+xg <- seq(11.5, 14.5, len = 101)
+post_prob <- rep(NA, length(xg))
+for(ii in 1:length(xg)){
+  f <- dnorm(xg[ii], 
+           mean = mean_class$Alcohol, 
+           sd = sqrt(var_class$Alcohol))
+
+  pf <- p * f
+  post_prob[ii] <- pf[1] / sum(pf)
+}
+plot(xg, post_prob, 
+     type = "b", pch = 19,
+     xlab = "Alcohol content", ylab = "Posterior probabilty of class 1")
+abline(h = 0.5, lty=2)
+abline(v = 13.0729556, lty=2, col = "blue")
+```
+
+The idea discussed above can be seen clearly if we compute the posterior probability of class "1" (or "2") for a range of values of $x$, see Figure \ref{fig:postx}. It seems that there is value $c$ so that the classification rule presented before can be translated as:
+
+> Assign $x$ to class 1 if $x > c$, assign to class 2 otherwise.
+
+\noindent To see this, we see that classification rule: "assign to class 1 if $\widehat p_1\widehat f_1(x) > \widehat p_2\widehat f_2(x)$" is equivalent to assigning $x$ to class 1 if
+$$
+log(\widehat p_1) + log(\widehat f_1(x)) > log(\widehat p_2) + log(\widehat f_2(x)).
+$$
+Substituting the functional form of $\widehat f_k(x)$, we can rewrite the condition above as
+$$
+log(\widehat p_1) - log(\widehat\sigma_1) - \frac{(x - \widehat\mu_1)^2}{2\widehat\sigma_1^2} > log(\widehat p_2) - log(\widehat\sigma_2) - \frac{(x - \widehat\mu_2)^2}{2\sigma_2^2}.
+$$
+Define the functions 
+$$
+\widehat \delta_k(x) = log(\widehat p_k) - log(\widehat\sigma_k) - \frac{(x - \widehat\mu_k)^2}{2\sigma_k^2}, k = 1, 2. 
+$$
+Thus our classification rule is equivalent to assigning $x$ to class 1 if 
+$$
+\widehat \delta_1(x) > \widehat \delta_2(x).
+$$
+The functions $\widehat \delta_k(x)$ are called *discriminant functions*. Now we can determine the decision boundary of the classifier by determining the value $c$ so that
+$$
+\widehat \delta_1(c) = \widehat \delta_2(c).
+$$
+Simple algebra^[We are solving a quadratic equation] shows that we need to solve the quadratic equation
+$$
+-\left(\frac{1}{2\widehat\sigma_1^2} - \frac{1}{2\widehat\sigma_2^2}\right)c^2 + \left(\frac{\widehat\mu_1}{\widehat\sigma_1^2} - \frac{\widehat\mu_2}{\widehat\sigma_2^2}\right)c - \left(\frac{\widehat\mu_1^2}{2\widehat\sigma_1^2} - \frac{\widehat\mu_2^2}{2\widehat\sigma_2^2} + log(\widehat p_1/\widehat p_2) - log(\widehat\sigma_1/\widehat\sigma_2)\right) = 0
+$$
+
+```{r, echo=FALSE}
+a <- -0.5*(1/var.1 - 1/var.2)
+b <- xbar.1/var.1 - xbar.2/var.2
+c <- -0.5*(xbar.1^2/var.1 - xbar.2^2/var.2) -  log(sdev[1]/sdev[2])  + log(p[1]/p[2]) 
+
+sol <- (-b +c(1,-1)*sqrt(b^2 - 4*a*c))/(2*a)
+#sol
+
+fsm <- dnorm(sol[2], 
+           mean = mean_class$Alcohol, 
+           sd = sqrt(var_class$Alcohol))
+```
+\noindent For this particular example, the two solutions are $c = `r sol[1]`$ and $c = `r sol[2]`$. However, the second solution is outside the range of the observed data, and the density values of at $c = `r sol[2]`$ are extremely small, `r fsm[1]` and `r fsm[2]` for class 1 and 2, respectively. Thus our actual classification boundary is given by the first solution $c = `r sol[1]`$. Thus. we have the classification rule:
+
+> Assign $x$ to class 1 if $x > `r sol[1]`$, assign to class 2 otherweise.
+
+The classification method we have discovered during our exploration so far is called the *Quadratic Discriminant Analysis (QDA)*. The name is due to the fact that the discriminant functions, $\widehat\delta_k(x)$ are quadratic polynomials of $x$. 
+
+```{r, echo=FALSE}
+delta <- function(x, k){
+  log(p[k]) - log(sdev[k]) - (x - xbar[k])^2/(2*sdev[k]^2)
+}
+d1 <- delta(wine_small$Alcohol, k = 1)
+```
+
+
+QDA can be applied to more than two classes as well. The idea remain the same -- for a general value of $K$, we will have $K$ discriminant functions, $\widehat\delta_k(x), k = 1, \ldots, K$. We classify an observation $x$ to class $k$ if $\delta_k(x)$ is maximum among $\delta_1(x), \ldots, \delta_K(x)$. Equivalently, $\widehat p_k \widehat f_k(x)$ is maximum. The posterior probabilities are computed  as before. As an example, consider the full `wine` data with three classes. Estimates of class means and variances are shown below. The estimated density functions are shown in Figure \ref{fig:wineden}.
+
+```{r}
+# means
+xbar <- aggregate(Alcohol ~ Class, mean, data = wines)
+xbar <- xbar$Alcohol
+xbar
+# variances
+vars <- aggregate(Alcohol ~ Class, var, data = wines)
+vars <- vars$Alcohol
+vars
+```
+
+```{r wineden, echo=FALSE, fig.cap="Estimated densities of Alcohol in the three classes in wines data, assuming normality."}
+sdev <- sqrt(vars)
+# set up the grid over which to plot
+grid <- seq(10, 16, length.out = 101)
+
+# Normal pdfs of two groups
+f1 <- dnorm(grid, mean = xbar[1], sd = sdev[1])
+f2 <- dnorm(grid, mean = xbar[2], sd = sdev[2])
+f3 <- dnorm(grid, mean = xbar[3], sd = sdev[3])
+df <- data.frame(grid, f1, f2, f3)
+gg <- gather(df, "Class", "Density", -grid)
+ggplot(gg) + 
+  geom_line(aes(grid, Density, col = Class), lwd = 2) + 
+  theme_bw(base_size = 18) + 
+  labs(col=guide_legend(title="Class")) + 
+  scale_color_discrete(labels = 1:3) + 
+  theme(legend.position = "top")
+```
+
+\noindent Suppose that the new data has $x = 13$. The estimated posterior probabilities are as follows.
+
+```{r}
+x <- 13
+p <- table(wines$Class)/nrow(wines)
+f <- dnorm(x, mean = xbar, sd = sqrt(vars)) 
+post_prob <- p*f / sum(p*f)
+round(post_prob, 3)
+```
+
+\noindent From the results above, the new sample will be classified into class 3. 
+
+## Example: multiple predictors
+
+Now let us consider the case where we have more than one predictors. For simplicity, let us start with two predictors ($p=2$), $X_{i1}$ and $X_{i2}$. To extend QDA to this setting, we need to generalize the normal distribution to two-dimensions. We call such a distribution a *bivariate  normal distribution*.
+
+In this situation, denote $\X_i = (X_{i1}, X_{i2})^T$. We say $\X_i$ is a *random vector*. We can define the mean, $\mubf$, of a random vector, $\X_i$, to be the vector of means of individual predictors:
+$$
+\mubf = E(\X_i) = (E(X_{i1}), E(X_{i2}))^T = (\mu_1, \mu_2)^T.
+$$
+Defining the analogous term for variance, however, requires care. For one predictor, variance can be quantified by one parameter. For two predictors, we need to look at their individual variances, $\sigma_1^2 = var(X_{i1})$ and $\sigma_2^2 = var(X_{i2})$, as well as their covariance, $\sigma_{12} = cov(X_{i1}, X_{i2})$. In general, we use the *variance-covariance matrix* of $\X_i$ to summarize the variability of $\X_i$:
+$$
+\Sigmabf = cov(\X_i) = \begin{pmatrix} \sigma_1^2 & \sigma_{12} \\ 
+\sigma_{12} & \sigma_2^2 \end{pmatrix},
+$$
+where the diagonal entries are variances of individual predictors, and the off-diagonal entry is the covariance between the two predictors. 
+
+The random vector $\X_{2\times 1} = (X_1, X_2)^T$ follows a bivariate normal (Gaussian) distribution with mean vector $\mubf = (\mu_1, \mu_2)^T$ and variance-covariance (positive definite) matrix $\Sigmabf$ and denoted as $\X \sim N_2(\mubf, \Sigmabf)$ if its probability density function is^[
+Recall the PDF of univariate normal distribution, $N(\mu, \sigma^2)$ is
+$$f_Y(y; \mu,\sigma^2)=\frac{1}{\sqrt{2\pi\sigma^2}}exp\{-\frac{1}{2\sigma^2}(y-\mu)^2\}$$
+]
+$$f(\x) = (2\pi)^{-1} |\Sigmabf|^{-1/2} \exp\{ - (\x - \mubf)^T \Sigmabf^{-1} (\x - \mubf) /2 \}.$$
+  
+```{r, echo=FALSE, fig.width=10, fig.height=5, warning=FALSE, message=FALSE, fig.margin = FALSE, fig.cap="Density function of a bivariate normal distribution (left) and a scatterplot of a random sample of size 100 from a bivariate normal distribution."}
+library(mnormt)
+xx = seq(-3,3,len=51)
+yy = xx
+mm = cbind( rep(xx,51), rep(yy,each=51) )
+ff = dmnorm(mm, varcov=diag(1,2))
+
+par(mfrow=c(1,2))
+
+persp(xx,yy,matrix(ff,ncol=51,nrow=51), phi=45, theta=30, zlab="density", main = "PDF of a bivariate normal distribution",
+      xlab = "x1", ylab = "x2")
+# contour(xx,yy,matrix(ff,ncol=51,nrow=51))
+
+dd <- rmnorm(n = 100, mean = c(0,0), varcov = matrix(0.5, 2, 2) + diag(0.5,2))
+plot(dd, xlab = "x1", ylab = "x2", main = "A random sample of size 100", pch=19)
+```
+
+
+The shape of the PDF (and that of the scatterplot of a random sample generated from the distribution) is determined by $\Sigmabf$, the variance-covariance matrix of $\X$. An easy was to visualize the PDF of a bivariate distribution is to plot the constant probability density contours.
+
+\mydefbox{Constant probability density contours}{
+We define the constant probability density contour (also called constant-density contour) of a bivariate normal PDF to be the set of vectors $\x$ such that $f(\x)$ is constant, These sets are ellipses that are centered around $\mubf$.
+}
+
+Figures \ref{fig:bvn1} -- \ref{fig:bvn3} show three examples of bivariate normal distribution with different variance-covariance patterns. The shape of the density function, and equivalently the contours, depend on the variance-covariance structure of $X_{i1}$ and $X_{i2}$. If the two variables are uncorrelated, the major and minor axes of the elliptical contours will be parallel to the $x$- and $y$-axis. In presence of correlation, the ellipses will be oriented according the sign/magnitude of the correlation. 
+
+```{r bvn1, echo=FALSE, fig.width=12, fig.height=6, fig.cap="PDF and contours of a bivariate normal distribution with $var(X_1) = var(X_2) = 1, cov(X_1,X_2) = 0$. The contours are concentric circles since $X_1$ and $X_2$ are uncorrelated, and have the same variance.", fig.margin = FALSE}
+m <- 51
+xx = seq(-3,3,len=m)
+yy = xx
+mm = cbind( rep(xx,m), rep(yy,each=m) )
+
+
+par(mfrow=c(1,2))
+
+ff = dmnorm(mm, varcov=diag(1,2))
+persp(xx,yy,matrix(ff,ncol=51,nrow=51), 
+      phi=45, theta=30, 
+      xlab = "x1", ylab = "x2", zlab="density", 
+      main = "PDF of a bivariate normal distribution\n v(x1) = v(x2) = 1, cov(x1,x2) = 0", zlim = c(0, 0.24))
+contour(xx,yy,matrix(ff,ncol=51,nrow=51), 
+        main = "Contour plot",
+        xlab = "x1", ylab = "x2")
+```
+
+```{r bvn2, echo=FALSE, fig.width=12, fig.height=6, fig.cap="PDF and contours of a bivariate normal distribution with $var(X_1) = 1, var(X_2) = 3, cov(X_1,X_2) = 1$. The countours are oriented accoring to the positive correlation between $X_1$ and $X_2$. Also, the contours are narrower along $X_1$ axis comapred to $X_2$ due to $var(X_1)$ being more that $var(X_2)$.", fig.margin = FALSE}
+m <- 51
+xx = seq(-4,4,len=m)
+yy = xx
+mm = cbind( rep(xx,m), rep(yy,each=m) )
+
+
+par(mfrow=c(1,2))
+ff = dmnorm(mm, varcov=matrix(1, 2, 2) + diag(c(0,2)))
+persp(xx,yy,matrix(ff,ncol=51,nrow=51), 
+      phi=45, theta=30, 
+      xlab = "x1", ylab = "x2", zlab="density",
+      main = "PDF of a bivariate normal distribution\n v(x1) = 1, v(x2) = 3, cov(x1,x2) = 1", zlim = c(0, 0.24))
+contour(xx,yy,matrix(ff,ncol=51,nrow=51), 
+        main = "Contour plot",
+        xlab = "x1", ylab = "x2")
+```
+
+```{r bvn3, echo=FALSE, fig.width=12, fig.height=6, fig.cap="PDF and contours of a bivariate normal distribution with v(x1) = 1, v(x2) = 1.3, cov(x1,x2) = -0.5", fig.margin = FALSE}
+m <- 51
+xx = seq(-3,3,len=m)
+yy = xx
+mm = cbind( rep(xx,m), rep(yy,each=m) )
+
+
+par(mfrow=c(1,2))
+ff = dmnorm(mm, varcov=matrix(-0.5, 2, 2) + diag(c(1.5,1.8)))
+persp(xx,yy,matrix(ff,ncol=51,nrow=51), 
+      phi=45, theta=30, 
+      xlab = "x1", ylab = "x2", zlab="density",
+      main = "PDF of a bivariate normal distribution\n v(x1) = 1, v(x2) = 1.3, cov(x1,x2) = -0.5", zlim = c(0, 0.24))
+contour(xx,yy,matrix(ff,ncol=51,nrow=51), 
+        main = "Contour plot",
+        xlab = "x1", ylab = "x2")
+```
+
+More generally, a random vector $\X_i = (X_{i1}, \ldots, X_{ip})^T$ is said for follow a multivariate normal distribution $N_p(\mubf, \Sigmabf)$, where $\mubf$ is a $p \times 1$ vector and $\Sigmabf$ is positive definite matrix, if the PDF of $\X$ is $$f(\x) = (2\pi)^{-p/2} |\Sigmabf|^{-1/2} \exp\{ - (\x - \mubf)^T \Sigmabf^{-1} (\x - \mubf) /2 \}.$$
+We can show that $E(\X) = \mubf$ and that $cov(\X) = \Sigmabf$. 
+
+To develop a classifier with $p$ predictors, we again define the random vector $\X_i$ containing the $p$ predictors for the $i$-th observation. we assume that 
+$$
+\X_i | Y = k \sim N(\mubf_k, \Sigmabf_k), \;\; k=1, \ldots, K,
+$$
+where $\mubf_k$ and $\Sigmabf_k$ are the mean vector and variance-covariance matrix corresponding to class $k$. 
+
+In practice, the true values of $\mubf_k$ and $\Sigmabf_k$ are unknown, we estimate these parameters as
+$$
+\hat\mubf_k = \hbox{ sample mean of group $k$ },
+$$
+$$
+\hat \Sigmabf = \hbox{ sample variance-covariance matrix of group $k$}.
+$$
+The rest of the process is exactly as before: we classify a new observation with data $\x$ to class $k$ if the estimated posterior probability of class $k$ is highest, or equivalently, if $\widehat p_k \widehat f_k(\x)$ is highest. 
+
+The discriminant functions are^[This is a quadratic function of each of the predictors in $\x$.]
+$$
+\widehat\delta_k(\x) = -\frac{1}{2}(\x - \widehat\mubf_k)^T\widehat\Sigmabf_k^{-1}(\x - \widehat\mubf_k) -\frac{1}{2}|\widehat\Sigmabf_k| + log(\widehat p_k).
+$$
+As before, an equivalent classification rule can be constructed using $\widehat\delta_k(\x)$: assign $\x$ to class $k$ is   $\widehat\delta_k(\x)$ is largest among $\widehat\delta_1(\x), \ldots, \widehat\delta_K(\x)$. This is the form of QDA for multiple predictors. 
+
+
+
+
+Let us consider the `wines` data again with all three classes, and two predictors, `Alcohol` and `Proline`. Figure \ref{fig:fullwine} shows the data for the three classes, overlayed with bivariate normal density contours for each class. The estimated mean vectors and variance-covariance matrices  for each class are shown below.
+
+```{r}
+X <- cbind(wines$Alcohol, wines$Proline)
+mu <- vector("list")
+Sigma <- vector("list")
+for(ii in 1:3){
+  mu[[ii]] <- colMeans(X[wines$Class == ii, ])
+  Sigma[[ii]] <- cov(X[wines$Class == ii, ])
+}
+mu
+Sigma
+```
+
+```{r fullwine, echo=FALSE, fig.cap="Three class wines data overlayed with normal density contours.", message=FALSE, warning=FALSE, fig.width=8, fig.height=6, fig.margin = TRUE}
+library(car)
+lv <- c(0.25, 0.5, 0.75)
+cl <- c("#990000", "darkgreen", "orange")
+pc <- c(19, 15, 21)
+plot(X, col = rep(cl, table(wines$Class)), 
+     pch= rep(pc, table(wines$Class)),#19,
+     xlab = "Alcohol", ylab = "Proline")
+for(ii in 1:3){
+dataEllipse(X[wines$Class == ii, ], 
+            add = TRUE, levels = lv,
+            col = cl[ii], lty=2,
+            fill = TRUE, fill.alpha = 0.1, 
+            center.pch = pc[ii],
+            center.cex = 2, cex = 1)
+}
+legend(11, 1600, c("1", "2", "3"), title = "Class",
+       pch = pc, col = cl, cex = 2)
+```
+
+As before, for a given data point $\x$, we can compute $\widehat p_k \widehat f_k(\x)$, and the associated posterior probabilities. 
+```{r, warning=FALSE, message=FALSE}
+# For multivariate normal density
+library(mnormt)
+# new data
+newx <- data.frame(Alcohol = 13, Proline = 600)
+# p-hat
+p <- table(wines$Class)/nrow(wines)
+# f-hat
+f <- c()
+for(ii in 1:3){
+  f[ii] <- dmnorm(newx, mean = mu[[ii]], varcov = Sigma[[ii]])
+}
+# Posterior prob
+post_prob <- p*f / sum(p*f)
+round(post_prob, 3)
+```
+
+
+In general, we can use the `qda()`^[See `?qda` for details.] function in `MASS` package to build QDA models. 
+```{r}
+wine_qda <- qda(Class ~ Alcohol + Proline, data = wines)
+wine_qda
+# prediction of new x
+pred <- predict(wine_qda, newdata = newx)
+pred
+```
+\noindent The decision boundaries for QDA are shown in Figure \ref{fig:qdadis}. Here the boundaries are quadratic functions of `Alcohol` and `Proline` since the discriminant functions are quadratic.  
+
+```{r qdadis, echo=FALSE, fig.cap="Decision boundary of QDA when applied to wines data."}
+drawparti(as.factor(wines$Class), wines$Alcohol, wines$Proline, method = "qda", prec = 100, col.mean = cl, gs = rep(pc, table(wines$Class)), imageplot = FALSE, lwd=2, col.contour="black", xlab = "Alcohol", ylab = "Proline", print.err = 0, cex.mean = 2)
+```
+We can also estimate the test error rate of QDA when applied to wine data using data splitting methods such as CV or holdout. We can use `caret` to do so.
+
+```{r}
+set.seed(1001)
+caret_qda <- train(as.factor(Class) ~ Alcohol + Proline,
+                   data = wines,
+                   method = "qda",
+                   trControl = trainControl(method = "CV",
+                                            number = 10))
+caret_qda$results
+```
+
+```{r, echo=FALSE}
+acc <- caret_qda$results$Accuracy
+```
+
+\noindent Thus the estimated test error for QDA is $1 - \hbox{Accuracy} = `r round(1 - acc, 3)`$.
+
+The `qda()` function also has the option to perform leave-one-out cross-validation.
+
+```{r}
+qda_cv <- qda(Class ~ Proline + Alcohol, data = wines,
+              CV = TRUE)
+err <- confusionMatrix(reference = as.factor(wines$Class), 
+                   data = qda_cv$class)
+err 
+```
+
+
+## Different clasification methods
+
+In the discussion presented in the previous section, we made the assumption that the predictors have multivariate normal density with different mean vectors and different variance-covariance matrices in each class. As a result, we developed QDA method. If we specify the densities in a different way, or put other assumptions on the parameters, we will get different classification methods. For example, we might assume that the multivariate normal distributions have the *same variance-covariance matrix*, $\Sigmabf$, in each class. Then it can be shown that the discriminant functions are *linear* in $\x$. Specifically,
+$$
+\widehat\delta_k(\x) = \x^T\widehat\Sigmabf^{-1}\widehat\mubf_k - \frac{1}{2}\widehat\mubf_k^T\widehat\Sigmabf^{-1}\widehat\mubf_k  + log(\widehat p_k)
+$$
+The common variance-covariance matrix, $\Sigmabf$, can be estimated by a "pooled" estimator.^[For $K$ classes, $$
+\hat \Sigmabf = \frac{(n_1 - 1)\bS_1 + \ldots + (n_K - 1)\bS_K}{n_1 + \ldots + n_K - K},
+$$
+where $\bS_1, \ldots, \bS_K$ are sample covariance matrices of $\X$'s from class $1, \ldots, K$, respectively.] The corresponding classification method is known as *Linear Discriminant Analysis (LDA)*, and the decision boundaries are linear. 
+
+In general, various classification methods specify or estimate the densities in different ways, giving rise to different classification rules. Some of these methods are shown below:
+
++ **Linear discriminant analysis** (LDA):^[`lda` function in `MASS` library] use Gaussian densities with different means but *same* covariance matrix for each class
+
++ **Quadratic discriminant analysis** (QDA):^[`qda` function in `MASS` library] use Gaussian densities with different means and *different* covariance matrices for each class;
+
++ **Naive Bayes Classifier**:^[`NaiveBayes` in `klaR` library] uses estimated density assuming that the inputs are conditionally independent in each class;
+
+
++ **Regularized Discriminant Analysis**:^[`rda` function in `klaR` library] using regularized group covariance matrices that are robust against multicollinearity in the data;
+
+
++ **Flexible discriminant analysis**:^[`fda` function in `mda` library] regerssion based classifier, captures nonlinear features of the covariates;
+
++ **Mixture discriminant analysis**:^[`mda` function in `mda` library] density of each class is modeled using a *mixture* (weighted sum) of normal densities, can model multimodal densities;
+
++ **Kernel Density Classification**:^[`kda` function in `ks` library] densities are estimated nonparametrically using kernel density estimation.
+ 
+
+\noindent Figure \ref{fig:cbd} shows the decision boundaries of a few classification methods applied to wines data. Keep in mind that there are *many* more discrimination analysis methods available in literature and in various R packages. 
+
+
+```{r cbd, echo=FALSE, fig.width=12, fig.height=3, warning=FALSE, message=FALSE, fig.fullwidth=T, fig.cap="Classification boundaries for four classifiers.", cache=TRUE, fig.margin = FALSE, fig.fullwidth = TRUE}
+set.seed(1001)
+library(caret)
+library(earth)
+alc <- wines$Alcohol
+pro <- wines$Proline
+group <- as.factor(wines$Class)
+colors <- rep(cl, table(wines$Class)) #c("#990000", "darkorange", "black")[group]
+data <- cbind(pro, alc)
+
+nbp <- 200;
+PredA <- seq(min(alc), max(alc), length = nbp)
+PredB <- seq(min(pro), max(pro), length = nbp)
+Grid <- expand.grid(alc = PredA, pro = PredB)
+
+df <- data.frame(alc = alc, pro = pro, group = group)
+
+TrControl <- trainControl(savePredictions = TRUE)
+par(mfrow = c(1,4))
+Seed <- 345
+Formula = "group ~ ."
+Method = "lda"
+
+Model <- train(as.formula(Formula), data = df, 
+               method = Method, trControl = TrControl)
+Pred <- predict(Model, newdata = Grid)
+
+contour(PredA, PredB, matrix(as.numeric(Pred), ncol = nbp), 
+        drawlabels = F, col="red", nlevels = 2, lwd=2,
+        xlab = "Alcohol", ylab = "Proline", main = "Linear DA")
+points(df$alc, df$pro, pch=19, col=colors)
+
+Method = "qda"
+Model <- train(as.formula(Formula), data = df, 
+               method = Method, trControl = TrControl)
+Pred <- predict(Model, newdata = Grid)
+
+contour(PredA, PredB, matrix(as.numeric(Pred), ncol = nbp), 
+        drawlabels = F, col="red", nlevels = 2, lwd=2,
+        xlab = "Alcohol", ylab = "Proline", main = "Quadratic DA")
+points(df$alc, df$pro, pch=19, col=colors)
+
+Method = "fda"
+V <- 10
+T <- 4
+TrControl <- trainControl(method = "repeatedcv",
+                          number = V,
+                          repeats = T
+                          )
+Model <- train(as.formula(Formula), data = df, 
+               method = Method, trControl = TrControl)
+Pred <- predict(Model, newdata = Grid)
+
+contour(PredA, PredB, matrix(as.numeric(Pred), ncol = nbp), 
+        drawlabels = F, col="red", nlevels = 2, lwd=2,
+        xlab = "Alcohol", ylab = "Proline", main = "Flexible DA")
+points(df$alc, df$pro, pch=19, col=colors)
+
+Method = "nb"
+Model <- train(as.formula(Formula), data = df,
+               method = Method, trControl = TrControl)
+Pred <- predict(Model, newdata = Grid)
+
+contour(PredA, PredB, matrix(as.numeric(Pred), ncol = nbp),
+        drawlabels = F, col="red", nlevels = 2, lwd=2,
+        xlab = "Alcohol", ylab = "Proline", main = "Naive Bayes")
+points(df$alc, df$pro, pch=19, col=colors)
+```
+
+
+## LDA vs. QDA
+
+Even though QDA can be considered more general method that LDA (due to the restrictive assumption made in LDA that each class has the same variance-covariance matrix), we might still prefer LDA in some situations over QDA.
+
+This is because QDA requires estimation of a larger number of parameters than LDA. In our wine data example, suppose we use all $p=13$ predictors, with $K=3$ classes. QDA estimates $K$ variance-covariance matrix with size $p\times p$. Thus QDA estimates a total of $Kp(p+1)/2 = `r 3*(13*14)/2`$ parameters. In comparison, LDA requires estimation of only one common variance-covariance matrix. Since LDA is a less flexible model, it may have more bias but less variance. Thus sometimes LDA might have better prediction performance than QDA.  
+
+However, we should keep in mind that if LDA’s assumption of a common variance-covariance matrix of the $K$ classes is badly violated, then LDA can suffer from high bias. Roughly speaking, LDA tends to be a better choice than QDA if training sample size is small and so reducing variance is crucial. In contrast, QDA is recommended if the training set is very large, so that the variance of the classifier is not a major concern, or if the assumption of a common covariance matrix for the $K$ classes is clearly untenable.
+
+
+```{r ldavsqda, echo=FALSE, fig.cap="LDA vs QDA in two simulated example. Left panel shows a data set where each class has the same covariance matrix. The right panel shows a data set with different covariance matrices for each class. The Bayes (purple dashed), LDA (black dotted), and QDA (green solid) decision boundaries are displayed. The shading indicates the QDA decision rule", fig.margin = FALSE, fig.width=8, fig.height=4}
+
+knitr::include_graphics("Hastie_ISLR2_figures/Chapter4/4_9.pdf")
+```
+
+Figure \ref{fig:ldavsqda} shows examples of simulated data sets -- figure taken from *Introduction to Statistical Learning*. Each of the data sets contains two variables $X_1$ and $X_2$ and two classes. The left panel shows the data with $cor(X_1, X_2) = 0.7$ for both the classes. Thus the Bayes decision boundary is linear in this case, and LDA performs better than QDA, because QDA suffers from higher variance without a corresponding decrease in bias.   The right panel shows a data set with $cor(X_1, X_2) = 0.7$ in one class and $cor(X_1, X_2) = -0.7$ in the other. Here, the assumption os a common variance-covariance matrix is not apppropriate and thus, LDA suffers from high bias but QDA performs better. 
+
+A possible disadvantage of QDA/LDA is the assumption of multivariate normality of predictors in each class. When this assumotion is unreasonable LDA/QDA can perfrom badly. However, assumption of normality is more crucial for QDA than LDA since another formulation of LDA^[Fisher, 1936] does not require normality of the predictors. 
+
+## Naive Bayes classifier
+
+Recall that LDA and QDA estimate the densities $f_k(\cdot)$ for the $K$ classes using the multivariate normality assumption. The naive Bayes classifier makes a single assumption: the joint density of $X_{i1}, \ldots, X_{ip}$ is the product of $p$ individual density function,
+$$
+f_k(\x) = f_{k1}(x_1) \times \ldots \times f_{kp}(x_p). 
+$$
+In other words, within each class the $p$ predictors are assumed to be *independent*. This is a quite strong assumption -- this will also imply that there is *no relation* (linear or otherwise) between the predictors *within each class*. In most situations, this assumption is not appropriate. However, a classifier can still be constructed basec on this assumption, and it often gives good results (especially for smaller $n$). 
+
+With this assumption, we only need to form estimates of the *marginal density functions*, $\widehat f_{kj}, j = 1, \ldots, p$, to obtain an estimate of $f_k(\x)$:
+$$
+\widehat f_k(\x) = \widehat f_{k1}(x_1) \times \ldots \times \widehat f_{kp}(x_p).
+$$
+The rest of the procedure is the same as before: we compute the posterior probabilites, or equivalently $\widehat p_k \widehat f_k(\x)$, and classify observations accordingly. 
+
+We can form $\widehat f_{kj}$ by following any of the options below:
+
++ If $X_{ij}$ is quantitative, we can assume $X_{ij} | Y_i = k \sim N(\mu_{kj}, \sigma^2_{kj})$. Then we only need to estimate $\mu_{kj}$ and $\sigma_{kj}^2$.^[This is equivalent to running QDA with a \textit{diagonal variance-covariance matrix}.]  
+
++ Another option for quantitative predictors is to estimate the densities nonparametric methods. Examples of such estimators are *relative frequency  histogram* and *kernel density estimator* -- a smoothed version of histogram. 
+
+```{r, echo=FALSE, fig.cap="Relative frequancy histogram and kernel density estimator (solid line) of a sample."}
+x <- wines$Alcohol
+ggplot() + 
+  geom_histogram(aes(x = x, 
+                     y = after_stat(density)), 
+                 bins = 15,
+                 fill = "white", col = "red") +
+  geom_density(aes(x), lwd=2)
+
+```
+
++ If $X_{ij}$ is qualitative, then we can simply take the proportion of sample observations for each value of the predictor. In other words, $\widehat f_{kj}$ is the estimated *probability mass function* of the $j$-th predictor:
+$$
+\widehat f_{kj}(x_j) = \frac{1}{n_{\rm train, k}} \sum_i I(X_{ij} = x_j), 
+$$
+where $n_{\rm train, k}$ is the size of the training set for the $k$-th class.
+
+
+
+In R, we can use the `NaiveBayes()` function in the `klaR` library for build a naive Bayes classifier. 
+
+```{r, message=FALSE, warning=FALSE}
+library(klaR)
+nb_wine <- NaiveBayes(as.factor(Class) ~ Alcohol + Proline, 
+                      data = wines,
+                      usekernel = FALSE)
+nb_kern <- NaiveBayes(as.factor(Class) ~ Alcohol + Proline, 
+                      data = wines,
+                      usekernel = TRUE)
+predict(nb_wine, newdata = data.frame(Alcohol = 13,
+                                      Proline = 600))
+predict(nb_kern, newdata = data.frame(Alcohol = 13,
+                                      Proline = 600))
+```
+
+\noindent Here we have assumed normal distribution for each predictor (`usekernel = FALSE`) in the first fit, and use kernel density estimation in the second fit (`usekernel = TRUE`). We can also use `caret` to evaluate test error with "method =  nb". 
+
+```{r, eval=FALSE, echo=FALSE}
+ld <- lda(Class ~ Alcohol + Proline, data = wines)
+
+tr <- trainControl(method = "repeatedcv", number = 10, repeats = 25)
+lda <- train(as.factor(Class) ~ Alcohol + Proline, 
+            data = wines,
+            method = "lda",
+            trControl = tr)
+qda <- train(as.factor(Class) ~ Alcohol + Proline,
+            data = wines,
+            method = "qda",
+            trControl = tr)
+nb_g <- train(as.factor(Class) ~ Alcohol + Proline, 
+            data = wines,
+            method = "nb", 
+            tuneGrid = expand.grid(usekernel = FALSE,
+                                   fL = 0,
+                                   adjust = 1),
+            trControl = tr)
+nb_k <- train(as.factor(Class) ~ Alcohol + Proline, 
+            data = wines,
+            method = "nb", 
+            tuneGrid = expand.grid(usekernel = TRUE,
+                                   fL = 0,
+                                   adjust = 1),
+            trControl = tr)
+
+bwplot(resamples(list(LDA = lda, 
+                      QDA = qda, 
+                      NaiveB_gauss = nb_g,
+                      NaiveB_kern = nb_k)))
+```
+
+
+
+# Logistic Regression
+
+One disadvantage of the classifiers discussed in the previous section is that we need to estimate the densities of the multivariate random variable $\X$. The QDA method for example requires multivariate normality assumption which is not reasonable if components of $\X$ are binary or categorical variables. The logistic regression model arises from the desire to model the posterior probabilities of each of the classes as functions of the data vector $\X$ without actually specifying any distribution of $\X$. 
+
+Usually, logistic regression models are used mostly as a tool for data analysis and inference, where the main goal is to understand the role of the predictors in explaining the outcome. 
+
+## Model
+For simplicity, we start with the case where we have two classes (1 and 2), and suppose for an item, we have covariate $\X = (X_{i1}, \ldots, X_{ip})^T$.  We can model posterior probabilities of the 2 classes via linear combinations of $\X$, such that the probabilities sum to one. We assume that $Y | \X$ has a Bernoulli distribution, and model the posterior probabilities as follows: 
+$$
+P(Y = 1 | \X) = \frac{exp(\beta_0 +  X_{i1}\beta_1 + \ldots + X_{ip}\beta_p)}{1 + exp(\beta_0 +  X_{i1}\beta_1 + \ldots + X_{ip}\beta_p)};
+$$
+$$
+P(Y = 2 | \X) = 1 - P(Y = 1 | \X) = \frac{1}{1 + exp(\beta_0 +  X_{i1}\beta_1 + \ldots + X_{ip}\beta_p)}.
+$$
+Here $\beta = (\beta_1, \ldots, \beta_p)^T$ is the vector of coefficients of the covariates. Another way to write the same model is using *log-odds*:^[Thus we are modeling the log-odds of class 1 vs 2 as a linear function of $\X_i$.]
+$$
+log\left[\frac{P(Y = 1 | \X)}{P(Y = 2 | X)}\right] = \beta_0 +  X_{i1}\beta_1 + \ldots + X_{ip}\beta_p.
+$$
+The expression $\frac{P(Y = 1 | \X)}{P(Y = 2 | \X)}$ is called the *odds* of $Y$ being 1 vs $Y$ being 2. The parameters $\beta_0, \beta_1, \dots, \beta_p$ quantifies the impact of the covariates to the prediction of class labels.^[We should note that the logistic regression is not just a classifier; it is a more general regression model.] The group used in the denominator (class 2 in our formulation above) is called the *reference group*. The choice of reference group is arbitrary as the estimates of the posterior probabilities are same. 
+
+## Odds and log-odds
+Let us understand the concepts of *odds* and *log-odds* in more detail. Let us revisit `wines` data with $K=2$ classes (1 and 2) and only one covariate, $X = `Alcohol`$. The odds are defined as
+$$
+\frac{P(Y = 1 | X)}{P(Y = 2 | X)} = \frac{P(Y = 1 | X)}{1 - P(Y = 1 | X)}.
+$$
+Thus, if $P(Y = 1 | X) = 0.1$ leads to odds $0.1/0.9 = 1/9$. In contrast  $P(Y = 1 | X) = 0.9$ leads to odds $0.9/0.1 = 9$. Thus greater odds relate to higher posterior probability of class 1 (since class 2 is the reference class).  
+
+In terms of log-odds, we have the model
+$$
+log\left[\frac{P(Y = 1 | X)}{P(Y = 2 | X)}\right] = \beta_0 +  X_{i}\beta_1.
+$$
+This model implies that with one unit increase in $X$ (Alcohol), the log-odds will change by $\beta_1$ units. This change in log-odds does *not* depend on the value of $X$, that is, whether $X$ goes from 10  to 11, or from 13 to 14, the change in log-odds stays the same, $\beta_1$.^[This phenomenon is similar to linear regression, where change in $E(Y)$ depends only on *change* in $X$, but not on the actual starting value of $X$.] Equivalently, due to one unit increase in $X$, the *odds* gets multiplied by $e^{\beta_1}$. Specifically,
+$$
+\frac{P(Y = 1 | X = x+1)}{P(Y = 2 | X = x+1)} = e^{\beta_1}\frac{P(Y = 1 | X = x)}{P(Y = 2 | X = x)}.
+$$
+
+In terms of probabilities $P(Y = 1 | X)$, we note that the relation between the posterior probabilities and odds (and $X$) is *not* linear:
+$$
+P(Y = 1 | X) = \frac{odds}{1 + odds}.
+$$
+Thus one unit increase in $X$, or equivalently $\beta_1$ unit change in odds, does not result in a constant amount of change in $P(Y = 1 | X)$. The actual change in $P(Y = 1 | X)$ depends on both the starting value of $X$ as well as the change in $X$. For example, with $\beta_0 = 40$ and $\beta_1 = -3$, Figure \ref{fig:logitdemo} shows the plots of log-odds, odds, and $P(Y = 1 | X)$ over a grid of values of $X$.
+
+```{r logitdemo, echo=FALSE, fig.margin = FALSE, fig.width=8, fig.cap="Plots of plots of log-odds, odds, and $P(Y = 1 | X)$ over a grid of values of $X$.", fig.height=3}
+x <- seq(11, 16, len = 101)
+logodds <- 40 - 3*x
+odds <- exp(logodds)
+px <- odds/(1 + odds)
+par(mfrow = c(1,3))
+plot(x, logodds, type = "b", pch=19, ylab = "log-odds")
+plot(x, odds, type = "b", pch=19)
+plot(x, px, type = "b", pch=19, ylab = "P(Y=1|x)")
+```
+
+## Classification
+
+The model parameters can be estimated directly by maximum likelihood, solution is obtained numerically by iteratively reweighted least squares.^[Essentially using a Newton–Raphson algorithm; see for example Hastie, Tibshirani and Friedman (2009), The Elements of Statistical Learning.] It follows that the posterior probabilities can be estimated by
+$$
+\widehat P(Y = 1 | \X = \x) = \frac{exp(\widehat\beta_0 + x_1\widehat\beta_1 + \ldots x_p\widehat\beta_p)}{1 + exp(\widehat\beta_0 + x_1\widehat\beta_1 + \ldots x_p\widehat\beta_p)};
+$$
+$$
+\widehat P(Y = 2 | \X = \x) = 1 - \widehat P(Y = 1 | \x),
+$$
+where $\widehat\beta_j$'s are the estimates of the regression coefficients. We can predict the class for a item with covariate $\x$ using the estimated probability that $Y=1$ as follows:
+  
+> The item is classified in group $1$ if $\widehat P(Y=1|\x) \geq \widehat P(Y=2|\x)$, otherwise in group $2$.
+
+
+Logistic regression can be performed using the `glm()` function in base R. For demonstration purposes, let us consider only two classes (1 and 2), and two covariates `Alcohol` and `Proline`. We create the small wines data -- the only change is that now we explicitly change `Class` to a factor.
+```{r}
+# wine data for classes 1 and 2
+wine_new <- wines[wines$Class == 1 | wines$Class == 2, ]
+wine_new$Class <- as.factor(wine_new$Class)
+wine_new$Class <- relevel(wine_new$Class, ref = 2)
+```
+\noindent Note that we called the function `relevel()` with the argument `"ref = 2"`. This is done to set class 2 as the reference group. Now we can perform logistic regression using the `glm()` function. 
+```{r}
+# Logistic regression
+wine_glm =  glm(Class ~ Proline + Alcohol, 
+               family = binomial(), 
+               data = wine_new)
+```
+\noindent The first part `Class ~ Proline + Alcohol` is specifying `Class` as response and `Proline` and `Alcohol` as covariates. The statement `family = binomial()` is used to perform logistic regression.^[It will performs linear regression  using least squares without the "family = binomial()" statement.] 
+
+
+The estimated coefficients are as follows.
+```{r}
+wine_coef <- wine_glm$coefficients
+wine_coef
+```
+
+```{r, echo=FALSE}
+cc <- wine_coef
+```
+
+We can interpret $\widehat\beta_0$ as the *log-odds* when both Proline and Alcohol levels are zero. Thus we have the corresponding odds of $`r exp(cc[1])`$. Keep in mind that in our dataset, zero values for Alcohol and Proline are not present, so such an interpretation is purely mechanical. 
+
+The estimated value of $\beta_1$ can be interpreted as the amount log-odds will *change* due to one unit *increase*  in `Proline` while *keeping the `Alcohol` level fixed*. Thus keeping  `Alcohol` level fixed, one unit increase in `Proline` level is associated with $`r cc[2]`$ unit change in log-odds. Equivalently, odds will change by a multiplicative factor of $`r exp(cc[2])`$ (in other words, increase by $`r round(100*(exp(cc[2]) - 1), 3)`$ percent). Similar interpretation can be given for $\widehat\beta_2$. 
+
+
+Suppose we have a new sample with `Proline = 600` and `Alcohol = 13`.  So here $x_1 = 600$ and $x_2 = 13$. We can compute the estimated posterior probabilities as
+$$
+\widehat P(Y = 1 | \x = (600,13)) = \frac{e^{(`r cc[1]` + `r cc[2]`*600 + `r cc[3]`*13)}}{1 + e^{(`r cc[1]` + `r cc[2]`*600 + `r cc[3]`*13)}} = \frac{exp(`r cc[1] +  cc[2]*600 + cc[3]*13`)}{1 + exp(`r cc[1] +  cc[2]*600 + cc[3]*13`)} = `r exp( cc[1] +  cc[2]*600 + cc[3]*13)/(1 + exp(cc[1] +  cc[2]*600 + cc[3]*13))`,
+$$
+$$
+\widehat P(Y = 2 | \x = (600,13)) = 1 -  \widehat P(Y = 1 | x_1 = 600, x_2 = 13) = `r 1 - exp( cc[1] +  cc[2]*600 + cc[3]*13)/(1 + exp(cc[1] +  cc[2]*600 + cc[3]*13))`.
+$$
+Thus the new sample will be classified to class 2.
+
+In R, we can simply use the `predict()` function to compute the probabilities shown above. By default, `predict()` gives the probability of *non-reference class*, class 1 in our example.^[See `?predict.glm()` for more details.]
+
+```{r}
+newx <- data.frame(Proline = 600,
+                   Alcohol = 13)
+predict(wine_glm, 
+        newdata = newx,
+        type = "response")
+```
+
+We can also view the estimated posterior probabilities of the training set using `predict()` or using the `$fitted.values` component of the fit. The probabilities for the *non-reference group* is computed by default. We have also included the prediction of the whole dataset.^[Just as before, we relevel the factors to set "2" as reference to make the predictions comparable to the original classes.] Figure \ref{fig:postprob} shows the posterior probabilities along with the true class labels.   
+```{r}
+# Training set estimation of P(Y = 1)
+post.prob.1 = wine_glm$fitted
+# Training set estimation of P(Y = 2)
+post.prob.2 = 1 - post.prob.1
+# Predicted groups
+Y.hat = as.factor(ifelse(post.prob.1>post.prob.2, 1, 2))
+Y.hat <- relevel(Y.hat, ref = 2)
+df <- data.frame("Class_1" = post.prob.1,
+            "Class_2" = post.prob.2,
+            "Predicted" = Y.hat,
+            "Observed" = wine_new$Class)
+head(df, 4)
+```
+
+\noindent As an example, for the first wine sample (1st row), $\hat P(Y = 1 | \x) = 99.987\%$ and $\hat P(Y = 1 | \x) = 0.013\%$. Thus this particular sample will be classified to group 1. Figure \ref{fig:lgdb} shows the decision boundary of the classifier, that is, all values of (`Alcohol`, `Proline`) that has the same posterior probability of being in class 1 or 2, or equivalently, odds of 1 and log-odds of 0. Formally, we have the boundary is given by all the solutions of the linear equation (the estimated formula of log-odds):
+$$
+`r cc[1]` + `r cc[2]`*Proline + `r cc[3]`*Alcohol = 0.
+$$
+
+```{r postprob, echo=FALSE, fig.cap="Esrimated posterior probabilities of class 1 along with the true class labels."}
+#plot(df, pch = c(17, 19), col = wines$Class)
+ggplot(df) + 
+  geom_point(aes(x = Class_1, 
+                 y = Observed,
+                 col = Predicted,
+                 pch = Predicted),
+             size = 3) + 
+  theme_bw(base_size = 18) + 
+  xlab("Estimated P(Y = 1 | X)") + 
+  theme(legend.position = "top")
+```
+
+
+
+```{r lgdb, echo=FALSE, fig.cap="Decision boundary of a 2-class logistic regression based classifier."}
+cc <- wine_coef
+newx <- expand.grid(Alcohol = seq(11, 15, len = 101),
+                    Proline = seq(270, 1700, len = 101))
+pp <- predict(wine_glm, newdata = newx, type = "response")
+ggplot() + 
+  geom_raster(aes(newx$Alcohol, 
+                  newx$Proline, 
+                  fill = pp))  + 
+  theme_bw(base_size = 18) + 
+  geom_contour(aes(newx$Alcohol, 
+                   newx$Proline,
+                   z = pp), lwd=1.2, bins=2, 
+               col = "white") +  
+  geom_point(aes(Alcohol, Proline,
+                 col = Class, pch = Class), size = 2,
+             data = wine_new) +
+  labs(fill = "P(Y = 1 | X)", 
+       x = "Alcohol",
+       y = "Proline") +
+  scale_fill_viridis_c(option = "B", guide = ) + 
+  theme(legend.position = "top") + 
+  geom_abline(slope = -cc[3]/cc[2], 
+              intercept = -cc[1]/cc[2],
+              col = "white")
+
+```
+
+We can use the function `errormatrix()` in the `klaR` package to obtain the training confusion matrix.^[Alternatively, we can also use the function `confusionMatrix()` in the `caret` package for a detailed output.] 
+```{r}
+# Confusion matrix
+err <- klaR::errormatrix(true = wine_new$Class, 
+                         predicted = Y.hat, 
+                         relative = TRUE)
+round(err, 3)
+```
+\noindent Ideally, we should use cross-validation, training-testing sets to estimate the accuracy, as we have learned before.
+
+
+
+
+
+## Hypothesis testing and confidence intervals
+
+We can get a summary of the fit as follows.
+
+```{r}
+# testing each beta coefficient
+summary(wine_glm)
+```
+```{r, echo=FALSE, eval=FALSE}
+cat("Call:
+glm(formula = class ~ proline + alcohol, family = binomial(), 
+    data = datatwo)
+
+Deviance Residuals: 
+     Min        1Q    Median        3Q       Max  
+-2.19220  -0.03196  -0.00558   0.02786   1.57716  
+
+Coefficients:
+              Estimate Std. Error z value Pr(>|z|)   
+(Intercept) -69.027638  22.757675  -3.033  0.00242 **
+proline       0.013695   0.004362   3.140  0.00169 **
+alcohol       4.453109   1.592916   2.796  0.00518 **
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 179.11  on 129  degrees of freedom
+Residual deviance:  19.72  on 127  degrees of freedom
+AIC: 25.72
+
+Number of Fisher Scoring iterations: 9")
+```
+\noindent The summary of the fit produces $z$-tests for coefficient of each covariate^[This is actually an approximate (large sample) test.]; it seems both `alcohol` and `proline` are associated with the group labels. Formally, the test statistic is essentially same as in linear regression: suppose we want to test whether `Alcohol` (the second predictor with coefficient $\beta_2$) has any association with $Y$. Thus we test for $H_0:\beta_2 = 0$ vs. $H_1:\beta_2 \neq 0$. The test statistic is 
+$$
+z = \frac{\widehat\beta_2 - 0}{\widehat{SE}(\widehat\beta_2)}.
+$$
+
+```{r tpv, echo=FALSE, fig.margin = TRUE, fig.cap="Two-tailed p-value for a z-test.", fig.height=6, fig.width=6}
+
+curve(dnorm(x), from = -3.5, to = 3.5, lwd=2, ylab = "N(0,1) PDF")
+# shaded region
+left <- 1.8
+right <- 3.5
+x  <- c(left, seq(left, right, 0.01), right)
+y  <- c(0, dnorm(seq(left, right, 0.01)), 0)
+polygon(x,y, col="steelblue")
+
+left <- -3.5
+right <- -1.8
+x  <- c(left, seq(left, right, 0.01), right)
+y  <- c(0, dnorm(seq(left, right, 0.01)), 0)
+polygon(x,y, col="steelblue")
+``` 
+
+\noindent Using large sample theory it can be shown that $z$ approximately follows a $N(0,1)$ distribution. Thus we reject $H_0$ for large positive or large negative values of $z$. Equivalently, the p-value can be computed as
+$$
+p-value = 2*P(Z > |z|),
+$$
+where $Z$ denotes $N(0,1)$ random variable. Figure \ref{fig:tpv} shows the p-value of a two-sided $z$-test. 
+
+
+```{r, echo=FALSE}
+logss <- summary(wine_glm)
+se <- logss$coefficients[,2]
+int <- cc[2] + c(-1,1)*1.96*se[2]
+```
+We can produce large sample $100(1-\alpha)\%$ confidence intervals for $\beta_j$ as
+$$
+[\widehat\beta_j \pm z_{1 - \alpha/2} SE(\widehat\beta_j)],
+$$
+where $z_{1 - \alpha/2}$ is the $(1 - \alpha/2)$ quantile of the $N(0,1)$ distribution. For example, a $95\%$ confidence intervals for $\beta_1$ is
+$$
+[`r cc[2]` \pm 1.96*`r se[2]`] = [`r int[1]`, `r int[2]`].
+$$
+We can interpret this intervals as follows: with every unit increase in level of $X_1$ (`Proline` in our example), we can expect an *increase in log-odds* by an amount of `r int[1]` to `r int[2]`. Equivalently, every unit increase in level of $X_1$, *odds* will be changed by a factor of `r exp(int[1])` to `r exp(int[2])` (in other words, increase in odds will be between `r round(100*(exp(int[1])-1),3)` percent and `r  round(100*(exp(int[2])-1),3)` percent.)
+
+
+
+## Logistic regression with multiple classes
+
+We can extend logistic regression presented for two classes to the case of multiple classes; the regression method is called *Multinomial Logistic Regression*. Suppose we have $K$ classes, and we take the $K$-th class as the reference. The log-odds of classes vs the reference class $K$ are modeled as follows:
+$$
+log\left[\frac{P(Y = 1 | \X_i)}{P(Y = K | \X_i)}\right] = \beta_{10} + X_{i1}\beta_{11} + \ldots + X_{ip}\beta_{1p}.
+$$
+$$
+log\left[\frac{P(Y = 2 | \X_i)}{P(Y = K | \X_i)}\right] = \beta_{20} + X_{i1}\beta_{21} + \ldots + X_{ip}\beta_{2p}.
+$$
+$$
+\vdots
+$$
+$$
+log\left[\frac{P(Y = K-1 | \X_i)}{P(Y = K | \X_i)}\right] = \beta_{K-1,0} + X_{i1}\beta_{K-1,1} + \ldots + X_{ip}\beta_{K-1,p}.
+$$
+Some algebra shows that the corresponding posterior probabilities are as follows:
+$$
+P(Y = k | \X_i) = \frac{exp(\beta_{k0} + X_{i1}\beta_{k1} + \ldots + X_{ip}\beta_{kp})}{1 + \sum_{\ell = 1}^{K-1}exp(\beta_{\ell 0} + X_{i1}\beta_{\ell 1} + \ldots + X_{ip}\beta_{\ell p})}, \;\;\; k = 1, 2, \ldots, K-1,
+$$
+$$
+P(Y = K | \X_i) = \frac{1}{1 + \sum_{\ell=1}^{K-1}exp(\beta_{\ell 0} + X_{i1}\beta_{\ell 1} + \ldots + X_{ip}\beta_{\ell p})}.
+$$
+
+
+
+\noindent We can similarly build a classification rule as follows.
+
+> An item with covariate $\x$ is predicted to be in class $k$ if the estimated probability $\hat P(Y = k | \x)$ is larger than the other posterior probabilities.
+
+
+We can use the `multinom()` function in the `nnet` library to perform multinomial logistic regression. Let us consider the wine data with all the three classes.
+```{r}
+library(nnet)
+# Convert Class in wines data to a fcator
+# and relevel to make 3 as reference
+wines$Class <- as.factor(wines$Class)
+wines$Class <- relevel(wines$Class, ref=3)
+# multinomial logistic regression
+multilogit <- multinom(Class ~ Proline + Alcohol, 
+                       data = wines, 
+                       maxit = 200, trace=FALSE)
+# summary
+summary(multilogit)
+```
+\noindent The option "trace = FALSE" in `multinom()` function suppresses the printing of convergence steps. The option "maxit = 200" sets the upper bound of the number of iterations to be performed to find the solutions.
+
+The estimated posterior probabilities are as follows.
+```{r}
+# estimated posterior probabilities
+probs <- multilogit$fitted.values
+head(probs)
+```
+
+
+```{r trig, fig.width=6, fig.height=6, fig.margin=TRUE, fig.cap="Estimated posterior probailities for the wine data using multinomial logistic regression.", echo=FALSE}
+# Plot the group probability
+plot(probs[, 2], probs[, 3], col = wines[ , 1], 
+ylim = c(0,1), xlim = c(0,1),
+pch = 16, cex = 1.25,
+xlab = "Estimated probability of Y=2",
+ylab = "Estimated probability of Y=3",
+main = "Probability of group membership")
+legend(0.7, 1, legend = c("1", "2", "3 (ref)"), col = 1:3, pch=19, cex=1, title = "True Classes")
+lines(c(0,0), c(1,0), lwd=2, col="grey", lty=2)
+lines(c(0,1), c(0,0), lwd=2, col="grey", lty=2)
+lines(c(0,1), c(1,0), lwd=2, col="grey", lty=2)
+```
+
+
+\noindent Each row shows the estimated probability of group membership for the corresponding wine sample. For example, the first wine sample (first row), has a 99.82% probability of being in group 1.  We can also visualize the posterior probabilities as shown in Figure \ref{fig:trig}. 
+
+We can also hypothesis testing for each $\beta_{kj}$ using the standard errors reported in the summary output.
+
+```{r}
+# Extract the coefficients and se
+mlogit_sum <- summary(multilogit)
+coef <- mlogit_sum$coefficients
+se <- mlogit_sum$standard.errors
+# z-statistics
+z <- coef/se
+z
+# p-value
+pv <- 2*pnorm(abs(z), lower.tail = FALSE)
+pv
+```
+
+\noindent We see for both classes 1 and 2, the two predictor variables are significant at any reasonable test level. 
+
+```{r, echo=FALSE, eval=FALSE}
+newx <- expand.grid(Alcohol = seq(11, 15, len = 101),
+                    Proline = seq(270, 1700, len = 101))
+pp <- predict(multilogit, newdata = newx, type = "probs")
+ggplot() + 
+  geom_raster(aes(newx$Alcohol, 
+                  newx$Proline, 
+                  fill = pp[,2]  )) +
+  scale_fill_viridis_c(option = "D") + 
+  theme_bw(base_size = 18) + 
+  geom_contour(aes(newx$Alcohol, 
+                   newx$Proline,
+                   z = pp[,1]), lwd=1.2, bins=2, col = "red") + 
+  geom_contour(aes(newx$Alcohol, 
+                   newx$Proline,
+                   z = pp[,2]), lwd=1.2, bins=2, col = "red") + 
+  geom_contour(aes(newx$Alcohol, 
+                   newx$Proline,
+                   z = pp[,3]), lwd=1.2, bins=2, col = "red") + 
+  geom_point(aes(Alcohol, Proline, col = Class), data = wines)
+
+```
+
+## Softmax coding
+
+In various areas in machine learning (including deep learning) an alternative formulation of logistic regression is often used, called *softmax* coding. Instead of setting a class as reference class, and modeling the other classes against the reference class, in softmax, we treat each class symmetrically. Specifically, we posit the model
+$$
+P(Y = k | \X_i) = \frac{exp(\beta_{k0} + X_{i1}\beta_{k1} + \ldots + X_{ip}\beta_{kp})}{\sum_{\ell = 1}^{K}exp(\beta_{\ell 0} + X_{i1}\beta_{\ell 1} + \ldots + X_{ip}\beta_{\ell p})}, \;\;\; k = 1, 2, \ldots, K.
+$$
+Thus, rather than estimating coefficients for $K-1$ classes, we actually estimate coefficients for all $K$ classes.
+
+It can be shown that the softmax coding is equivalent
+to the reference class based coding described before, in the sense that the fitted values, log odds between any pair of classes, and other key model outputs will remain the same, regardless of coding.
+
+
+## Issues to consider
+
+There are some situations where logistic regression might not perform well. One such situation is \textit{complete (or quasi-complete) separation} of the data.
+
+This situation happens when the outcome variable separates a predictor completely. This leads to perfect prediction of the outcome by the predictor. Consider the following data set with binary response $Y$ and two predictors $X_1$ and $X_2$. Figure \ref{fig:sep} shows relationship between $Y$ and the two predictors. In such a case, logistic regression may produce unreasonable over-inflated estimates of regression coefficients. 
+
+```{r sep, echo=FALSE, fig.cap="Simulated data set. The response separates $X_1$ completely, but not $X_2$."}
+set.seed(1001)
+x1 <- rnorm(200)
+x2 <- rnorm(200)
+y <- as.factor((x1 < 0) + 1)
+ggplot() + 
+  geom_point(aes(x1, x2, col = y, pch = y), size = 2) + 
+  theme_bw(base_size = 18) +
+  geom_vline(xintercept = 0, lty=2)
+```
+
+```{r}
+glm(y ~ x1 + x2, family = binomial())
+```
+
+In general, if there is a linear combination $Z = aX_1 + bX_2$ that is completely separated by $Y$, logistic regression will fail to produce reasonable results. Figure \ref{fig:septwo} shows one such example where the data is completely separated by the line $X_1 + X_2 = 0$. 
+
+
+```{r septwo, echo=FALSE, fig.cap="Simulated data set. The response separates the data completely -- the boundary (dashed line) is $X_1 + X_2 = 0$. Negative values of $X_1 + X_2$ corresponds to $Y=2$, and positive values corresponds to $Y = 1$."}
+set.seed(1001)
+x1 <- rnorm(200)
+x2 <- rnorm(200)
+y <- as.factor((x1 + x2 < 0) + 1)
+ggplot() + 
+  geom_point(aes(x1, x2, col = y, pch = y), size = 2) + 
+  theme_bw(base_size = 18) +
+  geom_abline(intercept = 0, slope=-1, lty=2)
+```
+
+```{r}
+glm(y ~ x1 + x2, family = binomial())
+```
+
+
+Although the examples above shows complete separation using continuous predictors, it is more like to happen when using categorical predictors coded by dummy variables. Small sample size might contribute to this problem as well.  In such situations, applying other classification methods (e.g., LDA) is preferred. 
+
+Since logistic regression deals with binary outcome, often it requires more sample size that linear regression. Multinomial logit regression requires even more sample size than binary logistic  regression due to the fact that it estimates parameters for multiple classes. 
+
+In presence of categorical predictor, it might happen that there are some combination of predictor and response values that are not present in the data. In such a case, logistic fit may become unstable, or might even fail to converge. 
+
+
+
+As a practical example of perfect separability, consider the wines data with two classes, "1" and "2", but with all 13 predictors. Note that glm did not converge, and produces extremely inflated standard errors. 
+
+```{r}
+wines <- read.table("data/Wines.txt", header = TRUE)
+wines_all <- glm(as.factor(Class) ~ ., 
+                 data = wines[1:130,], 
+                 family = binomial())
+summary(wines_all)
+```
+
+```{r, echo=FALSE, fig.cap="Example of quasi-separable wines data.", eval=FALSE}
+ggplot(wines[1:130,]) + 
+  geom_point(aes(Color, Proline, 
+                 col = as.factor(Class),
+                 pch = as.factor(Class)), size = 2) + 
+  theme_bw(base_size = 18) + 
+  labs(col = "Class", pch = "Class")
+```
+
+```{r, echo=FALSE, eval=FALSE}
+df <- data.frame(x = c(rep(0, 50), 
+                       rep(1, 50), 
+                       rep(2, 50)),
+                 y = c(runif(50)<0.5, 
+                       rep(0, 50), 
+                       runif(50)<0.5))
+```
+
+```{r, echo=FALSE, eval=FALSE}
+table(df)
+glm(y ~ x, family = binomial())
+```
+
+
+# Comparison of a few classifiers
+
+Chapter 4.5 of the textbook \textit{Introduction to Statistical Learning} provides a nice comparison of the different classifiers we learned in this chapter. I recommend you read the chapter to get more insight. We will provide only a brief  overview of the discussion presented in the book.
+
+Analytically, we can compare the form of log-odds of LDA, QDA, naive Bayes and logistic regression. We can show that:
+
++ LDA and logistic regression models the log-odds as a linear combination of the predictors. 
+
++ QDA models the log-odds as a quadratic function of the predictors.
+
++ Naive Bayes classifier model the log-odds as a sum of non-linear functions of the predictors. 
+
+\noindent We can observe that LDA is a special case of QDA since LDA assumes  the covariance matrix for each class is the same. On the other hand, any classifier with a linear decision boundary is a special case of naive Bayes. However, neither QDA nor naive Bayes is a special case of the other. Between LDA and logistic regression, we expect LDA to perform better if the assumptions for LDA are satisfied. 
+
+
+The textbook \textit{Introduction to Statistical Learning} also provides numerical comparison between various classifiers discussed so far. Figure \ref{fig:comp} shows test error rates under different scenarios -- see the textbook for details for each scenarios.
+
+```{r, echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE}
+knitr::include_graphics("Hastie_ISLR2_figures/Chapter4/4_11.pdf")
+```
+
+```{r comp, echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE, fig.cap="Test error rates for a few classifiers in linear (top row) and nonlinear (bottom row) scenarios described in \\textit{Introduction to Statistical Learning}, section 4.5."}
+knitr::include_graphics("Hastie_ISLR2_figures/Chapter4/4_12.pdf")
+```
+
+In general, no single classifier performs best in every scenario. Their test performance depends on the underlying structure (distribution, variance-covariance patterns) of the the data. If it often a good idea to build several classifiers, and evaluate them using their test error rate. 
+
+
+# High-Dimensional Problems
+
+When the number of predictors $p$ is larger than (or close to) the sample size $n$, the methods described in this section suffer from numerical instability or simply can not be applied to the data.^[Recall same issues in Linear Regression. ]   We can apply similar strategies discussed for linear regression here as well: regularization/shrinkage and dimension reduction methods. Some classifier such as naive Bayes are more appropriate in hig-dimensional data than others. 
+
+For example, we can extend LDA for high-dimensional data by assuming a *diagonal* covariance matrix (i.e., assuming features are independent in each class). This method is called *Diagonal Linear Discriminant Analysis*.^[A special case of Naive Bayes classifier, see section 18 of \textit{Element of Statistical Learning} by Hastie et al. if you are interested in more details.] Similar approach can be taken for QDA as well resulting in *Diagonal Quadratic Discriminant Analysis*.^[Dudoit, S., Fridlyand, J., and Speed, T. P. (2002). "Comparison of Discrimination Methods for the Classification of Tumors Using Gene Expression Data," Journal of the American Statistical Association, 97, 457, 77-87.] Regularized versions of LDA such as *nearest shrunken centroids (NSC)*, *Regularized discriminant analysis (RDA)*, and many other methods are also available in literature. R packages such as `sparsediscrim`, `HDclassif`, `HiDimDA` among others have various classifiers for high-dimensional data. 
+
+
+Like linear regression, we can develop ridge, lasso and elastic net methods for logistic regression as well. All these methods are available in  `glmnet()` package. As before, these methods shrink the regression coefficients towards zero, can be used in high-dimensional setting. We show the lasso based logistic regression fit of the two-class wines data (class 1 and 2) with the penalty parameter $\lambda$ chosen by CV below.^[`glmnet()` automatically scales the predictors before estimating the regression coefficients, and then outputs the coefficients in the original scale.]
+
+```{r, warning=FALSE, message=FALSE}
+library(glmnet)
+set.seed(1102)
+# CV to choose lambda
+logit_cv <- cv.glmnet(x = as.matrix(wine_new[,-1]), 
+             y = wine_new$Class,
+             family = binomial(),
+             alpha = 1)
+```
+
+```{r, echo=FALSE, fig.cap="CV results for logistic regression of wines data with lasso penalty."}
+plot(logit_cv)
+```
+
+```{r}
+# Final fit with lambda chosen by 1-SE rule
+wine_lasso <- glmnet(x = as.matrix(wine_new[,-1]), 
+             y = wine_new$Class,
+             family = binomial(),
+             alpha = 1,
+             lambda = logit_cv$lambda.1se)
+```
+
+
+```{r}
+# Estimated coefs
+coef(wine_lasso)
+```
+
+
+Dimension reduction method like PCA can still be applied to the predictors before building classifiers. PCA often is useful in providing better visualization of the data. For example, the full wines data has 13 predictors, which are hard to visualize in a plot. Let us perform PCA and plot the first few PCs along with class labels.
+
+```{r}
+# wine data PCA
+wine_pca <- prcomp(wines[, -1], scale. = TRUE)
+wine_score <- wine_pca$x
+```
+
+
+
+```{r winepclda, echo=FALSE, fig.cap="LDA based classification of wines data using first two PCs.", fig.height=6}
+df <- data.frame(wine_score, Class = as.factor(wines$Class))
+# ggplot(df) + 
+#   geom_point(aes(PC1, PC2, 
+#                  col = Class,
+#                  pch = Class),
+#              size = 2) + 
+#   theme_bw(base_size = 18)
+# 
+# ggplot(df) + 
+#   geom_point(aes(PC1, PC3, 
+#                  col = Class,
+#                  pch = Class),
+#              size = 2) + 
+#   theme_bw(base_size = 18)
+# 
+# ggplot(df) + 
+#   geom_point(aes(PC2, PC3, 
+#                  col = Class,
+#                  pch = Class),
+#              size = 2) + 
+#   theme_bw(base_size = 18)
+
+cl <- c("#990000", "darkgreen", "orange")
+pc <- c(19, 21, 15)
+drawparti(df$Class, 
+          df$PC1, 
+          df$PC2, 
+          method = "lda", 
+          prec = 100, 
+          col.mean = cl, 
+          gs = rep(pc, table(wines$Class)), 
+          imageplot = FALSE, 
+          lwd=2, 
+          col.contour="black", 
+          xlab = "PC1", 
+          ylab = "PC2", 
+          print.err = 1, 
+          cex.mean = 2)
+legend(-4,-2, legend = 1:3, pch = pc, title = "Class")
+
+```
+
+\noindent Figure \ref{fig:winepclda} shows results from LDA using only the first two PCs as predictors. We can see that PC1 and PC2 almost completely separate the three classes.  Thus we have reduced dimension from 13 to two. Keep in mid that PCA is an unsupervised technique, and such a nice classification performance may not always happen. Also, even though PC1 and PC2  lead to excellent classification, together they only explain $55\%$ variation of the data. The opposite can be true as well -- the first two PCs  of some data might explain a large amount of variation but fail to produce good classification results. 
+
+```{r}
+summary(wine_pca)
+```
+
+
+\begin{comment}
+
+https://stats.idre.ucla.edu/r/dae/multinomial-logistic-regression/
+
+
+# High-dimensional data
+
+# Regularized Logistic Regression
+
+\end{comment}
+
