@@ -583,7 +583,7 @@ log_loss <- function(phat, y){
   y*log(phat)+(1-y)*log(1-phat)
 }
 to_plot <- data.frame(phat = rep(phat, 2), 
-           logloss = -c(log_loss(phat, rep(1, length(phat))), 
+           logloss = c(log_loss(phat, rep(1, length(phat))), 
                        log_loss(phat, rep(0, length(phat)))),
            y = as.factor(rep(c(1,0), each = length(phat))))
 ggplot(to_plot, aes(x = phat, y = -logloss, color = y)) +
