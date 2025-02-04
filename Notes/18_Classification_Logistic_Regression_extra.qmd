@@ -1,0 +1,1046 @@
+---
+title: "Classification Tasks & Logistic Regression"
+author: "Arnab Maity - Modified by Justin Post"
+always_allow_html: yes
+format: docx
+include-in-header: 
+      - header.tex
+editor_options: 
+  chunk_output_type: console
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, message = FALSE, warning = FALSE}
+library(MASS)
+library(klaR)
+library(tidyverse)
+library(caret)
+library(rsample)
+library(ISLR2)
+library(knitr)
+library(AppliedPredictiveModeling)
+library(kableExtra)
+library(nnet)
+library(glmnet)
+```
+
+
+```{r  include=FALSE, message=FALSE}
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, 
+                      cache.extra = packageVersion('tufte'),
+                      kable.force.latex = TRUE,
+                      fig.margin = TRUE, 
+                      fig.height = 5, 
+                      fig.width = 6)
+options(htmltools.dir.version = FALSE)
+```
+
+\pagebreak
+
+# Classification Tasks
+
+The problems of separating two or more groups/classes, and allocating new objects in previously defined classes are called classification and discrimination.
+
++ **Classification:** developing a rule to *allocate* a new object into one of a number of known groups. We use such classification rules to classify objects into pre-defined classes. Here the emphasis is on defining the rule to optimally assigning objects to classes. 
+
++ **Discrimination:** finding the features that *separate* known groups in a multivariate sample. This can be either done graphically or algebraically. We try to find *discriminants* (features) whose numeric values can separate the classes as much as possible.
+
+\noindent A classification rule is based on the features that separate the groups, so the two goals often (but not always) overlap. 
+
+## Classification Example
+
+To give some context, let's consider a data set and the familiar model KNN model used as a classifier.
+
+Consider the `wines` data set available at the [UCI machine learning repository](https://archive.ics.uci.edu/ml/datasets/wine). The dataset contains quantities of 13 constituents found in each of the three types (cultivars) of wines.
+
+Our response variable here is `Class` (`1`, `2`, or `3`), representing the three cultivars. Note that is no ordering to the cultivars. The values 1, 2, and 3 are just category placeholders.
+
+```{r, message = FALSE, warning = FALSE}
+# Read the data
+wines <- read_table("data/Wines.txt")
+#convert our response to a factor
+wines$Class <- as.factor(wines$Class)
+```
+
+A snapshot of the full data is shown below. The goal is to find a *rule* that can assign a specimen of wine to its cultivar. In other words, we want to predict the classes (1, 2, or 3) based on the predictors (13 variables).  
+
+```{r}
+#frequency of each class of wine
+table(wines$Class)
+```
+
+For this demonstration, we will only consider two predictor variables, `Alcohol` and `Malic`. However, the techniques discussed hereafter can be applied to any number of predictors. The figure below shows the three classes on a scatterplot of `Alcohol` vs. `Malic`.  
+
+```{r winetwo, fig.width=4, fig.height=4, fig.cap="Scatterplot of Alcohol vs. Malic in the wine data.", fig.margin=T, echo=FALSE}
+# pairs plot
+#colors <- c("darkgreen", "darkorange", "#990000")[wines$Class]
+#plot(wines$Alcohol, wines$Proline, pch = 16, cex = .5, col = colors, #xaxt = "n", yaxt = "n", xlab = "Alcohol", ylab = "Proline")
+
+ggplot(wines) + 
+  geom_point(aes(Alcohol, Malic, 
+                 col=as.factor(Class),
+                 shape=as.factor(Class)),
+             size = 3) + 
+  scale_color_manual(name = "Class",
+                     labels = c(1,2,3),
+                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+  scale_shape_manual(name = "Class",
+                     labels = c(1,2,3),
+                     values = c(15, 17, 19)) +
+  theme_bw(base_size = 18) + 
+  theme(legend.position = "top")
+```
+
+### $K$-Nearest Neighbors 
+
+Suppose we have training data $(Y_i, X_i)$ for $i=1,\ldots,n$, where $Y_i$ is categorical variable denoting class label of $X_i$. For a given predictor $x_0$, KNN classifier predicts the class label as follows:
+
++  Identify the $K$ observations in the training data such the their $X$ values are "nearest" to $x_0$.
+
++ Predict the class label corresponding to $x_0$ as the class having the majority vote, that is, having the most number of points among the $K$ neighbors obtained form previous step.
+
+The process and concepts around train/test sets, tuning, etc. all follow through here. We'll go through the example more explicitly soon. First, let's just look at some KNN decision boundaries.
+
+Let us start with a KNN classifier with $K = 30$. We can use the `knn()` function in the `class` package, or use `caret` with `method = "knn"`. Note that `caret` does both regression and classification. It automatically determines the problem depending on whether the response is numeric or categorical (`factor`). We have already converted the `Class` variable in the `wines` data to a factor.
+
+```{r}
+## 30-NN Classifier / with no tuning done
+fit <- train(Class ~ Alcohol + Malic,
+             data = wines,
+             method = "knn",
+             tuneGrid = data.frame(k = 30),
+             trControl = trainControl(method = "none"))
+fit
+```
+
+Now let's plot the classifications made by the model:
+
+```{r knnk20, echo=FALSE, cache=TRUE, fig.height=4, fig.width=4, fig.cap="Decision boundary of 30-NN classifier of the wines data.", fig.margin = TRUE}
+
+nbp <- 200
+PredA <- seq(min(wines$Alcohol), max(wines$Alcohol), length = nbp)
+PredB <- seq(min(wines$Malic), max(wines$Malic), length = nbp)
+Grid <- expand.grid(Alcohol = PredA, Malic = PredB)
+
+pred_reg <- predict(fit, newdata = Grid)
+
+ggplot() + 
+  geom_point(aes(Alcohol, Malic, 
+                 col = Class, 
+                 shape = Class), 
+             data = wines,
+             size = 2) + 
+  geom_raster(aes(Alcohol, Malic, fill = pred_reg), 
+              data = Grid,
+              alpha = 0.1) + 
+  geom_contour(mapping = aes(Alcohol, Malic, 
+                             z = as.numeric(pred_reg)), data = Grid,
+               col="black") + 
+   scale_color_manual(name = "Class",
+                      labels = c("1",'2',"3"),
+                      values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+   scale_shape_manual(name = "Class",
+                      labels = c("1","2","3"),
+                      values = c(15, 17, 19)) +
+   scale_fill_manual(name = "Prediction",
+                      labels = c("1",'2',"3"),
+                      values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+   theme_bw(base_size = 18) + 
+   theme(legend.position = "top") +
+   guides(color = guide_legend(override.aes = list(size = 5)))
+```
+
+The lines in the figure are called the decision boundaries of this classifier!
+
+Formally, we can think of the KNN process as estimating the conditional probability of Y given X, $P(Y | X)$. 
+
+Suppose that $Y$ has $J$ categorical classes. Denote the values $Y$ can take on as $1, 2, \ldots, J$.
+
+Suppose $S_K(x_0)$ denotes the indices of the $K$ points whose $X$ values are nearest to $x_0$. Then for a data point $x_0$, KNN estimates the conditional probability that the class label is $j$ given $X = x_0$ as
+$$
+\widehat P(Y = j | X = x_0) = \frac{1}{K}\sum_{i \in S_K(x_0)} I(Y_i = j), 
+$$
+for each $j = 1, \ldots, J$. Thus, for each of the $J$ classes, we compute the proportion of the $K$ neighbors belonging to that class. We classify $x_0$ to the class that has the highest estimated probability.
+
+Here we can see that the KNN classifier gives us a rule to allocate objects to classes, but **does not give us any discriminants**. 
+
+Now that we've seen an example, we need to understand how evaluation of a classifier differs from evaluation of a regression model.
+
+# Bayes classifier
+
+The motivation behind estimating the conditional probabilities $P(Y = j | X)$ is from minimizing test error rate. Similar to regression, given a new independent test point $X$ with label $Y$, we can define expected prediction error for classification as
+$$
+E[I(Y \neq \widehat Y)],
+$$
+where $\widehat Y$ is the prediction from a classifier. Notice that $Y$ depends on $X$, and $\widehat Y$ depends on both $X$ and the training set. We want a classifier that minimizes the expected prediction error. It can be shown that the optimal classifier is the one that predicts a new observation $x_0$ by $\widehat Y$ such that 
+
+>> $\widehat Y = j$ if $P(Y = j | X = x_0)$ is maximum among $P(Y = 1 | X = x_0), \ldots, P(Y = J | X = x_0).$
+
+\noindent The optimal classifier is called the *Bayes classifier*.
+
+**Bayes Classifier:** Classifies an observation to the most probable class using the discrete conditional distribution of $P(Y | X)$
+
+**Bayes error rate:** misclassification error rate of the Bayes classifier. For a given $x_0$, Bayes error is $1 - max_\ell P(Y = \ell | X = x_0)$. The overall Bayes error rate is $1 - E[max_\ell P(Y = \ell | X)]$.
+
+Every classification problem has these two (unknown) items. 
+
+The Bayes rate is analogous to the irreducible error that we encountered in the regression setting.  Even if we knew everything about the relationships between our $X$'s and $Y$, we can't ever beat this error rate!
+
+Unfortunately, we can not directly use the Bayes classifier since we do not know the distribution of $Y|X$. Different classifiers use different estimators of such conditional distributions -- KNN uses proportion of points in the $K$ nearest neighbors belonging to each class as the estimator.
+
+Thus, it is natural to try to estimate/model the conditional probabilities $P(Y = k | X)$ using the data, and use them to create classifiers. 
+
+There are two major approaches for obtaining estimates of $P(Y = k | X)$:
+
++ *Directly estimating/modeling $P(Y = k | X)$*
+
+    - An example of direct estimation of $P(Y = k | X)$ is the KNN classification technique, where the conditional probability is estimated by taking a majority vote from $K$ nearest point to $x_0$. 
+    - Another example is *logistic* regression model, where the conditional probability is modeled using transformations of linear combinations of $X$ of the form:
+    $$
+    P(Y = k | X) = \frac{e^{\beta_0 + X_1\beta_1 + \ldots + X_p\beta_p}}{1 + e^{\beta_0 + X_1\beta_1 + \ldots + X_p\beta_p}}.
+    $$
+      Therefore it is sufficient to estimate the coefficients $\beta_0,\beta_1, \ldots, \beta_p$ to obtain estimates of $P(Y = k | X)$.
+
++ *Generative models* where we model the distribution of $X | Y = k$ for $k = 1, \ldots, K$ and use **Bayes Theorem** to obtain a classifier
+
+## kNN and the Bayes Classifier
+
+As with KNN regression, the hyperparameter $K$ determines how flexible the KNN method is. However, the idea of flexibility is subtle in this case. The boundary that separates the regions of the predictor space is effectively the classification rule for that classifier. The *decision boundary*, is the boundary of the regions.
+
+```{r, echo=FALSE, cache=TRUE, fig.height=4, fig.width=4, fig.cap="Decision boundary of 30-NN classifier of the wines data.", fig.margin = TRUE}
+ggplot() + 
+  geom_point(aes(Alcohol, Malic, 
+                 col = Class, 
+                 shape = Class), 
+             data = wines,
+             size = 2) + 
+  geom_raster(aes(Alcohol, Malic, fill = pred_reg), 
+              data = Grid,
+              alpha = 0.1) + 
+  geom_contour(mapping = aes(Alcohol, Malic, 
+                             z = as.numeric(pred_reg)), data = Grid,
+               col="black") + 
+   scale_color_manual(name = "Class",
+                      labels = c("1",'2',"3"),
+                      values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+   scale_shape_manual(name = "Class",
+                      labels = c("1","2","3"),
+                      values = c(15, 17, 19)) +
+   scale_fill_manual(name = "Prediction",
+                      labels = c("1",'2',"3"),
+                      values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+   theme_bw(base_size = 18) + 
+   theme(legend.position = "top") +
+   guides(color = guide_legend(override.aes = list(size = 5)))
+```
+
+
+How would the decision boundary look like for the Bayes classifier? For a two class problem, the Bayes classifier assigns the most probable class to a new data point. Thus for a new $x_0$, it will be assigned to class 1 if $P(Y = 1 | X = x_0) > P(Y = 2 | X = x_0)$ and assigned to class 2 otherwise. Equivalently, $x_0$ will be assigned to class 1 if $P(Y = 1 | X = x_0) > 0.5$. Thus the decision boundary of the Bayes classifier is the set of all $x$ such that $P(Y = 1 | X = x) = 0.5$.
+
+The plots below are taken from the book and show the KNN decision boundary and the Bayes classifier decision boundary on some simulated data (hence the ability to know the Bayes classifier!).
+
+```{r knnthree, echo=FALSE, fig.fullwidth = FALSE, fig.cap="Impact of K on decision boundaries of KNN classifiers. The Bayes dicision boundary is shown using purple dashed line. Image adapted from *Introduction to Statistical Learning*.", out.height="40%"}
+
+knitr::include_graphics(c("img/2_16.png"))
+
+```
+
+The value of $K$ in a KNN classifier determines how smooth or rough the decision boundary is. For a small value of $K$ (in this example,  $K=1$), the boundary is extremely rough. Although it follows the Bayes boundary closely, it is overly flexible (uses local features) and tries to discover patterns that do not conform to the Bayes boundary. This is an example of overfitting a classification problem.  
+
+In contrast, for a large value of $K$ (such as $K=100$), the decision boundary is much smoother but does not capture the shape of the Bayes boundary. (Again we see the bias-variance trade-off here, even though we are in the classification setting.) Large values of $K$ result in a non-flexible (uses global features but averages over local ones) classifier that perhaps captures the overall trend of the Bayes boundary, but misses the details. In fact, as $K$ grows, the decision boundary will get closer to a straight line. 
+
+Therefore, we need to tune $K$ so that the "optimal" $K$ will result in a decision boundary that is not too rough but also sufficiently captures the shape of the Bayes boundary.  The figure below shows one such example with $K=10$. In practice, we might choose $K$ by minimizing the test error rate or equivalently maximizing test accuracy. 
+
+```{r knnk10, echo=FALSE, fig.fullwidth = FALSE, fig.margin = TRUE, fig.cap="Decision boundary for $K=10$ using simulated data presented in the previous figure. The Bayes decision boundary is shown using purple dashed line. Image adapted from *Introduction to Statistical Learning*.", out.height="40%"}
+
+knitr::include_graphics(c("img/2_15.png"))
+
+```
+
+
+# Example: Building a KNN Classifier
+
+Consider the `wines` data set available at the [UCI machine learning repository](https://archive.ics.uci.edu/ml/datasets/wine). The dataset contains quantities of 13 constituents found in each of the three types (cultivars) of wines.
+
+```{r, message = FALSE, warning = FALSE}
+# Read the data
+wines <- read_table("data/Wines.txt")
+wines$Class <- as.factor(wines$Class)
+```
+
+A snapshot of the full data is shown below. 
+
+```{r}
+print(wines, n = 4)
+```
+
+The goal is to find a *rule* that can assign a specimen of wine to its cultivar. In other words, we want to predict the classes (cultivar) based on the predictors (13 variables).  
+
+```{r}
+# classes of wine
+table(wines$Class)
+```
+
+We can tune $K$ as we did in the regression setting. The code below searches odd values of $K$ (to avoid ties) for the optimal value with largest test accuracy. We use 50 times repeated 5-fold CV for tuning.
+
+```{r knnloocv, cache=TRUE, fig.height=4, fig.width=4, fig.cap="Results for repeated 5-fold CV tuning.", fig.margin = TRUE}
+set.seed(1001)
+## K values for tuning
+kgrid <- expand.grid(k = seq(1,51, by=2))
+## 5-fold CV, repeated, tuning
+tr <- trainControl(method = "repeatedcv",
+                   number = 5,
+                   repeats = 50)
+## Train the classifier
+fit <- train(Class ~ Alcohol + Malic,
+             data = wines,
+             method = "knn",
+             tuneGrid = kgrid,
+             trControl = tr)
+plot(fit)
+fit$bestTune$k
+```
+
+```{r}
+## Refit the model with best K
+tuned_knn_class <- train(Class ~ Alcohol + Malic,
+             data = wines,
+             method = "knn",
+             tuneGrid = expand.grid(k = fit$bestTune$k),
+             trControl = trainControl(method = "none"))
+```
+
+
+To estimate the prediction error of the tuned model, we can use any of the methods discussed previously. For example, we could just look at prediction on a test set or we could use the bootstrap as the 'outer' loop. 
+
+Consider two new unlabeled points. The first with `Alcohol` = 13 and `Malic` = 3, and the second with `Alcohol` = 12.78 and `Malic` = 2.
+
+```{r again, echo=FALSE, cache=TRUE, fig.height=5, fig.width=5, fig.cap="Decision boundary of 21-NN classifier of the wines data with two new unlabeled points.", fig.margin = TRUE}
+new_dat <- data.frame(Alcohol = c(13, 12.78),
+                   Malic = c(3,2))
+
+nbp <- 200;
+PredA <- seq(min(wines$Alcohol), max(wines$Alcohol), length = nbp)
+PredB <- seq(min(wines$Malic), max(wines$Malic), length = nbp)
+Grid <- expand.grid(Alcohol = PredA, Malic = PredB)
+
+pred_reg <- predict(tuned_knn_class, newdata = Grid)
+
+ggplot() + 
+  geom_point(aes(Alcohol, Malic, 
+                 col = Class, 
+                 shape = Class), 
+             data = wines,
+             size = 2) + 
+  geom_point(aes(Alcohol, Malic), 
+             data = new_dat,
+             size = 5, shape = 5) + 
+  geom_text(aes(Alcohol, Malic, label = rownames(new_dat)),
+            data = new_dat, size = 5) + 
+  geom_raster(aes(Alcohol, Malic, fill = pred_reg), 
+              data = Grid,
+              alpha = 0.2) + 
+  scale_color_manual(name = "Class",
+                     labels = c(1,2,3),
+                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+  scale_shape_manual(name = "Class",
+                     labels = c(1,2,3),
+                     values = c(15, 17, 19)) +
+  scale_fill_manual(name = "Prediction",
+                     labels = c(1,2,3),
+                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+  theme_bw(base_size = 18) + 
+  theme(legend.position = "top") +
+  guides(color = guide_legend(override.aes = list(size = 5)))
+
+```
+
+We can use the model to predict a class or a class probability with predict.
+
+The default is to give a predicted class.
+
+```{r}
+pred_class <- predict(tuned_knn_class,
+                      newdata = new_dat)
+pred_class
+```
+
+We can specify `type = "prob"` to do obtain predicted class probabilities.
+
+```{r}
+pred_prob <- predict(tuned_knn_class,
+                     newdata = new_dat,
+                     type = "prob")
+pred_prob
+```
+
+\noindent Note that for the first point, has about an $80\%$ probability associated with class `3`, and hence we are quite confident about out final class prediction of `3`. However, for the second point, probabilities associated with classes `1` and `2` are quite similar ($38\%$ vs $43\%$). So while we are quite confident about the predicted class of the first data point, there is some uncertainlty about the second prediction.  
+
+
+# Evaluating a Classifier
+
+## Basic Measures
+
+To evaluate the performance of the classifier, instead of test MSE, we can use *classification accuracy* or *misclassification error rate*. In the definitions below, $|S|$ denotes the *cardinality* of $S$, that is, the number of observations in $S$. 
+
+**Accuracy:** the proportion of points correctly classified to their respective classes. With a set of observations $S$, 
+
+$$
+\mbox{Accuracy} = \frac{\mbox{Total correct classification}}{\mbox{
+Total number of points}} = \frac{1}{|S|}\sum_{i \in S} I(Y_i = \widehat Y_i).
+$$
+We can compute *training* and *test accuracy* depending on whether $S$ is the training or testing set.
+
+**Misclassification error rate:** The proportion of points wrongly classified.
+
+$$
+\mbox{Error rate} = \frac{\mbox{Total incorrect classification}}{\mbox{Total number of points}} = \frac{1}{|S|}\sum_{i \in S} I(Y_i \neq \widehat Y_i).
+$$
+
+As before, we can compute *training* and *test error rate*.
+
+
+As with regression setting, here too we aim to maximize *test* accuracy or minimize test error. Minimizing training error is undesirable since it will lead to overfitting the data. 
+
+- For example, consider $K=1$, a 1-NN classifier. Since each $X_i$ is the closest neighbor to itself, the training error would be zero. 
+- The figure below shows training and test error rates from a simulation study (figure adapted from the textbook *Introduction to Statistical Learning*). 
+
+
+```{r knncerr, echo=FALSE, fig.margin = TRUE, fig.cap="Training and test error rates for a KNN classifier based on 200 training and 5000 test observations. The error rates are plotted against 1/K. The black dashed line shows the Bayes error rate. Figure adapted from Introduction to Statistical Learning.", fig.height = 4, fig.width=4}
+knitr::include_graphics("img/2_17.png")
+
+```
+
+
+## Other Metrics and the No Information Rate
+
+There are many other metrics to evaluate a classification technique other than error rate and accuracy. The main criticism of these two criteria are that they provide a global measure, but do not provide much insight into how individual classes are correctly identified. For example, $80\%$ accuracy of a classifier does *not* guarantee that it will correctly classify items from *both* the classes correctly $80\%$ of the time. Such a criticism is even more relevant when there is class imbalance in the data: say we have a situation where $80\%$ of observations belong to class A, and rest in class B. If we employ a classifier that classifies *every point into class A* regardless of their predictor values. This classifier will have $80\%$ accuracy! This is called the *no information rate (NIR)* of the classification problem.
+
+**No information rate (NIR)**
+The percentage of the largest class in the training set.
+
+\noindent The NIR represents the accuracy that can be obtained without using any model. Thus for any classifier, the NIR should be the minimum accuracy it should have. Any classifier having accuracy better than NIR might be considered viable. 
+
+Most other measures to evaluate a classifier can be obtained by cross-tabulating the true and predicted classes of a test set. Such a table is called *confusion matrix*. An example is shown in the table below.
+
+```{r}
+#split the original data
+index <- createDataPartition(wines$Class, p = 0.7, list = FALSE)
+#get the train and test sets
+train <- wines[index,]
+test <- wines[-index,]
+
+## K values for tuning
+kgrid <- expand.grid(k = seq(1,51, by=2))
+## 5-fold CV tuning
+tr <- trainControl(method = "cv",
+                   number = 5)
+## Train the classifier
+fit <- train(Class ~ Alcohol + Malic,
+             data = train,
+             method = "knn",
+             tuneGrid = kgrid,
+             trControl = tr)
+fit$bestTune$k
+## Refit the model with best K
+tuned_knn_class <- train(Class ~ Alcohol + Malic,
+             data = train,
+             method = "knn",
+             tuneGrid = expand.grid(k = fit$bestTune$k),
+             trControl = trainControl(method = "none"))
+#predict on the test set
+preds <- predict(tuned_knn_class, test)
+```
+
+With `caret` the `confusionMatrix()` function can now be applied to the true labels in the test set and the predictions given by the model.
+
+```{r}
+confusionMatrix(test$Class, preds)
+```
+
+\noindent Some measures we might look at are as follows:
+
++ *sensitivity* (Also called "true positive rate" or "recall")$$\frac{\text{number of positive cases classified as positive}}{\text{Total number of positive samples}} = \frac{TP}{TP + FN}$$
+
++ *specificity* (Also called "true negative rate")$$\frac{\text{number of negative cases classified as negative}}{\text{Total number of negative samples}}  = \frac{TN}{TN + FP}$$
+
++ *Precision*$$\frac{\text{number of positive cases classified as positive}}{\text{Total number of predicted positive cases}}  = \frac{TP}{TP + FP}$$
+
+\noindent We can also examine: 
+
++ *Cohen's kappa*: measures the agreement of the classifier to the sample data taking into account any class imbalances, and how much agreement is by chance.  Values close to 1 are considered good. The R function to do so is `cohen.kappa()` in `psych` library.
+
++ *McNemar's test*: hypothesis test for agreement between the predictions from an classifier to the observed data using a Chi-squared test. The R function to do so is `mcnemar.test()`.
+
+For a multi-class problem, we can create these measures using a "one-vs-all" approach, that is, by comparing each class vs the remaining combined (class `1` vs not class `1`, and so on). 
+
+
+Often, we want a single measure of performance of the classifier rather than the multitude of measures shown above. There are many such options, such as *Youden’s $J$ Index*, 
+$$J = \mbox{Sensitivity} + \mbox{Specificity} - 1,$$
+which measures the proportions of correct predictions for both the positive and negative events.
+
+# Logistic Regression
+
+The logistic regression model arises from the desire to model the posterior probabilities of each of the classes as functions of the data vector $X$ without actually specifying any distribution of $X$.
+
+Usually, logistic regression models are used mostly as a tool for data analysis and inference, where the main goal is to understand the role of the predictors in explaining the outcome. 
+
+## Model
+
+For simplicity, we start with the case where we have two classes (1 and 2), and suppose for an item, we have covariate $X = (X_{i1}, \ldots, X_{ip})^T$.  We can model posterior probabilities of the 2 classes via linear combinations of $X$, such that the probabilities sum to one. We assume that $Y | X$ has a Bernoulli distribution, and model the posterior probabilities as follows: 
+$$
+P(Y = 1 | X) = \frac{exp(\beta_0 +  X_{i1}\beta_1 + \ldots + X_{ip}\beta_p)}{1 + exp(\beta_0 +  X_{i1}\beta_1 + \ldots + X_{ip}\beta_p)};
+$$
+$$
+P(Y = 2 | X) = 1 - P(Y = 1 | X) = \frac{1}{1 + exp(\beta_0 +  X_{i1}\beta_1 + \ldots + X_{ip}\beta_p)}.
+$$
+Here $\beta = (\beta_1, \ldots, \beta_p)^T$ is the vector of coefficients of the covariates. Another way to write the same model is using *log-odds*:^[Thus we are modeling the log-odds of class 1 vs 2 as a linear function of $X_i$.]
+$$
+log\left[\frac{P(Y = 1 | \X)}{P(Y = 2 | X)}\right] = \beta_0 +  X_{i1}\beta_1 + \ldots + X_{ip}\beta_p.
+$$
+The expression $\frac{P(Y = 1 | X)}{P(Y = 2 | X)}$ is called the *odds* of $Y$ being 1 vs $Y$ being 2. The parameters $\beta_0, \beta_1, \dots, \beta_p$ quantifies the impact of the covariates to the prediction of class labels. (Note that the logistic regression is not just a classifier; it is a more general regression model.) The group used in the denominator (class 2 in our formulation above) is called the *reference group*. The choice of reference group is arbitrary as the estimates of the posterior probabilities are same. 
+
+## Odds and log-odds
+Let us understand the concepts of *odds* and *log-odds* in more detail. Let us revisit `wines` data with $K=2$ classes (1 and 2) and only one covariate, $X = `Alcohol`$. The odds are defined as
+$$
+\frac{P(Y = 1 | X)}{P(Y = 2 | X)} = \frac{P(Y = 1 | X)}{1 - P(Y = 1 | X)}.
+$$
+Thus, if $P(Y = 1 | X) = 0.1$ leads to odds $0.1/0.9 = 1/9$. In contrast  $P(Y = 1 | X) = 0.9$ leads to odds $0.9/0.1 = 9$. Thus greater odds relate to higher posterior probability of class 1 (since class 2 is the reference class).  
+
+In terms of log-odds, we have the model
+$$
+log\left[\frac{P(Y = 1 | X)}{P(Y = 2 | X)}\right] = \beta_0 +  X_{i}\beta_1.
+$$
+This model implies that with one unit increase in $X$ (Alcohol), the log-odds will change by $\beta_1$ units. This change in log-odds does *not* depend on the value of $X$, that is, whether $X$ goes from 10  to 11, or from 13 to 14, the change in log-odds stays the same, $\beta_1$. Equivalently, due to one unit increase in $X$, the *odds* gets multiplied by $e^{\beta_1}$. Specifically,
+$$
+\frac{P(Y = 1 | X = x+1)}{P(Y = 2 | X = x+1)} = e^{\beta_1}\frac{P(Y = 1 | X = x)}{P(Y = 2 | X = x)}.
+$$
+
+In terms of probabilities $P(Y = 1 | X)$, we note that the relation between the posterior probabilities and odds (and $X$) is *not* linear:
+$$
+P(Y = 1 | X) = \frac{odds}{1 + odds}.
+$$
+Thus one unit increase in $X$, or equivalently $\beta_1$ unit change in odds, does not result in a constant amount of change in $P(Y = 1 | X)$. The actual change in $P(Y = 1 | X)$ depends on both the starting value of $X$ as well as the change in $X$. For example, with $\beta_0 = 40$ and $\beta_1 = -3$, Figure \ref{fig:logitdemo} shows the plots of log-odds, odds, and $P(Y = 1 | X)$ over a grid of values of $X$.
+
+```{r logitdemo, echo=FALSE, fig.margin = FALSE, fig.width=8, fig.cap="Plots of plots of log-odds, odds, and $P(Y = 1 | X)$ over a grid of values of $X$.", fig.height=3}
+x <- seq(11, 16, len = 101)
+logodds <- 40 - 3*x
+odds <- exp(logodds)
+px <- odds/(1 + odds)
+par(mfrow = c(1,3))
+plot(x, logodds, type = "b", pch=19, ylab = "log-odds")
+plot(x, odds, type = "b", pch=19)
+plot(x, px, type = "b", pch=19, ylab = "P(Y=1|x)")
+```
+
+## Classification
+
+The model parameters can be estimated directly by maximum likelihood, solution is obtained numerically by iteratively reweighted least squares.^[Essentially using a Newton–Raphson algorithm; see for example Hastie, Tibshirani and Friedman (2009), The Elements of Statistical Learning.] It follows that the posterior probabilities can be estimated by
+$$
+\widehat P(Y = 1 | \X = \x) = \frac{exp(\widehat\beta_0 + x_1\widehat\beta_1 + \ldots x_p\widehat\beta_p)}{1 + exp(\widehat\beta_0 + x_1\widehat\beta_1 + \ldots x_p\widehat\beta_p)};
+$$
+$$
+\widehat P(Y = 2 | \X = \x) = 1 - \widehat P(Y = 1 | \x),
+$$
+where $\widehat\beta_j$'s are the estimates of the regression coefficients. We can predict the class for a item with covariate $\x$ using the estimated probability that $Y=1$ as follows:
+  
+> The item is classified in group $1$ if $\widehat P(Y=1|\x) \geq \widehat P(Y=2|\x)$, otherwise in group $2$.
+
+
+Logistic regression can be performed using the `glm()` function in base R. For demonstration purposes, let us consider only two classes (1 and 2), and two covariates `Alcohol` and `Proline`. We create the small wines data -- the only change is that now we explicitly change `Class` to a factor.
+```{r}
+# wine data for classes 1 and 2
+wine_new <- wines[wines$Class == 1 | wines$Class == 2, ]
+wine_new$Class <- as.factor(wine_new$Class)
+wine_new$Class <- relevel(wine_new$Class, ref = 2)
+```
+\noindent Note that we called the function `relevel()` with the argument `"ref = 2"`. This is done to set class 2 as the reference group. Now we can perform logistic regression using the `glm()` function. 
+```{r}
+# Logistic regression
+wine_glm =  glm(Class ~ Proline + Alcohol, 
+               family = binomial(), 
+               data = wine_new)
+```
+\noindent The first part `Class ~ Proline + Alcohol` is specifying `Class` as response and `Proline` and `Alcohol` as covariates. The statement `family = binomial()` is used to perform logistic regression.
+
+
+The estimated coefficients are as follows.
+```{r}
+wine_coef <- wine_glm$coefficients
+wine_coef
+```
+
+```{r, echo=FALSE}
+cc <- wine_coef
+```
+
+We can interpret $\widehat\beta_0$ as the *log-odds* when both Proline and Alcohol levels are zero. Thus we have the corresponding odds of $`r exp(cc[1])`$. Keep in mind that in our dataset, zero values for Alcohol and Proline are not present, so such an interpretation is purely mechanical. 
+
+The estimated value of $\beta_1$ can be interpreted as the amount log-odds will *change* due to one unit *increase*  in `Proline` while *keeping the `Alcohol` level fixed*. Thus keeping  `Alcohol` level fixed, one unit increase in `Proline` level is associated with $`r cc[2]`$ unit change in log-odds. Equivalently, odds will change by a multiplicative factor of $`r exp(cc[2])`$ (in other words, increase by $`r round(100*(exp(cc[2]) - 1), 3)`$ percent). Similar interpretation can be given for $\widehat\beta_2$. 
+
+
+Suppose we have a new sample with `Proline = 600` and `Alcohol = 13`.  So here $x_1 = 600$ and $x_2 = 13$. We can compute the estimated posterior probabilities as
+$$
+\widehat P(Y = 1 | x = (600,13)) = \frac{e^{(`r cc[1]` + `r cc[2]`*600 + `r cc[3]`*13)}}{1 + e^{(`r cc[1]` + `r cc[2]`*600 + `r cc[3]`*13)}} = \frac{exp(`r cc[1] +  cc[2]*600 + cc[3]*13`)}{1 + exp(`r cc[1] +  cc[2]*600 + cc[3]*13`)} = `r exp( cc[1] +  cc[2]*600 + cc[3]*13)/(1 + exp(cc[1] +  cc[2]*600 + cc[3]*13))`,
+$$
+$$
+\widehat P(Y = 2 | \x = (600,13)) = 1 -  \widehat P(Y = 1 | x_1 = 600, x_2 = 13) = `r 1 - exp( cc[1] +  cc[2]*600 + cc[3]*13)/(1 + exp(cc[1] +  cc[2]*600 + cc[3]*13))`.
+$$
+Thus the new sample will be classified to class 2.
+
+In R, we can simply use the `predict()` function to compute the probabilities shown above. By default, `predict()` gives the probability of *non-reference class*, class 1 in our example.
+
+```{r}
+newx <- data.frame(Proline = 600,
+                   Alcohol = 13)
+predict(wine_glm, 
+        newdata = newx,
+        type = "response")
+```
+
+We can also view the estimated posterior probabilities of the training set using `predict()` or using the `$fitted.values` component of the fit. The probabilities for the *non-reference group* is computed by default. We have also included the prediction of the whole dataset. Figure \ref{fig:postprob} shows the posterior probabilities along with the true class labels.   
+```{r}
+# Training set estimation of P(Y = 1)
+post.prob.1 = wine_glm$fitted
+# Training set estimation of P(Y = 2)
+post.prob.2 = 1 - post.prob.1
+# Predicted groups
+Y.hat = as.factor(ifelse(post.prob.1>post.prob.2, 1, 2))
+Y.hat <- relevel(Y.hat, ref = 2)
+df <- data.frame("Class_1" = post.prob.1,
+            "Class_2" = post.prob.2,
+            "Predicted" = Y.hat,
+            "Observed" = wine_new$Class)
+head(df, 4)
+```
+
+\noindent As an example, for the first wine sample (1st row), $\hat P(Y = 1 | x) = 99.987\%$ and $\hat P(Y = 1 | x) = 0.013\%$. Thus this particular sample will be classified to group 1. Figure \ref{fig:lgdb} shows the decision boundary of the classifier, that is, all values of (`Alcohol`, `Proline`) that has the same posterior probability of being in class 1 or 2, or equivalently, odds of 1 and log-odds of 0. Formally, we have the boundary is given by all the solutions of the linear equation (the estimated formula of log-odds):
+$$
+`r cc[1]` + `r cc[2]`*Proline + `r cc[3]`*Alcohol = 0.
+$$
+
+```{r postprob, echo=FALSE, fig.cap="Esrimated posterior probabilities of class 1 along with the true class labels."}
+#plot(df, pch = c(17, 19), col = wines$Class)
+ggplot(df) + 
+  geom_point(aes(x = Class_1, 
+                 y = Observed,
+                 col = Predicted,
+                 pch = Predicted),
+             size = 3) + 
+  theme_bw(base_size = 18) + 
+  xlab("Estimated P(Y = 1 | X)") + 
+  theme(legend.position = "top")
+```
+
+
+
+```{r lgdb, echo=FALSE, fig.cap="Decision boundary of a 2-class logistic regression based classifier."}
+cc <- wine_coef
+newx <- expand.grid(Alcohol = seq(11, 15, len = 101),
+                    Proline = seq(270, 1700, len = 101))
+pp <- predict(wine_glm, newdata = newx, type = "response")
+ggplot() + 
+  geom_raster(aes(newx$Alcohol, 
+                  newx$Proline, 
+                  fill = pp))  + 
+  theme_bw(base_size = 18) + 
+  geom_contour(aes(newx$Alcohol, 
+                   newx$Proline,
+                   z = pp), lwd=1.2, bins=2, 
+               col = "white") +  
+  geom_point(aes(Alcohol, Proline,
+                 col = Class, pch = Class), size = 2,
+             data = wine_new) +
+  labs(fill = "P(Y = 1 | X)", 
+       x = "Alcohol",
+       y = "Proline") +
+  scale_fill_viridis_c(option = "B", guide = ) + 
+  theme(legend.position = "top") + 
+  geom_abline(slope = -cc[3]/cc[2], 
+              intercept = -cc[1]/cc[2],
+              col = "white")
+
+```
+
+We can use the function `errormatrix()` in the `klaR` package to obtain the training confusion matrix or, alternatively, we can also use the function `confusionMatrix()` in the `caret` package for a detailed output.]
+```{r}
+# Confusion matrix
+err <- klaR::errormatrix(true = wine_new$Class, 
+                         predicted = Y.hat, 
+                         relative = TRUE)
+round(err, 3)
+```
+\noindent Ideally, we should use cross-validation, training-testing sets to estimate the accuracy, as we have learned before.
+
+## Hypothesis testing and confidence intervals
+
+We can get a summary of the fit as follows.
+
+```{r}
+# testing each beta coefficient
+summary(wine_glm)
+```
+```{r, echo=FALSE, eval=FALSE}
+cat("Call:
+glm(formula = class ~ proline + alcohol, family = binomial(), 
+    data = datatwo)
+
+Deviance Residuals: 
+     Min        1Q    Median        3Q       Max  
+-2.19220  -0.03196  -0.00558   0.02786   1.57716  
+
+Coefficients:
+              Estimate Std. Error z value Pr(>|z|)   
+(Intercept) -69.027638  22.757675  -3.033  0.00242 **
+proline       0.013695   0.004362   3.140  0.00169 **
+alcohol       4.453109   1.592916   2.796  0.00518 **
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 179.11  on 129  degrees of freedom
+Residual deviance:  19.72  on 127  degrees of freedom
+AIC: 25.72
+
+Number of Fisher Scoring iterations: 9")
+```
+\noindent The summary of the fit produces $z$-tests for coefficient of each covariate^[This is actually an approximate (large sample) test.]; it seems both `alcohol` and `proline` are associated with the group labels. Formally, the test statistic is essentially same as in linear regression: suppose we want to test whether `Alcohol` (the second predictor with coefficient $\beta_2$) has any association with $Y$. Thus we test for $H_0:\beta_2 = 0$ vs. $H_1:\beta_2 \neq 0$. The test statistic is 
+$$
+z = \frac{\widehat\beta_2 - 0}{\widehat{SE}(\widehat\beta_2)}.
+$$
+
+```{r tpv, echo=FALSE, fig.margin = TRUE, fig.cap="Two-tailed p-value for a z-test.", fig.height=6, fig.width=6}
+
+curve(dnorm(x), from = -3.5, to = 3.5, lwd=2, ylab = "N(0,1) PDF")
+# shaded region
+left <- 1.8
+right <- 3.5
+x  <- c(left, seq(left, right, 0.01), right)
+y  <- c(0, dnorm(seq(left, right, 0.01)), 0)
+polygon(x,y, col="steelblue")
+
+left <- -3.5
+right <- -1.8
+x  <- c(left, seq(left, right, 0.01), right)
+y  <- c(0, dnorm(seq(left, right, 0.01)), 0)
+polygon(x,y, col="steelblue")
+``` 
+
+\noindent Using large sample theory it can be shown that $z$ approximately follows a $N(0,1)$ distribution. Thus we reject $H_0$ for large positive or large negative values of $z$. Equivalently, the p-value can be computed as
+$$
+p-value = 2*P(Z > |z|),
+$$
+where $Z$ denotes $N(0,1)$ random variable. Figure \ref{fig:tpv} shows the p-value of a two-sided $z$-test. 
+
+
+```{r, echo=FALSE}
+logss <- summary(wine_glm)
+se <- logss$coefficients[,2]
+int <- cc[2] + c(-1,1)*1.96*se[2]
+```
+We can produce large sample $100(1-\alpha)\%$ confidence intervals for $\beta_j$ as
+$$
+[\widehat\beta_j \pm z_{1 - \alpha/2} SE(\widehat\beta_j)],
+$$
+where $z_{1 - \alpha/2}$ is the $(1 - \alpha/2)$ quantile of the $N(0,1)$ distribution. For example, a $95\%$ confidence intervals for $\beta_1$ is
+$$
+[`r cc[2]` \pm 1.96*`r se[2]`] = [`r int[1]`, `r int[2]`].
+$$
+We can interpret this intervals as follows: with every unit increase in level of $X_1$ (`Proline` in our example), we can expect an *increase in log-odds* by an amount of `r int[1]` to `r int[2]`. Equivalently, every unit increase in level of $X_1$, *odds* will be changed by a factor of `r exp(int[1])` to `r exp(int[2])` (in other words, increase in odds will be between `r round(100*(exp(int[1])-1),3)` percent and `r  round(100*(exp(int[2])-1),3)` percent.)
+
+
+
+## Logistic regression with multiple classes
+
+We can extend logistic regression presented for two classes to the case of multiple classes; the regression method is called *Multinomial Logistic Regression*. Suppose we have $K$ classes, and we take the $K$-th class as the reference. The log-odds of classes vs the reference class $K$ are modeled as follows:
+$$
+log\left[\frac{P(Y = 1 | X_i)}{P(Y = K | X_i)}\right] = \beta_{10} + X_{i1}\beta_{11} + \ldots + X_{ip}\beta_{1p}.
+$$
+$$
+log\left[\frac{P(Y = 2 | X_i)}{P(Y = K | X_i)}\right] = \beta_{20} + X_{i1}\beta_{21} + \ldots + X_{ip}\beta_{2p}.
+$$
+$$
+\vdots
+$$
+$$
+log\left[\frac{P(Y = K-1 | X_i)}{P(Y = K | X_i)}\right] = \beta_{K-1,0} + X_{i1}\beta_{K-1,1} + \ldots + X_{ip}\beta_{K-1,p}.
+$$
+Some algebra shows that the corresponding posterior probabilities are as follows:
+$$
+P(Y = k | X_i) = \frac{exp(\beta_{k0} + X_{i1}\beta_{k1} + \ldots + X_{ip}\beta_{kp})}{1 + \sum_{\ell = 1}^{K-1}exp(\beta_{\ell 0} + X_{i1}\beta_{\ell 1} + \ldots + X_{ip}\beta_{\ell p})}, \;\;\; k = 1, 2, \ldots, K-1,
+$$
+$$
+P(Y = K | X_i) = \frac{1}{1 + \sum_{\ell=1}^{K-1}exp(\beta_{\ell 0} + X_{i1}\beta_{\ell 1} + \ldots + X_{ip}\beta_{\ell p})}.
+$$
+
+
+
+\noindent We can similarly build a classification rule as follows.
+
+> An item with covariate $x$ is predicted to be in class $k$ if the estimated probability $\hat P(Y = k | x)$ is larger than the other posterior probabilities.
+
+
+We can use the `multinom()` function in the `nnet` library to perform multinomial logistic regression. Let us consider the wine data with all the three classes.
+```{r}
+# Convert Class in wines data to a fcator
+# and relevel to make 3 as reference
+wines$Class <- as.factor(wines$Class)
+wines$Class <- relevel(wines$Class, ref=3)
+# multinomial logistic regression
+multilogit <- multinom(Class ~ Proline + Alcohol, 
+                       data = wines, 
+                       maxit = 200, trace=FALSE)
+# summary
+summary(multilogit)
+```
+\noindent The option "trace = FALSE" in `multinom()` function suppresses the printing of convergence steps. The option "maxit = 200" sets the upper bound of the number of iterations to be performed to find the solutions.
+
+The estimated posterior probabilities are as follows.
+```{r}
+# estimated posterior probabilities
+probs <- multilogit$fitted.values
+head(probs)
+```
+
+
+```{r trig, fig.width=6, fig.height=6, fig.margin=TRUE, fig.cap="Estimated posterior probailities for the wine data using multinomial logistic regression.", echo=FALSE}
+# Plot the group probability
+plot(probs[, 2], probs[, 3], col = wines[ , 1], 
+ylim = c(0,1), xlim = c(0,1),
+pch = 16, cex = 1.25,
+xlab = "Estimated probability of Y=2",
+ylab = "Estimated probability of Y=3",
+main = "Probability of group membership")
+legend(0.7, 1, legend = c("1", "2", "3 (ref)"), col = 1:3, pch=19, cex=1, title = "True Classes")
+lines(c(0,0), c(1,0), lwd=2, col="grey", lty=2)
+lines(c(0,1), c(0,0), lwd=2, col="grey", lty=2)
+lines(c(0,1), c(1,0), lwd=2, col="grey", lty=2)
+```
+
+
+\noindent Each row shows the estimated probability of group membership for the corresponding wine sample. For example, the first wine sample (first row), has a 99.82% probability of being in group 1.  We can also visualize the posterior probabilities as shown in Figure \ref{fig:trig}. 
+
+We can also hypothesis testing for each $\beta_{kj}$ using the standard errors reported in the summary output.
+
+```{r}
+# Extract the coefficients and se
+mlogit_sum <- summary(multilogit)
+coef <- mlogit_sum$coefficients
+se <- mlogit_sum$standard.errors
+# z-statistics
+z <- coef/se
+z
+# p-value
+pv <- 2*pnorm(abs(z), lower.tail = FALSE)
+pv
+```
+
+\noindent We see for both classes 1 and 2, the two predictor variables are significant at any reasonable test level. 
+
+```{r, echo=FALSE, eval=FALSE}
+newx <- expand.grid(Alcohol = seq(11, 15, len = 101),
+                    Proline = seq(270, 1700, len = 101))
+pp <- predict(multilogit, newdata = newx, type = "probs")
+ggplot() + 
+  geom_raster(aes(newx$Alcohol, 
+                  newx$Proline, 
+                  fill = pp[,2]  )) +
+  scale_fill_viridis_c(option = "D") + 
+  theme_bw(base_size = 18) + 
+  geom_contour(aes(newx$Alcohol, 
+                   newx$Proline,
+                   z = pp[,1]), lwd=1.2, bins=2, col = "red") + 
+  geom_contour(aes(newx$Alcohol, 
+                   newx$Proline,
+                   z = pp[,2]), lwd=1.2, bins=2, col = "red") + 
+  geom_contour(aes(newx$Alcohol, 
+                   newx$Proline,
+                   z = pp[,3]), lwd=1.2, bins=2, col = "red") + 
+  geom_point(aes(Alcohol, Proline, col = Class), data = wines)
+
+```
+
+
+## Issues to consider
+
+There are some situations where logistic regression might not perform well. One such situation is *complete (or quasi-complete) separation* of the data.
+
+This situation happens when the outcome variable separates a predictor completely. This leads to perfect prediction of the outcome by the predictor. Consider the following data set with binary response $Y$ and two predictors $X_1$ and $X_2$. Figure \ref{fig:sep} shows relationship between $Y$ and the two predictors. In such a case, logistic regression may produce unreasonable over-inflated estimates of regression coefficients. 
+
+```{r sep, echo=FALSE, fig.cap="Simulated data set. The response separates $X_1$ completely, but not $X_2$."}
+set.seed(1001)
+x1 <- rnorm(200)
+x2 <- rnorm(200)
+y <- as.factor((x1 < 0) + 1)
+ggplot() + 
+  geom_point(aes(x1, x2, col = y, pch = y), size = 2) + 
+  theme_bw(base_size = 18) +
+  geom_vline(xintercept = 0, lty=2)
+```
+
+```{r}
+glm(y ~ x1 + x2, family = binomial())
+```
+
+In general, if there is a linear combination $Z = aX_1 + bX_2$ that is completely separated by $Y$, logistic regression will fail to produce reasonable results. Figure \ref{fig:septwo} shows one such example where the data is completely separated by the line $X_1 + X_2 = 0$. 
+
+
+```{r septwo, echo=FALSE, fig.cap="Simulated data set. The response separates the data completely -- the boundary (dashed line) is $X_1 + X_2 = 0$. Negative values of $X_1 + X_2$ corresponds to $Y=2$, and positive values corresponds to $Y = 1$."}
+set.seed(1001)
+x1 <- rnorm(200)
+x2 <- rnorm(200)
+y <- as.factor((x1 + x2 < 0) + 1)
+ggplot() + 
+  geom_point(aes(x1, x2, col = y, pch = y), size = 2) + 
+  theme_bw(base_size = 18) +
+  geom_abline(intercept = 0, slope=-1, lty=2)
+```
+
+```{r}
+glm(y ~ x1 + x2, family = binomial())
+```
+
+
+Although the examples above shows complete separation using continuous predictors, it is more like to happen when using categorical predictors coded by dummy variables. Small sample size might contribute to this problem as well.  In such situations, applying other classification methods (e.g., LDA) is preferred. 
+
+Since logistic regression deals with binary outcome, often it requires more sample size that linear regression. Multinomial logit regression requires even more sample size than binary logistic  regression due to the fact that it estimates parameters for multiple classes. 
+
+In presence of categorical predictor, it might happen that there are some combination of predictor and response values that are not present in the data. In such a case, logistic fit may become unstable, or might even fail to converge. 
+
+
+
+As a practical example of perfect separability, consider the wines data with two classes, "1" and "2", but with all 13 predictors. Note that glm did not converge, and produces extremely inflated standard errors. 
+
+```{r}
+wines <- read.table("data/Wines.txt", header = TRUE)
+wines_all <- glm(as.factor(Class) ~ ., 
+                 data = wines[1:130,], 
+                 family = binomial())
+summary(wines_all)
+```
+
+```{r, echo=FALSE, fig.cap="Example of quasi-separable wines data.", eval=FALSE}
+ggplot(wines[1:130,]) + 
+  geom_point(aes(Color, Proline, 
+                 col = as.factor(Class),
+                 pch = as.factor(Class)), size = 2) + 
+  theme_bw(base_size = 18) + 
+  labs(col = "Class", pch = "Class")
+```
+
+```{r, echo=FALSE, eval=FALSE}
+df <- data.frame(x = c(rep(0, 50), 
+                       rep(1, 50), 
+                       rep(2, 50)),
+                 y = c(runif(50)<0.5, 
+                       rep(0, 50), 
+                       runif(50)<0.5))
+```
+
+```{r, echo=FALSE, eval=FALSE}
+table(df)
+glm(y ~ x, family = binomial())
+```
+
+
+# High-Dimensional Problems
+
+When the number of predictors $p$ is larger than (or close to) the sample size $n$, the methods described in this section suffer from numerical instability or simply can not be applied to the data.^[Recall same issues in Linear Regression. ]   We can apply similar strategies discussed for linear regression here as well: regularization/shrinkage and dimension reduction methods. Some classifier such as naive Bayes are more appropriate in hig-dimensional data than others. 
+
+For example, we can extend LDA for high-dimensional data by assuming a *diagonal* covariance matrix (i.e., assuming features are independent in each class). This method is called *Diagonal Linear Discriminant Analysis*. Similar approach can be taken for QDA as well resulting in *Diagonal Quadratic Discriminant Analysis*. Regularized versions of LDA such as *nearest shrunken centroids (NSC)*, *Regularized discriminant analysis (RDA)*, and many other methods are also available in literature. R packages such as `sparsediscrim`, `HDclassif`, `HiDimDA` among others have various classifiers for high-dimensional data. 
+
+
+Like linear regression, we can develop ridge, lasso and elastic net methods for logistic regression as well. All these methods are available in  `glmnet()` package. As before, these methods shrink the regression coefficients towards zero, can be used in high-dimensional setting. We show the lasso based logistic regression fit of the two-class wines data (class 1 and 2) with the penalty parameter $\lambda$ chosen by CV below (`glmnet()` automatically scales the predictors before estimating the regression coefficients, and then outputs the coefficients in the original scale.)
+
+```{r, warning=FALSE, message=FALSE}
+set.seed(1102)
+# CV to choose lambda
+logit_cv <- cv.glmnet(x = as.matrix(wine_new[,-1]), 
+             y = wine_new$Class,
+             family = binomial(),
+             alpha = 1)
+```
+
+```{r, echo=FALSE, fig.cap="CV results for logistic regression of wines data with lasso penalty."}
+plot(logit_cv)
+```
+
+```{r}
+# Final fit with lambda chosen by 1-SE rule
+wine_lasso <- glmnet(x = as.matrix(wine_new[,-1]), 
+             y = wine_new$Class,
+             family = binomial(),
+             alpha = 1,
+             lambda = logit_cv$lambda.1se)
+```
+
+
+```{r}
+# Estimated coefs
+coef(wine_lasso)
+```
+
+
+Dimension reduction method like PCA can still be applied to the predictors before building classifiers. PCA often is useful in providing better visualization of the data. For example, the full wines data has 13 predictors, which are hard to visualize in a plot. Let us perform PCA and plot the first few PCs along with class labels.
+
+```{r}
+# wine data PCA
+wine_pca <- prcomp(wines[, -1], scale. = TRUE)
+wine_score <- wine_pca$x
+```
+
+
+
+```{r winepclda, echo=FALSE, fig.cap="LDA based classification of wines data using first two PCs.", fig.height=6}
+df <- data.frame(wine_score, Class = as.factor(wines$Class))
+# ggplot(df) + 
+#   geom_point(aes(PC1, PC2, 
+#                  col = Class,
+#                  pch = Class),
+#              size = 2) + 
+#   theme_bw(base_size = 18)
+# 
+# ggplot(df) + 
+#   geom_point(aes(PC1, PC3, 
+#                  col = Class,
+#                  pch = Class),
+#              size = 2) + 
+#   theme_bw(base_size = 18)
+# 
+# ggplot(df) + 
+#   geom_point(aes(PC2, PC3, 
+#                  col = Class,
+#                  pch = Class),
+#              size = 2) + 
+#   theme_bw(base_size = 18)
+
+cl <- c("#990000", "darkgreen", "orange")
+pc <- c(19, 21, 15)
+drawparti(df$Class, 
+          df$PC1, 
+          df$PC2, 
+          method = "lda", 
+          prec = 100, 
+          col.mean = cl, 
+          gs = rep(pc, table(wines$Class)), 
+          imageplot = FALSE, 
+          lwd=2, 
+          col.contour="black", 
+          xlab = "PC1", 
+          ylab = "PC2", 
+          print.err = 1, 
+          cex.mean = 2)
+legend(-4,-2, legend = 1:3, pch = pc, title = "Class")
+
+```
+
+\noindent Figure \ref{fig:winepclda} shows results from LDA using only the first two PCs as predictors. We can see that PC1 and PC2 almost completely separate the three classes.  Thus we have reduced dimension from 13 to two. Keep in mid that PCA is an unsupervised technique, and such a nice classification performance may not always happen. Also, even though PC1 and PC2  lead to excellent classification, together they only explain $55\%$ variation of the data. The opposite can be true as well -- the first two PCs  of some data might explain a large amount of variation but fail to produce good classification results. 
+
+```{r}
+summary(wine_pca)
+```
+

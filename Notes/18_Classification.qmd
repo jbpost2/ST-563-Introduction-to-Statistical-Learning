@@ -1,0 +1,580 @@
+---
+title: "Classification Tasks"
+author: "Arnab Maity - Modified by Justin Post"
+always_allow_html: yes
+format: docx
+include-in-header: 
+      - header.tex
+editor_options: 
+  chunk_output_type: console
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, message = FALSE, warning = FALSE}
+library(MASS)
+library(klaR)
+library(tidyverse)
+library(caret)
+library(rsample)
+library(ISLR2)
+library(knitr)
+library(AppliedPredictiveModeling)
+library(kableExtra)
+library(nnet)
+library(glmnet)
+```
+
+
+```{r  include=FALSE, message=FALSE}
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, 
+                      cache.extra = packageVersion('tufte'),
+                      kable.force.latex = TRUE,
+                      fig.margin = TRUE, 
+                      fig.height = 5, 
+                      fig.width = 6)
+options(htmltools.dir.version = FALSE)
+```
+
+\pagebreak
+
+# Classification Tasks
+
+The problems of separating two or more groups/classes, and allocating new objects in previously defined classes are called classification and discrimination.
+
++ **Classification:** 
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
++ **Discrimination:** 
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+\noindent A classification rule is often based on the features that separate the groups, so the two goals often (but not always) overlap. 
+
+## Classification Example
+
+To give some context, let's consider a data set and the familiar model KNN model used as a classifier.
+
+Consider the `wines` data set available at the [UCI machine learning repository](https://archive.ics.uci.edu/ml/datasets/wine). The dataset contains
+
+- quantities of 13 constituents found in each of the three types (cultivars) of wines
+- response variable is `Class` (`1`, `2`, or `3`)
+
+&nbsp;  
+&nbsp;  
+
+```{r, message = FALSE, warning = FALSE}
+# Read the data
+wines <- read_table("data/Wines.txt")
+#convert our response to a factor
+wines$Class <- as.factor(wines$Class)
+```
+
+A snapshot of the full data is shown below. 
+
+```{r}
+#frequency of each class of wine
+table(wines$Class)
+```
+
+Goal:
+
+
+Here we will only consider two predictor variables: `Alcohol` and `Malic` but the techniques we discuss apply to any number of predictors.
+
+The figure below shows the three classes on a scatterplot of `Alcohol` vs. `Malic`.  
+
+```{r winetwo, fig.width=4, fig.height=4, fig.cap="Scatterplot of Alcohol vs. Malic in the wine data. The color and shapes represent the different cultivars of wine (Class).", fig.margin=T, echo=FALSE}
+# pairs plot
+#colors <- c("darkgreen", "darkorange", "#990000")[wines$Class]
+#plot(wines$Alcohol, wines$Proline, pch = 16, cex = .5, col = colors, #xaxt = "n", yaxt = "n", xlab = "Alcohol", ylab = "Proline")
+
+ggplot(wines) + 
+  geom_point(aes(Alcohol, Malic, 
+                 col=as.factor(Class),
+                 shape=as.factor(Class)),
+             size = 3) + 
+  scale_color_manual(name = "Class",
+                     labels = c(1,2,3),
+                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+  scale_shape_manual(name = "Class",
+                     labels = c(1,2,3),
+                     values = c(15, 17, 19)) +
+  theme_bw(base_size = 18) + 
+  theme(legend.position = "top")
+```
+
+### $K$-Nearest Neighbors 
+
+Suppose we have training data $(Y_i, X_i)$ for $i=1,\ldots,n$, where $Y_i$ is categorical variable denoting class label of $X_i$. For a given predictor $x_0$, KNN classifier predicts the class label as follows:
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+The process and concepts around train/test sets, tuning, etc. all follow through here. We'll go through the example more explicitly soon. First, let's just look at some KNN decision boundaries.
+
+\pagebreak
+
+Let us start with a KNN classifier with $K = 30$. 
+
+- Use `caret` with `method = "knn"`
+- This does both regression and classification tasks!
+- It automatically determines the problem depending on whether the response is numeric or categorical (`factor`)
+
+```{r}
+## 30-NN Classifier / with no tuning done
+fit <- train(Class ~ Alcohol + Malic,
+             data = wines,
+             method = "knn",
+             tuneGrid = data.frame(k = 30),
+             trControl = trainControl(method = "none"))
+fit
+```
+
+Now let's plot the classifications made by the model:
+
+```{r knnk20, echo=FALSE, cache=TRUE, fig.height=4, fig.width=4, fig.cap="Decision boundary of 30-NN classifier of the wines data.", fig.margin = TRUE}
+
+nbp <- 200
+PredA <- seq(min(wines$Alcohol), max(wines$Alcohol), length = nbp)
+PredB <- seq(min(wines$Malic), max(wines$Malic), length = nbp)
+Grid <- expand.grid(Alcohol = PredA, Malic = PredB)
+
+pred_reg <- predict(fit, newdata = Grid)
+
+ggplot() + 
+  geom_point(aes(Alcohol, Malic, 
+                 col = Class, 
+                 shape = Class), 
+             data = wines,
+             size = 2) + 
+  geom_raster(aes(Alcohol, Malic, fill = pred_reg), 
+              data = Grid,
+              alpha = 0.1) + 
+  geom_contour(mapping = aes(Alcohol, Malic, 
+                             z = as.numeric(pred_reg)), data = Grid,
+               col="black") + 
+   scale_color_manual(name = "Class",
+                      labels = c("1",'2',"3"),
+                      values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+   scale_shape_manual(name = "Class",
+                      labels = c("1","2","3"),
+                      values = c(15, 17, 19)) +
+   scale_fill_manual(name = "Prediction",
+                      labels = c("1",'2',"3"),
+                      values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+   theme_bw(base_size = 18) + 
+   theme(legend.position = "top") +
+   guides(color = guide_legend(override.aes = list(size = 5)))
+```
+
+
+Formally, we can think of the KNN process as estimating the conditional probability of Y given X, $P(Y | X)$. 
+
+- Suppose that $Y$ has $J$ categorical classes. 
+
+    + Denote the values $Y$ can take on as $1, 2, \ldots, J$.
+
+- Suppose $S_K(x_0)$ denotes the indices of the $K$ points whose $X$ values are nearest to $x_0$. 
+- For a data point $x_0$, KNN estimates the conditional probability that the class label is $j$ given $X = x_0$ as
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+Here we can see that the KNN classifier gives us a rule to allocate objects to classes, but **does not give us any discriminants**. 
+
+Now that we've seen an example, we need to understand how evaluation of a classifier differs from evaluation of a regression model.
+
+# Bayes classifier
+
+The motivation behind estimating the conditional probabilities $P(Y = j | X)$ is from minimizing test error rate. Test error rate differs in the classification setting as compared to the regression setting!
+
+Similar to regression, given a new independent test point $X$ with label $Y$, we can define expected prediction error for classification as
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+- $Y$ depends on $X$
+- $\widehat Y$ depends on both $X$ and the training set
+
+\pagebreak
+
+We want a classifier that minimizes this expected prediction error. 
+
+- It can be shown that the optimal classifier is the one that predicts a new observation $x_0$ by $\widehat Y$ such that 
+
+$$\widehat Y = j\mbox{ if }P(Y = j | X = x_0)\mbox{ is maximum among }P(Y = 1 | X = x_0), \ldots, P(Y = J | X = x_0)$$
+
+The optimal classifier is called the *Bayes classifier*.
+
+**Bayes Classifier:** Classifies an observation to the most probable class using the discrete conditional distribution of $P(Y | X)$
+
+**Bayes error rate:** misclassification error rate of the Bayes classifier. For a given $x_0$, Bayes error is $1 - max_\ell P(Y = \ell | X = x_0)$. The overall Bayes error rate is $1 - E[max_\ell P(Y = \ell | X)]$.
+
+Every classification problem has these two (unknown) items. 
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+It is natural to try to estimate/model the conditional probabilities $P(Y = k | X)$ using the data, and use them to create classifiers.  There are two major approaches for obtaining estimates of $P(Y = k | X)$:
+
++ *Directly estimating/modeling $P(Y = k | X)$*
+
+    - An example of direct estimation of $P(Y = k | X)$ is the KNN classification technique, where the conditional probability is estimated by taking a majority vote from $K$ nearest point to $x_0$. 
+    - Another example is *logistic* regression model, where the conditional probability is modeled using transformations of linear combinations of $X$ of the form:
+    $$
+    P(Y = k | X) = \frac{e^{\beta_0 + X_1\beta_1 + \ldots + X_p\beta_p}}{1 + e^{\beta_0 + X_1\beta_1 + \ldots + X_p\beta_p}}.
+    $$
+      Therefore it is sufficient to estimate the coefficients $\beta_0,\beta_1, \ldots, \beta_p$ to obtain estimates of $P(Y = k | X)$.
+
++ *Generative models* where we model the distribution of $X | Y = k$ for $k = 1, \ldots, K$ and use **Bayes Theorem** to obtain a classifier
+
+\pagebreak
+
+## kNN and the Bayes Classifier
+
+As with KNN regression, the hyperparameter $K$ determines how flexible the KNN method is. However, the idea of flexibility is subtle in this case. 
+
+- The boundary that separates the regions of the predictor space is effectively the classification rule for that classifier. 
+- The *decision boundary*, is the boundary of the regions.
+
+```{r, echo=FALSE, cache=TRUE, fig.height=3.5, fig.width=3.5, fig.cap="Decision boundary of 30-NN classifier of the wines data.", fig.margin = TRUE}
+ggplot() + 
+  geom_point(aes(Alcohol, Malic, 
+                 col = Class, 
+                 shape = Class), 
+             data = wines,
+             size = 2) + 
+  geom_raster(aes(Alcohol, Malic, fill = pred_reg), 
+              data = Grid,
+              alpha = 0.1) + 
+  geom_contour(mapping = aes(Alcohol, Malic, 
+                             z = as.numeric(pred_reg)), data = Grid,
+               col="black") + 
+   scale_color_manual(name = "Class",
+                      labels = c("1",'2',"3"),
+                      values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+   scale_shape_manual(name = "Class",
+                      labels = c("1","2","3"),
+                      values = c(15, 17, 19)) +
+   scale_fill_manual(name = "Prediction",
+                      labels = c("1",'2',"3"),
+                      values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+   theme_bw(base_size = 18) + 
+   theme(legend.position = "top") +
+   guides(color = guide_legend(override.aes = list(size = 5)))
+```
+
+
+How would the decision boundary look like for the Bayes classifier? We can't know for this problem!
+
+- For a two class problem, the Bayes classifier assigns the most probable class to a new data point. 
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+
+The plots below are taken from the book and show the KNN decision boundary and the Bayes classifier decision boundary on some simulated data (hence the ability to know the Bayes classifier!).
+
+```{r knnthree, echo=FALSE, fig.fullwidth = FALSE, fig.cap="Impact of K on decision boundaries of KNN classifiers. The Bayes dicision boundary is shown using purple dashed line. Image adapted from *Introduction to Statistical Learning*.", out.height="30%"}
+
+knitr::include_graphics(c("img/2_16.png"))
+
+```
+
+The value of $K$ in a KNN classifier determines how smooth or rough the decision boundary is. 
+
+- For a small value of $K$ (in this example,  $K=1$), the boundary is extremely rough.  
+
+- For a large value of $K$ (such as $K=100$), the decision boundary is much smoother but does not capture the shape of the Bayes boundary.
+
+&nbsp;  
+&nbsp;  
+
+We need to tune $K$ so that the "optimal" $K$ will result in a decision boundary that is not too rough but also sufficiently captures the shape of the Bayes boundary.  
+
+The figure below shows one such example with $K=10$. In practice, we might choose $K$ by minimizing the test error rate or equivalently maximizing test accuracy. 
+
+```{r knnk10, echo=FALSE, fig.fullwidth = FALSE, fig.margin = TRUE, fig.cap="Decision boundary for $K=10$ using simulated data presented in the previous figure. The Bayes decision boundary is shown using purple dashed line. Image adapted from *Introduction to Statistical Learning*.", out.height="20%"}
+
+knitr::include_graphics(c("img/2_15.png"))
+
+```
+
+
+# Example: Building a KNN Classifier
+
+Let's reconsider the `wines` data set available at the [UCI machine learning repository](https://archive.ics.uci.edu/ml/datasets/wine). The dataset contains quantities of 13 constituents found in each of the three types (cultivars) of wines.
+
+A snapshot of the full data is shown below. 
+
+```{r}
+print(wines, n = 4)
+```
+
+The goal is to find a *rule* that can assign a specimen of wine to its cultivar. In other words, we want to predict the classes (cultivar) based on the predictors (13 variables).  
+
+```{r}
+# classes of wine
+table(wines$Class)
+```
+
+We can tune $K$ as we did in the regression setting. The code below searches odd values of $K$ (to avoid ties) for the optimal value with largest test accuracy. We use 50 times repeated 5-fold CV for tuning.
+
+```{r knnloocv, cache=TRUE, fig.height=3.5, fig.width=3.5, fig.cap="Results for repeated 5-fold CV tuning.", fig.margin = TRUE}
+set.seed(1001)
+## K values for tuning
+kgrid <- expand.grid(k = seq(1,51, by=2))
+## 5-fold CV, repeated, tuning
+tr <- trainControl(method = "repeatedcv",
+                   number = 5,
+                   repeats = 50)
+## Train the classifier
+fit <- train(Class ~ Alcohol + Malic,
+             data = wines,
+             method = "knn",
+             tuneGrid = kgrid,
+             trControl = tr)
+plot(fit)
+fit$bestTune$k
+```
+
+```{r}
+## Refit the model with best K
+tuned_knn_class <- train(Class ~ Alcohol + Malic,
+             data = wines,
+             method = "knn",
+             tuneGrid = expand.grid(k = fit$bestTune$k),
+             trControl = trainControl(method = "none"))
+```
+
+
+To estimate the prediction error of the tuned model, we can use any of the methods discussed previously. For example, we could just look at prediction on a test set or we could use the bootstrap as the 'outer' loop. 
+
+Consider two new unlabeled points. The first with `Alcohol` = 13 and `Malic` = 3, and the second with `Alcohol` = 12.78 and `Malic` = 2.
+
+```{r again, echo=FALSE, cache=TRUE, fig.height=4, fig.width=4, fig.cap="Decision boundary of 21-NN classifier of the wines data with two new unlabeled points.", fig.margin = TRUE}
+new_dat <- data.frame(Alcohol = c(13, 12.78),
+                   Malic = c(3,2))
+
+nbp <- 200;
+PredA <- seq(min(wines$Alcohol), max(wines$Alcohol), length = nbp)
+PredB <- seq(min(wines$Malic), max(wines$Malic), length = nbp)
+Grid <- expand.grid(Alcohol = PredA, Malic = PredB)
+
+pred_reg <- predict(tuned_knn_class, newdata = Grid)
+
+ggplot() + 
+  geom_point(aes(Alcohol, Malic, 
+                 col = Class, 
+                 shape = Class), 
+             data = wines,
+             size = 2) + 
+  geom_point(aes(Alcohol, Malic), 
+             data = new_dat,
+             size = 5, shape = 5) + 
+  geom_text(aes(Alcohol, Malic, label = rownames(new_dat)),
+            data = new_dat, size = 5) + 
+  geom_raster(aes(Alcohol, Malic, fill = pred_reg), 
+              data = Grid,
+              alpha = 0.2) + 
+  scale_color_manual(name = "Class",
+                     labels = c(1,2,3),
+                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+  scale_shape_manual(name = "Class",
+                     labels = c(1,2,3),
+                     values = c(15, 17, 19)) +
+  scale_fill_manual(name = "Prediction",
+                     labels = c(1,2,3),
+                     values = c("#00AFBB", "#E7B800", "#FC4E07")) + 
+  theme_bw(base_size = 18) + 
+  theme(legend.position = "top") +
+  guides(color = guide_legend(override.aes = list(size = 5)))
+
+```
+
+We can use the model to predict a class or a class probability with predict.
+
+The default is to give a predicted class.
+
+```{r}
+pred_class <- predict(tuned_knn_class,
+                      newdata = new_dat)
+pred_class
+```
+
+We can specify `type = "prob"` to do obtain predicted class probabilities.
+
+```{r}
+pred_prob <- predict(tuned_knn_class,
+                     newdata = new_dat,
+                     type = "prob")
+pred_prob
+```
+
+\noindent Note that for the first point, has about an $80\%$ probability associated with class `3`, and hence we are quite confident about out final class prediction of `3`. However, for the second point, probabilities associated with classes `1` and `2` are quite similar ($38\%$ vs $43\%$). So while we are quite confident about the predicted class of the first data point, there is some uncertainty about the second prediction! 
+
+&nbsp;  
+&nbsp;  
+
+
+# Evaluating a Classifier
+
+## Basic Measures
+
+To evaluate the performance of the classifier, instead of test MSE, we can use *classification accuracy* or *misclassification error rate*. In the definitions below, $|S|$ denotes the *cardinality* of $S$, that is, the number of observations in $S$. 
+
+**Accuracy:** the proportion of points correctly classified to their respective classes. With a set of observations $S$, 
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+We can compute *training* and *test accuracy* depending on whether $S$ is the training or testing set.
+
+**Misclassification error rate:** The proportion of points wrongly classified.
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+As before, we can compute *training* and *test error rate*.
+
+
+As with regression setting, here too we aim to maximize *test* accuracy or minimize test error. Minimizing training error is undesirable since it will lead to overfitting the data. 
+
+- For example, consider $K=1$, a 1-NN classifier. Since each $X_i$ is the closest neighbor to itself, the training error would be zero. 
+- The figure below shows training and test error rates from a simulation study (figure adapted from the textbook *Introduction to Statistical Learning*). 
+
+
+```{r knncerr, echo=FALSE, fig.margin = TRUE, fig.cap="Training and test error rates for a KNN classifier based on 200 training and 5000 test observations. The error rates are plotted against 1/K. The black dashed line shows the Bayes error rate. Figure adapted from Introduction to Statistical Learning.", fig.height = 4, fig.width=4}
+knitr::include_graphics("img/2_17.png")
+
+```
+
+
+## Other Metrics and the No Information Rate
+
+There are many other metrics to evaluate a classification technique other than error rate and accuracy. The main criticism of these two criteria are that they provide a global measure, but do not provide much insight into how individual classes are correctly identified. 
+
+- For example, $80\%$ accuracy of a classifier does *not* guarantee that it will correctly classify items from *both* the classes correctly $80\%$ of the time!
+- Such a criticism is even more relevant when there is class imbalance in the data
+
+    + Say we have a situation where $80\%$ of observations belong to class A, and rest in class B. 
+    + If we employ a classifier that classifies *every point into class A* regardless of their predictor values. This classifier will have $80\%$ accuracy! 
+    + This is called the *no information rate (NIR)* of the classification problem.
+
+**No information rate (NIR)**
+
+&nbsp;  
+&nbsp;  
+
+\noindent The NIR represents the accuracy that can be obtained without using any model. 
+
+&nbsp;  
+&nbsp;  
+
+
+Most other measures to evaluate a classifier can be obtained by cross-tabulating the true and predicted classes of a test set. Such a table is called *confusion matrix*. An example is shown in the table below.
+
+```{r}
+#split the original data
+index <- createDataPartition(wines$Class, p = 0.7, list = FALSE)
+#get the train and test sets
+train <- wines[index,]
+test <- wines[-index,]
+
+## K values for tuning
+kgrid <- expand.grid(k = seq(1,51, by=2))
+## 5-fold CV tuning
+tr <- trainControl(method = "cv",
+                   number = 5)
+## Train the classifier
+fit <- train(Class ~ Alcohol + Malic,
+             data = train,
+             method = "knn",
+             tuneGrid = kgrid,
+             trControl = tr)
+fit$bestTune$k
+## Refit the model with best K
+tuned_knn_class <- train(Class ~ Alcohol + Malic,
+             data = train,
+             method = "knn",
+             tuneGrid = expand.grid(k = fit$bestTune$k),
+             trControl = trainControl(method = "none"))
+#predict on the test set
+preds <- predict(tuned_knn_class, test)
+```
+
+With `caret` the `confusionMatrix()` function can now be applied to the true labels in the test set and the predictions given by the model.
+
+```{r}
+confusionMatrix(test$Class, preds)
+```
+
+\noindent Some measures we might look at are as follows:
+
++ *sensitivity* (Also called "true positive rate" or "recall")$$\frac{\text{number of positive cases classified as positive}}{\text{Total number of positive samples}} = \frac{TP}{TP + FN}$$
+
++ *specificity* (Also called "true negative rate")$$\frac{\text{number of negative cases classified as negative}}{\text{Total number of negative samples}}  = \frac{TN}{TN + FP}$$
+
++ *Precision*$$\frac{\text{number of positive cases classified as positive}}{\text{Total number of predicted positive cases}}  = \frac{TP}{TP + FP}$$
+
+\noindent We can also examine: 
+
++ *Cohen's kappa*: measures the agreement of the classifier to the sample data taking into account any class imbalances, and how much agreement is by chance.  Values close to 1 are considered good. The R function to do so is `cohen.kappa()` in `psych` library.
+
++ *McNemar's test*: hypothesis test for agreement between the predictions from an classifier to the observed data using a Chi-squared test. The R function to do so is `mcnemar.test()`.
+
+For a multi-class problem, we can create these measures using a "one-vs-all" approach, that is, by comparing each class vs the remaining combined (class `1` vs not class `1`, and so on). 
+
+
+Often, we want a single measure of performance of the classifier rather than the multitude of measures shown above. There are many such options, such as *Youden’s $J$ Index*, 
+$$J = \mbox{Sensitivity} + \mbox{Specificity} - 1,$$
+which measures the proportions of correct predictions for both the positive and negative events.
+
+## Log-Loss
+
+Most classifiers also produce probabilities of classification. We can use these to understand our model's performance.
+
+A commonly used metric along these lines is called the **log-loss**
+
+- For a binary classification ($Y = 0$ or $Y = 1$)
+
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+Next, we'll look at some common models for doing classification!
