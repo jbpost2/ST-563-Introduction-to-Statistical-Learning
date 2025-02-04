@@ -577,4 +577,17 @@ A commonly used metric along these lines is called the **log-loss**
 &nbsp;  
 &nbsp;  
 
+```{r, echo = FALSE, fig.cap = "Negative log-loss as a function of the estimated probability and the observed value of y", out.width="350px"}
+phat <- seq(from = 0.01, to = 0.99, by = 0.01)
+log_loss <- function(phat, y){
+  y*log(phat)+(1-y)*log(1-phat)
+}
+to_plot <- data.frame(phat = rep(phat, 2), 
+           logloss = -c(log_loss(phat, rep(1, length(phat))), 
+                       log_loss(phat, rep(0, length(phat)))),
+           y = as.factor(rep(c(1,0), each = length(phat))))
+ggplot(to_plot, aes(x = phat, y = -logloss, color = y)) +
+  geom_line()
+```
+
 Next, we'll look at some common models for doing classification!
