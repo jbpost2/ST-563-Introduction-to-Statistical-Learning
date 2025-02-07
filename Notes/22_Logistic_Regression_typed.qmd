@@ -44,15 +44,13 @@ We've now discussed the main ideas associated with the predictive modeling tasks
 
 - Regression task: 
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
+    + numeric response variable
+    + MSE or RMSE is the commonly used metric
 
 - Classification task:
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
+    + categorical response variable
+    + accuracy, confusion matrix-based metrics, and log-loss are common metrics
 
 Now we'll talk about other models that are commonly used for the classification task!
 
@@ -63,7 +61,11 @@ We talked about two major ways to create classification models:
 - Models that directly try to model the conditional class probabilities, $P(Y|X)$
 - Generative models that model $X|Y$'s distribution and use Bayes' theorem to obtain estimated conditional class probabilities
 
-Logistic regression takes the first approach. Often, logistic regression models are used for their abilities to help us understand the role of the predictors in explaining the outcome (our discrimination task)
+Logistic regression takes the first approach.
+
+- LR models the model the probabilities associated with the distribution of $Y|X$ as functions of the data vector $X$ without actually specifying any distribution of $X$.
+
+Often, logistic regression models are used for their abilities to help us understand the role of the predictors in explaining the outcome (our discrimination task)
 
 ## Why not an MLR Model?
 
@@ -79,8 +81,6 @@ Consider just a binary response
 &nbsp;  
 &nbsp;  
 &nbsp;  
-&nbsp;  
-&nbsp;  
 
 Suppose you have a predictor variable as well, call it $X$
     
@@ -88,14 +88,10 @@ Suppose you have a predictor variable as well, call it $X$
 
 $$E(Y|X=x_1) = P(Y=1|X = x_1)$$
 $$E(Y|X=x_2) = P(Y=1|X = x_2)$$
-\newpage
 
 - For a continuous $X$, we could consider a SLR model
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-
+$$E(Y|X) = P(Y=1|X) = \beta_0+\beta_1X$$
 
 - What's wrong with this? Consider data about [heart disease](https://www4.stat.ncsu.edu/online/datasets/heart.csv)
 
@@ -154,7 +150,7 @@ heart_data_grouped <- heart_data |>
   mutate(Age_groups = cut(Age, breaks = Age_x)) |>
   group_by(Age_groups) |>
   summarize(HeartDisease_mean = mean(HeartDisease), counts = n())
-print(heart_data_grouped, n = 4)
+heart_data_grouped
 ```
 
 - Now plot that data as well!
@@ -172,12 +168,8 @@ Here SLR isn't actually terrible! However, theoretically we have some issues.
 
     + We are modeling the average number of successes for a given $X$. This is a probability!
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-
+        + predictions should never go below 0  
+        + predictions should never go above 1  
 
 The SLR model doesn't require this! We just got lucky. Consider a much wider set of `Age` values.
 
@@ -190,10 +182,6 @@ ggplot(data = heart_data, aes(x = Age, y = HeartDisease)) +
 ```
 
 The predicted probability (the value of the line) will go below 0 and above 1 sometimes!
-
-Ideally, we should consider a model that requires this. One option is a logistic regression model.
-
-\newpage
 
 ## Logistic Regression Model
 
@@ -232,16 +220,15 @@ How can we relate this to our usual linear model?
 
 - Back-solving shows the *logit* or *log-odds* of success is linear in the parameters  
 
-\newpage
-
-- Coefficient interpretation changes greatly from linear regression model!
+$$log\left(\frac{P(success|X)}{1-P(success|X)}\right) = \beta_0+\beta_1 X$$
+- Coefficient interpretation changes greatly from linear regression model!  
 
     - $\frac{P(success|X)}{1-P(success|X)}$ is call the odds of success
     - $\beta_1$ represents a change in the log-odds of success  
 
 Let's plot the logistic regression model that uses `Age` to predict `HeartDisease`:
 
-```{r, echo = FALSE, fig.align='center', out.width = '350px', message = FALSE, warning = FALSE}
+```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE}
 log_reg_fit <- glm(HeartDiseaseFac ~ Age, data = heart_data, family = "binomial")
 x <- seq(from = min(heart_data$Age), to = max(heart_data$Age), length = 200)
 plot_df <- tibble(Age = x, Logistic_Pred = predict(log_reg_fit, newdata = data.frame(Age = x), type = "response"))
@@ -252,7 +239,7 @@ ggplot(plot_df, aes(x = Age, y = Logistic_Pred)) +
 
 This is a sigmoid function that looks linear close up! Let's zoom out:
 
-```{r, echo = FALSE, fig.align='center', out.width = '350px', message = FALSE, warning = FALSE}
+```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE}
 x <- seq(from = -0, to = 120, length = 2000)
 plot_df <- tibble(Age = x, Logistic_Pred = predict(log_reg_fit, newdata = data.frame(Age = x), type = "response"))
 ggplot(plot_df, aes(x = Age, y = Logistic_Pred)) + 
@@ -260,7 +247,7 @@ ggplot(plot_df, aes(x = Age, y = Logistic_Pred)) +
   geom_line()
 ```
 
-\newpage
+Nice! 
 
 ### Including More Than One Predictor
 
@@ -286,7 +273,6 @@ heart_data_grouped2$Age_x <- rep(seq(from = Age_x[1]+(Age_x[2]-Age_x[1])/2, to =
 
 
 ```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE}
-log_reg_fit <- glm(HeartDiseaseFac ~ Age +Sex, data = heart_data, family = "binomial")
 x <- seq(from = min(heart_data$Age), to = max(heart_data$Age), length = 200)
 plot_df <- tibble(Age = rep(x, times = 2), Sex = factor(rep(c("F", "M"), length(x))),
                   Logistic_Pred = predict(log_reg_fit, 
@@ -309,9 +295,6 @@ log_reg_fit <- glm(HeartDiseaseFac ~ Age + Sex,
 summary(log_reg_fit)
 ```
 
-What are our fitted equations for Males? For Females?
-&nbsp;  
-&nbsp;  
 &nbsp;  
 &nbsp;  
 &nbsp;  
@@ -375,7 +358,9 @@ $$
 log\left[\frac{P(Y_i = 1 | X)}{1-P(Y_i = 1 | X)}\right] = log\left[\frac{P(Y_i = 1 | X)}{P(Y_i = 0 | X)}\right] = \beta_0 +  X_{i1}\beta_1 + \ldots + X_{ip}\beta_p.
 $$
 
-\newpage
+- The parameters $\beta_0, \beta_1, \dots, \beta_p$ quantify the impact of the covariates to the prediction of $Y$
+
+- The group used in the denominator (class 0 in our formulation above) is called the *reference group*. The choice of reference group is arbitrary as the estimates of the conditional (posterior) probabilities are same. 
 
 ### Fitting the Logistic Regression Model
 
@@ -385,10 +370,26 @@ For the MLR model we said we could use least squares or maximum likelihood to fi
 - Maximum likelihood still works! However, we don't get a closed form solution as we did in the MLR case
 
     + We can show that the equation to find the 'best' $\beta$'s is equivalent to minimizing the negative log loss over the training data!
-    + The derivation below is optional!
-    
-\newpage
 
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 # Inference on the Logistic Regression Model
 
@@ -400,20 +401,16 @@ $$
 \widehat P(Y = 1 | X = x) = \frac{exp(\widehat\beta_0 + x_1\widehat\beta_1 + \ldots x_p\widehat\beta_p)}{1 + exp(\widehat\beta_0 + x_1\widehat\beta_1 + \ldots x_p\widehat\beta_p)};
 $$
 $$
-\widehat P(Y = 0 | X = x) = 1 - \widehat P(Y = 1 | x),
+\widehat P(Y = 2 | X = x) = 1 - \widehat P(Y = 1 | x),
 $$
 
 As with our $KNN$ model, we can predict the class for a particular observation via the following rule:
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+> The item is classified in group $Y = 1$ if $\widehat P(Y=1|x) \geq \widehat P(Y=2|x)$, otherwise in group $Y = 2$.
 
+- Again, in the binary case, this is equivalent to 
+
+$$\mbox{Assign to class 1 if }P(Y=1|x)>0.5$$
 
 Logistic regression can be performed using the `glm()` function in base R. **Make sure your response variable is a factor.** Use `family = "binomial"` to specify the logistic regression model.
 
@@ -447,15 +444,13 @@ cc <- heart_coef
 
 We can interpret $\widehat\beta_0$ as the *log-odds* when both `Age` and `RestingBP` are zero and `Sex` is Female. 
 
-- We have $`r exp(cc[1])`$ odds of heart disease vs not having heart disease in this case. 
-- Of course, zero values for `Age` and `RestingBP` don't make sense!
+- We have $`r exp(cc[1])`$ odds of heart disease vs not having heart disease. 
+- Of course, zero values for `Age` and `RestingBP` doesn't make sense!
 
 The estimated value of $\beta_1$ can be interpreted as the amount the log-odds will *change* due to one unit *increase*  in `Age` while *keeping the `RestingBP` level fixed* for a `Sex = Female`. 
 
 - We expect a $`r cc[2]`$ unit change in log-odds. 
-- Equivalently, our odds will change by a multiplicative factor of $`r exp(cc[2])`$ ($e^{\beta_1}$) 
-
-    + In other words, increase by $`r round(100*(exp(cc[2]) - 1), 3)`$ percent ($100(e^{\beta_1}-1)$) 
+- Equivalently, our odds will change by a multiplicative factor of $`r exp(cc[2])`$ (in other words, increase by $`r round(100*(exp(cc[2]) - 1), 3)`$ percent). 
 
 
 Suppose we have a new sample with `Age = 60` and `RestingBP = 130`. We can compute the estimated conditional (posterior) probabilities of heart disease for Males and Females as follows:
@@ -478,8 +473,6 @@ predict(heart_glm,
 ```
 
 - We can see that a `Male` with these values of `Age` and `RestingBP` is classified as having heart disease but a female would not.
-
-\newpage
 
 Let's check out our confusion matrix. 
 
@@ -513,24 +506,19 @@ ggplot() +
   geom_raster(aes(newx$Age, 
                   newx$RestingBP, 
                   fill = pp))  + 
-  theme_bw(base_size = 12) + 
+  theme_bw(base_size = 18) + 
 #  geom_contour(aes(newx$Age, 
 #                  newx$RestingBP,
 #                   z = pp), lwd=1.2, bins=2, 
 #               col = "white") +  
   geom_point(aes(Age, RestingBP,
-                 col = HeartDiseaseFac, shape = HeartDiseaseFac), size = 2,
+                 col = HeartDiseaseFac, pch = HeartDiseaseFac), size = 2,
              data = heart_data |> dplyr::filter(Sex == "F")) +
-  labs(fill = NULL, 
+  labs(fill = "P(Y = 1 | Age, RestingBP, Female)", 
        x = "Age",
        y = "RestingBP") +
-  scale_color_manual( name = "Heart Disease",
-                      labels = c("Yes", "No"),
-                      values = c("#619CFF", "#F8766D")) +
-  scale_shape_manual( name = "Heart Disease",
-                      labels = c("Yes", "No"),
-                      values = c(16, 17)) +
-  scale_fill_viridis_c(option = "B", guide = guide_colorbar(title = "Predicted Probability")) + 
+  scale_fill_viridis_c(option = "B", guide = ) + 
+  theme(legend.position = "top", legend.text = element_text(angle = 45)) +
   geom_abline(slope = -cc[2]/cc[3], 
               intercept = -cc[1]/cc[3],
               col = "white")
@@ -568,24 +556,19 @@ ggplot() +
   geom_raster(aes(newx$Age, 
                   newx$RestingBP, 
                   fill = pp))  + 
-  theme_bw(base_size = 12) + 
+  theme_bw(base_size = 18) + 
 #  geom_contour(aes(newx$Age, 
 #                  newx$RestingBP,
 #                   z = pp), lwd=1.2, bins=2, 
 #               col = "white") +  
   geom_point(aes(Age, RestingBP,
-                 col = HeartDiseaseFac, shape = HeartDiseaseFac), size = 2,
+                 col = HeartDiseaseFac, pch = HeartDiseaseFac), size = 2,
              data = heart_data |> dplyr::filter(Sex == "M")) +
-  labs(fill = NULL, 
+  labs(fill = "P(Y = 1 | Age, RestingBP, Male)", 
        x = "Age",
        y = "RestingBP") +
-  scale_color_manual( name = "Heart Disease",
-                      labels = c("Yes", "No"),
-                      values = c("#619CFF", "#F8766D")) +
-  scale_shape_manual( name = "Heart Disease",
-                      labels = c("Yes", "No"),
-                      values = c(16, 17)) +
-  scale_fill_viridis_c(option = "B", guide = guide_colorbar(title = "Predicted Probability")) + 
+  scale_fill_viridis_c(option = "B", begin = 0, end = 1, guide = ) + 
+  theme(legend.position = "top", legend.text = element_text(angle = 45)) + 
   geom_abline(slope = -cc[2]/cc[3], 
               intercept = -(cc[1]+cc[4])/cc[3],
               col = "white")
@@ -613,7 +596,7 @@ Note: **Ideally, we should use cross-validation, training-testing sets to estima
 
 Let's investigate the concepts of *odds* and *log-odds* in more detail. 
 
-Reconsider the heart disease data with $K=2$ classes (1 and 0) and only one covariate, $X =$ `Age`. 
+Reconsider the heart disease data with $K=2$ classes (1 and 0) and only one covariate, $X = `Age`$. 
 
 - The odds are defined as$$
 \frac{P(Y = 1 | X)}{P(Y = 0 | X)} = \frac{P(Y = 1 | X)}{1 - P(Y = 1 | X)}.$$
@@ -678,7 +661,6 @@ We can interpret this intervals as follows:
 
     + In other words, the increase in odds will be between `r round(100*(exp(int[1])-1),3)` percent and `r  round(100*(exp(int[2])-1),3)` percent
 
-\newpage
 
 # Logistic regression with multiple classes
 
@@ -712,8 +694,6 @@ $$
 We can similarly build a classification rule as follows.
 
 > An item with covariate $x$ is predicted to be in class $k$ if the estimated probability $\hat P(Y = k | x)$ is larger than the other posterior probabilities.
-
-\newpage
 
 # Issues to consider
 
@@ -761,7 +741,6 @@ In the presence of categorical predictors, it might happen that there are some c
 
 In such a case, logistic fit may become unstable, or might even fail to converge. 
 
-\newpage
 
 # High-Dimensional Problems
 
