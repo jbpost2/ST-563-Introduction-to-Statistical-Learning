@@ -183,6 +183,8 @@ ggplot(data = heart_data, aes(x = Age, y = HeartDisease)) +
 
 The predicted probability (the value of the line) will go below 0 and above 1 sometimes!
 
+Ideally, we should consider a model that requires this. One option is a logistic regression model.
+
 ## Logistic Regression Model
 
 - The basic Logistic Regression model uses a *logistic function* to model the success probability:
@@ -221,7 +223,7 @@ How can we relate this to our usual linear model?
 - Back-solving shows the *logit* or *log-odds* of success is linear in the parameters  
 
 $$log\left(\frac{P(success|X)}{1-P(success|X)}\right) = \beta_0+\beta_1 X$$
-- Coefficient interpretation changes greatly from linear regression model!  
+- Coefficient interpretation changes greatly from linear regression model!
 
     - $\frac{P(success|X)}{1-P(success|X)}$ is call the odds of success
     - $\beta_1$ represents a change in the log-odds of success  
@@ -401,12 +403,12 @@ $$
 \widehat P(Y = 1 | X = x) = \frac{exp(\widehat\beta_0 + x_1\widehat\beta_1 + \ldots x_p\widehat\beta_p)}{1 + exp(\widehat\beta_0 + x_1\widehat\beta_1 + \ldots x_p\widehat\beta_p)};
 $$
 $$
-\widehat P(Y = 2 | X = x) = 1 - \widehat P(Y = 1 | x),
+\widehat P(Y = 0 | X = x) = 1 - \widehat P(Y = 1 | x),
 $$
 
 As with our $KNN$ model, we can predict the class for a particular observation via the following rule:
 
-> The item is classified in group $Y = 1$ if $\widehat P(Y=1|x) \geq \widehat P(Y=2|x)$, otherwise in group $Y = 2$.
+> The item is classified in group $Y = 1$ if $\widehat P(Y=1|x) \geq \widehat P(Y=0|x)$, otherwise in group $Y = 0$.
 
 - Again, in the binary case, this is equivalent to 
 
@@ -444,13 +446,15 @@ cc <- heart_coef
 
 We can interpret $\widehat\beta_0$ as the *log-odds* when both `Age` and `RestingBP` are zero and `Sex` is Female. 
 
-- We have $`r exp(cc[1])`$ odds of heart disease vs not having heart disease. 
-- Of course, zero values for `Age` and `RestingBP` doesn't make sense!
+- We have $`r exp(cc[1])`$ odds of heart disease vs not having heart disease in this case. 
+- Of course, zero values for `Age` and `RestingBP` don't make sense!
 
 The estimated value of $\beta_1$ can be interpreted as the amount the log-odds will *change* due to one unit *increase*  in `Age` while *keeping the `RestingBP` level fixed* for a `Sex = Female`. 
 
 - We expect a $`r cc[2]`$ unit change in log-odds. 
-- Equivalently, our odds will change by a multiplicative factor of $`r exp(cc[2])`$ (in other words, increase by $`r round(100*(exp(cc[2]) - 1), 3)`$ percent). 
+- Equivalently, our odds will change by a multiplicative factor of $`r exp(cc[2])`$ ($e^{\beta_1}$) 
+
+    + In other words, increase by $`r round(100*(exp(cc[2]) - 1), 3)`$ percent ($100(e^{\beta_1}-1)$) 
 
 
 Suppose we have a new sample with `Age = 60` and `RestingBP = 130`. We can compute the estimated conditional (posterior) probabilities of heart disease for Males and Females as follows:
@@ -512,12 +516,18 @@ ggplot() +
 #                   z = pp), lwd=1.2, bins=2, 
 #               col = "white") +  
   geom_point(aes(Age, RestingBP,
-                 col = HeartDiseaseFac, pch = HeartDiseaseFac), size = 2,
+                 col = HeartDiseaseFac, shape = HeartDiseaseFac), size = 2,
              data = heart_data |> dplyr::filter(Sex == "F")) +
-  labs(fill = "P(Y = 1 | Age, RestingBP, Female)", 
+  labs(fill = NULL, 
        x = "Age",
        y = "RestingBP") +
-  scale_fill_viridis_c(option = "B", guide = ) + 
+  scale_color_manual( name = "Heart Disease",
+                      labels = c("Yes", "No"),
+                      values = c("#619CFF", "#F8766D")) +
+  scale_shape_manual( name = "Heart Disease",
+                      labels = c("Yes", "No"),
+                      values = c(16, 17)) +
+  scale_fill_viridis_c(option = "B", guide = guide_colorbar(title = "Predicted Probability")) + 
   theme(legend.position = "top", legend.text = element_text(angle = 45)) +
   geom_abline(slope = -cc[2]/cc[3], 
               intercept = -cc[1]/cc[3],
@@ -567,10 +577,16 @@ ggplot() +
   labs(fill = "P(Y = 1 | Age, RestingBP, Male)", 
        x = "Age",
        y = "RestingBP") +
-  scale_fill_viridis_c(option = "B", begin = 0, end = 1, guide = ) + 
-  theme(legend.position = "top", legend.text = element_text(angle = 45)) + 
+  scale_color_manual( name = "Heart Disease",
+                      labels = c("Yes", "No"),
+                      values = c("#619CFF", "#F8766D")) +
+  scale_shape_manual( name = "Heart Disease",
+                      labels = c("Yes", "No"),
+                      values = c(16, 17)) +
+  scale_fill_viridis_c(option = "B", guide = guide_colorbar(title = "Predicted Probability")) + 
+  theme(legend.position = "top", legend.text = element_text(angle = 45)) +
   geom_abline(slope = -cc[2]/cc[3], 
-              intercept = -(cc[1]+cc[4])/cc[3],
+              intercept = -cc[1]/cc[3],
               col = "white")
 ```
 
