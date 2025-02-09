@@ -15,15 +15,13 @@ editor:
 ```{r, message = FALSE, warning = FALSE}
 library(MASS)
 library(klaR)
-library(tidyverse)
+library(nnet)
+library(glmnet)
 library(caret)
 library(rsample)
 library(ISLR2)
 library(knitr)
-library(AppliedPredictiveModeling)
-library(kableExtra)
-library(nnet)
-library(glmnet)
+library(tidyverse)
 ```
 
 
@@ -272,7 +270,7 @@ f3 <- dnorm(Alcohol, mean = xbar[3], sd = sdev[3])
 df <- data.frame(Alcohol, f1, f2, f3)
 gg <- gather(df, "Class", "Density", -Alcohol)
 ggplot(gg) + 
-  geom_line(aes(Alcohol, Density, col = Class), lwd = 2) + 
+  geom_line(aes(Alcohol, Density, col = factor(Class)), lwd = 2) + 
   theme_bw(base_size = 18) + 
   labs(col=guide_legend(title="Class")) + 
   scale_color_discrete(labels = 1:3)
@@ -382,25 +380,35 @@ $$
 
 ## Example: QDA with Multiple Predictors
 
-Now let us consider the case where we have more than one predictors. For simplicity, let us start with two predictors ($p=2$), $X_{i1}$ and $X_{i2}$. To extend QDA to this setting, we need to generalize the normal distribution to two-dimensions. We call such a distribution a *bivariate  normal distribution*.
+Now let us consider the case where we have two predictors ($p=2$): $X_{i1}$ and $X_{i2}$
 
-In this situation, denote $\X_i = (X_{i1}, X_{i2})^T$. We say $\X_i$ is a *random vector*. We can define the mean, $\mubf$, of a random vector, $\X_i$, to be the vector of means of individual predictors:
+- To extend QDA, we need to generalize the normal distribution to two-dimensions. We call such a distribution a *bivariate  normal distribution*.
+
+### Bivariate Normal Distribution
+
+- Denote $X_i = (X_{i1}, X_{i2})^T$. $X_i$ is a *random vector*. 
+
+    + We can define the mean as $\boldsymbol{\mu}$: 
 $$
-\mubf = E(\X_i) = (E(X_{i1}), E(X_{i2}))^T = (\mu_1, \mu_2)^T.
+\boldsymbol{\mu} = E(X_i) = (E(X_{i1}), E(X_{i2}))^T = (\mu_1, \mu_2)^T
 $$
-Defining the analogous term for variance, however, requires care. For one predictor, variance can be quantified by one parameter. For two predictors, we need to look at their individual variances, $\sigma_1^2 = var(X_{i1})$ and $\sigma_2^2 = var(X_{i2})$, as well as their covariance, $\sigma_{12} = cov(X_{i1}, X_{i2})$. In general, we use the *variance-covariance matrix* of $\X_i$ to summarize the variability of $\X_i$:
+
+    + To define the variance of the random vector we need to look at their individual variances, $\sigma_1^2 = var(X_{i1})$ and $\sigma_2^2 = var(X_{i2})$, as well as their covariance, $\sigma_{12} = cov(X_{i1}, X_{i2})$. 
+    + In general, we use the *variance-covariance matrix* of $X_i$ to summarize the variability of $X_i$:
 $$
-\Sigmabf = cov(\X_i) = \begin{pmatrix} \sigma_1^2 & \sigma_{12} \\ 
+\boldsymbol{\Sigma} = cov(X_i) = \begin{pmatrix} \sigma_1^2 & \sigma_{12} \\ 
 \sigma_{12} & \sigma_2^2 \end{pmatrix},
 $$
-where the diagonal entries are variances of individual predictors, and the off-diagonal entry is the covariance between the two predictors. 
 
-The random vector $\X_{2\times 1} = (X_1, X_2)^T$ follows a bivariate normal (Gaussian) distribution with mean vector $\mubf = (\mu_1, \mu_2)^T$ and variance-covariance (positive definite) matrix $\Sigmabf$ and denoted as $\X \sim N_2(\mubf, \Sigmabf)$ if its probability density function is^[
-Recall the PDF of univariate normal distribution, $N(\mu, \sigma^2)$ is
-$$f_Y(y; \mu,\sigma^2)=\frac{1}{\sqrt{2\pi\sigma^2}}exp\{-\frac{1}{2\sigma^2}(y-\mu)^2\}$$
-]
-$$f(\x) = (2\pi)^{-1} |\Sigmabf|^{-1/2} \exp\{ - (\x - \mubf)^T \Sigmabf^{-1} (\x - \mubf) /2 \}.$$
-  
+**Bivariate Normal Distribution**:
+
+- The random vector $\boldsymbol{X} = (X_1, X_2)^T$ follows a bivariate normal (Gaussian) distribution with mean vector $\boldsymbol{\mu} = (\mu_1, \mu_2)^T$ and variance-covariance (positive definite) matrix $\boldsymbol{\Sigma}$ if its joint PDF is given by
+
+$$f_{\boldsymbol{X}}(\boldsymbol{x}) = (2\pi)^{-1} |\boldsymbol{\Sigma}|^{-1/2} \exp\{ - (\boldsymbol{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\boldsymbol{x} - \boldsymbol{\mu}) /2 \}$$
+This is denoted by $\boldsymbol X \sim N_2(\boldsymbol{\mu}, \boldsymbol{\Sigma})$
+
+The plots below give an example of this joint distribution and an example of a random sample from it.
+
 ```{r, echo=FALSE, fig.width=10, fig.height=5, warning=FALSE, message=FALSE, fig.margin = FALSE, fig.cap="Density function of a bivariate normal distribution (left) and a scatterplot of a random sample of size 100 from a bivariate normal distribution."}
 library(mnormt)
 xx = seq(-3,3,len=51)
@@ -419,13 +427,20 @@ plot(dd, xlab = "x1", ylab = "x2", main = "A random sample of size 100", pch=19)
 ```
 
 
-The shape of the PDF (and that of the scatterplot of a random sample generated from the distribution) is determined by $\Sigmabf$, the variance-covariance matrix of $\X$. An easy was to visualize the PDF of a bivariate distribution is to plot the constant probability density contours.
+The shape of the PDF (and that of the scatterplot of a random sample generated from the distribution) is determined by $\boldsymbol{\Sigma}$.
 
-\mydefbox{Constant probability density contours}{
-We define the constant probability density contour (also called constant-density contour) of a bivariate normal PDF to be the set of vectors $\x$ such that $f(\x)$ is constant, These sets are ellipses that are centered around $\mubf$.
-}
+- An easy was to visualize the PDF of a bivariate distribution is to plot the constant probability density contours.
 
-Figures \ref{fig:bvn1} -- \ref{fig:bvn3} show three examples of bivariate normal distribution with different variance-covariance patterns. The shape of the density function, and equivalently the contours, depend on the variance-covariance structure of $X_{i1}$ and $X_{i2}$. If the two variables are uncorrelated, the major and minor axes of the elliptical contours will be parallel to the $x$- and $y$-axis. In presence of correlation, the ellipses will be oriented according the sign/magnitude of the correlation. 
+**Constant probability density contours**
+
+We define the constant probability density contour (also called constant-density contour) of a bivariate normal PDF to be the set of vectors $\boldsymbol{x}$ such that $f(\boldsymbol{x})$ is constant, These sets are ellipses that are centered around $\boldsymbol{\mu}$.
+
+The figures below show three examples of bivariate normal distribution with different variance-covariance patterns. 
+
+Note:
+
+- If the two variables are uncorrelated (covariance is 0), the major and minor axes of the elliptical contours will be parallel to the $x$- and $y$-axis. 
+- In presence of correlation, the ellipses will be oriented according the sign/magnitude of the correlation. 
 
 ```{r bvn1, echo=FALSE, fig.width=12, fig.height=6, fig.cap="PDF and contours of a bivariate normal distribution with $var(X_1) = var(X_2) = 1, cov(X_1,X_2) = 0$. The contours are concentric circles since $X_1$ and $X_2$ are uncorrelated, and have the same variance.", fig.margin = FALSE}
 m <- 51
@@ -482,34 +497,58 @@ contour(xx,yy,matrix(ff,ncol=51,nrow=51),
         xlab = "x1", ylab = "x2")
 ```
 
-More generally, a random vector $\X_i = (X_{i1}, \ldots, X_{ip})^T$ is said for follow a multivariate normal distribution $N_p(\mubf, \Sigmabf)$, where $\mubf$ is a $p \times 1$ vector and $\Sigmabf$ is positive definite matrix, if the PDF of $\X$ is $$f(\x) = (2\pi)^{-p/2} |\Sigmabf|^{-1/2} \exp\{ - (\x - \mubf)^T \Sigmabf^{-1} (\x - \mubf) /2 \}.$$
-We can show that $E(\X) = \mubf$ and that $cov(\X) = \Sigmabf$. 
+### Multivariate Normal Distribution
 
-To develop a classifier with $p$ predictors, we again define the random vector $\X_i$ containing the $p$ predictors for the $i$-th observation. we assume that 
-$$
-\X_i | Y = k \sim N(\mubf_k, \Sigmabf_k), \;\; k=1, \ldots, K,
-$$
-where $\mubf_k$ and $\Sigmabf_k$ are the mean vector and variance-covariance matrix corresponding to class $k$. 
+Of course there is a general multivariate version of this distribution.
 
-In practice, the true values of $\mubf_k$ and $\Sigmabf_k$ are unknown, we estimate these parameters as
-$$
-\hat\mubf_k = \hbox{ sample mean of group $k$ },
-$$
-$$
-\hat \Sigmabf = \hbox{ sample variance-covariance matrix of group $k$}.
-$$
-The rest of the process is exactly as before: we classify a new observation with data $\x$ to class $k$ if the estimated posterior probability of class $k$ is highest, or equivalently, if $\widehat p_k \widehat f_k(\x)$ is highest. 
+- A random vector $\boldsymbol{X_i} = (X_{i1}, \ldots, X_{ip})^T$ is said for follow a multivariate normal distribution $N_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$, where $\boldsymbol{\mu}$ is a $p \times 1$ vector and $\boldsymbol{\Sigma}$ is positive definite matrix, if the PDF of $\boldsymbol{X}$ is 
+$$f(\boldsymbol{x}) = (2\pi)^{-p/2} |\boldsymbol{\Sigma}|^{-1/2} \exp\{ - (\boldsymbol{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\boldsymbol{x} - \boldsymbol{\mu}) /2 \}.$$
+We can show that $E(\boldsymbol{X}) = \boldsymbol{\mu}$ and that $cov(\boldsymbol{X}) = \boldsymbol{\Sigma}$. 
 
-The discriminant functions are^[This is a quadratic function of each of the predictors in $\x$.]
+### QDA with $p$ Predictors
+
+To develop a classifier with $p$ predictors, look at the conditional distribution of the random vector $\boldsymbol{X}_i$ (containing the $p$ predictors)
 $$
-\widehat\delta_k(\x) = -\frac{1}{2}(\x - \widehat\mubf_k)^T\widehat\Sigmabf_k^{-1}(\x - \widehat\mubf_k) -\frac{1}{2}|\widehat\Sigmabf_k| + log(\widehat p_k).
+\boldsymbol{X}_i | Y = k \sim N(\boldsymbol{\mu}_k, \boldsymbol{\Sigma}_k), \;\; k=1, \ldots, K,
 $$
-As before, an equivalent classification rule can be constructed using $\widehat\delta_k(\x)$: assign $\x$ to class $k$ is   $\widehat\delta_k(\x)$ is largest among $\widehat\delta_1(\x), \ldots, \widehat\delta_K(\x)$. This is the form of QDA for multiple predictors. 
+where $\boldsymbol{\mu}_k$ and $\boldsymbol{\Sigma}_k$ are the mean vector and variance-covariance matrix corresponding to class $k$. 
 
+- As with our univariate predictor case, the true values of $\boldsymbol{\mu}_k$ and $\boldsymbol{\Sigma}_k$ are unknown, we estimate these parameters as
+$$
+\hat\boldsymbol{\mu}_k = \mbox{ sample mean of group $k$ }
+$$
+$$
+\hat \boldsymbol{\Sigma} = \mbox{ sample variance-covariance matrix of group $k$}
+$$
 
+The rest of the process is exactly as before! 
 
+- We need values for our 'prior' distributions, $\widehat p_Y(k)$
 
-Let us consider the `wines` data again with all three classes, and two predictors, `Alcohol` and `Proline`. Figure \ref{fig:fullwine} shows the data for the three classes, overlayed with bivariate normal density contours for each class. The estimated mean vectors and variance-covariance matrices  for each class are shown below.
+- We find the value of $\widehat p_Y(k) \widehat f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y=k)$
+
+- We classify a new observation with data $\boldsymbol{x}$ to class $k$ if the estimated posterior probability of class $k$ is highest, or equivalently, if $\widehat p_Y(k) \widehat f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y=k)$ is highest. 
+
+The discriminant functions are quadratic in each of the predictors in $\boldsymbol{x}$ and are given by 
+$$
+\widehat\delta_k(\boldsymbol{x}) = -\frac{1}{2}(\boldsymbol x - \widehat{\boldsymbol{\mu}}_k)^T\widehat{\boldsymbol{\Sigma}}_k^{-1}(\boldsymbol{x} - \widehat{\boldsymbol{\mu}}_k) -\frac{1}{2}|\widehat{\boldsymbol{\Sigma}}_k| + log(\widehat p_Y(k)).
+$$
+
+- As before, an equivalent classification rule can be constructed using $\widehat\delta_k(\x)$: 
+
+    + Assign $\boldsymbol{x}$ to class $k$ where   $\widehat\delta_k(\boldsymbol{x})$ is largest among $\widehat\delta_1(\boldsymbol{x}), \ldots, \widehat\delta_K(\boldsymbol{x})$
+    
+This is the form of QDA for multiple predictors!
+
+Of course we implement this using software!
+
+### QDA Example Implementation
+
+Let us consider the `wines` data again with all three classes, and two predictors, `Alcohol` and `Proline`.
+
+- First let's do some of this ourselves!
+
+    + The estimated mean vectors and variance-covariance matrices for the conditional bivariate normal distributions are shown below.
 
 ```{r}
 X <- cbind(wines$Alcohol, wines$Proline)
@@ -522,6 +561,8 @@ for(ii in 1:3){
 mu
 Sigma
 ```
+
+    + The figure below shows the data for the three classes, overlayed with bivariate normal density contours for each class. 
 
 ```{r fullwine, echo=FALSE, fig.cap="Three class wines data overlayed with normal density contours.", message=FALSE, warning=FALSE, fig.width=8, fig.height=6, fig.margin = TRUE}
 library(car)
@@ -543,7 +584,8 @@ legend(11, 1600, c("1", "2", "3"), title = "Class",
        pch = pc, col = cl, cex = 2)
 ```
 
-As before, for a given data point $\x$, we can compute $\widehat p_k \widehat f_k(\x)$, and the associated posterior probabilities. 
+    + As before, **for a given data point** $\boldsymbol{x}$, we can compute $\widehat p_Y(k) \widehat f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y=k)$, and the associated posterior probabilities.
+    
 ```{r, warning=FALSE, message=FALSE}
 # For multivariate normal density
 library(mnormt)
@@ -561,8 +603,8 @@ post_prob <- p*f / sum(p*f)
 round(post_prob, 3)
 ```
 
+- In general, we can use the `qda()` function in `MASS` package to build QDA models. 
 
-In general, we can use the `qda()`^[See `?qda` for details.] function in `MASS` package to build QDA models. 
 ```{r}
 wine_qda <- qda(Class ~ Alcohol + Proline, data = wines)
 wine_qda
@@ -570,72 +612,80 @@ wine_qda
 pred <- predict(wine_qda, newdata = newx)
 pred
 ```
-\noindent The decision boundaries for QDA are shown in Figure \ref{fig:qdadis}. Here the boundaries are quadratic functions of `Alcohol` and `Proline` since the discriminant functions are quadratic.  
+
+The decision boundaries for this QDA are shown in the figure below. 
+
+- Here the boundaries are quadratic functions of `Alcohol` and `Proline` since the discriminant functions are quadratic!  
 
 ```{r qdadis, echo=FALSE, fig.cap="Decision boundary of QDA when applied to wines data."}
-drawparti(as.factor(wines$Class), wines$Alcohol, wines$Proline, method = "qda", prec = 100, col.mean = cl, gs = rep(pc, table(wines$Class)), imageplot = FALSE, lwd=2, col.contour="black", xlab = "Alcohol", ylab = "Proline", print.err = 0, cex.mean = 2)
+drawparti(as.factor(wines$Class), 
+          wines$Alcohol, 
+          wines$Proline, 
+          method = "qda", 
+          prec = 100, 
+          col.mean = cl, 
+          gs = rep(pc, table(wines$Class)), 
+          imageplot = FALSE, 
+          lwd=2, 
+          col.contour="black", 
+          xlab = "Alcohol", 
+          ylab = "Proline", 
+          print.err = 0, 
+          cex.mean = 2)
 ```
+
 We can also estimate the test error rate of QDA when applied to wine data using data splitting methods such as CV or holdout. We can use `caret` to do so.
 
 ```{r}
 set.seed(1001)
-caret_qda <- train(as.factor(Class) ~ Alcohol + Proline,
+caret_qda <- train(factor(Class) ~ Alcohol + Proline,
                    data = wines,
                    method = "qda",
                    trControl = trainControl(method = "CV",
                                             number = 10))
 caret_qda$results
-```
-
-```{r, echo=FALSE}
-acc <- caret_qda$results$Accuracy
-```
-
-\noindent Thus the estimated test error for QDA is $1 - \hbox{Accuracy} = `r round(1 - acc, 3)`$.
-
-The `qda()` function also has the option to perform leave-one-out cross-validation.
-
-```{r}
-qda_cv <- qda(Class ~ Proline + Alcohol, data = wines,
-              CV = TRUE)
-err <- confusionMatrix(reference = as.factor(wines$Class), 
-                   data = qda_cv$class)
-err 
+confusionMatrix(caret_qda)
 ```
 
 
-## Different clasification methods
+## Different Clasification Methods
 
-In the discussion presented in the previous section, we made the assumption that the predictors have multivariate normal density with different mean vectors and different variance-covariance matrices in each class. As a result, we developed QDA method. If we specify the densities in a different way, or put other assumptions on the parameters, we will get different classification methods. For example, we might assume that the multivariate normal distributions have the *same variance-covariance matrix*, $\Sigmabf$, in each class. Then it can be shown that the discriminant functions are *linear* in $\x$. Specifically,
+Following similar logic to our QDA exploration, we could specify the densities in a different way, or put other assumptions on the parameters, to obtain other classification methods!
+
+- For example, we might assume that the multivariate normal distributions have the *same variance-covariance matrix*, $\boldsymbol{\Sigma}$, in each class. 
+
+    + Then it can be shown that the discriminant functions are *linear* in $\boldsymbol{x}$. 
 $$
-\widehat\delta_k(\x) = \x^T\widehat\Sigmabf^{-1}\widehat\mubf_k - \frac{1}{2}\widehat\mubf_k^T\widehat\Sigmabf^{-1}\widehat\mubf_k  + log(\widehat p_k)
+\widehat\delta_k(\boldsymbol{x}) = \boldsymbol{x}^T\widehat{\boldsymbol{\Sigma}}^{-1}\widehat{\boldsymbol{\mu}}_k - \frac{1}{2}\widehat{\boldsymbol{\mu}}_k^T\widehat{\boldsymbol{\Sigma}}^{-1}\widehat{\boldsymbol{\mu}}_k  + log(\widehat p_Y(k))
 $$
-The common variance-covariance matrix, $\Sigmabf$, can be estimated by a "pooled" estimator.^[For $K$ classes, $$
-\hat \Sigmabf = \frac{(n_1 - 1)\bS_1 + \ldots + (n_K - 1)\bS_K}{n_1 + \ldots + n_K - K},
+
+    + The common variance-covariance matrix, $\boldsymbol{\Sigma}$, can be estimated by a "pooled" estimator: 
 $$
-where $\bS_1, \ldots, \bS_K$ are sample covariance matrices of $\X$'s from class $1, \ldots, K$, respectively.] The corresponding classification method is known as *Linear Discriminant Analysis (LDA)*, and the decision boundaries are linear. 
+\hat{\boldsymbol{\Sigma}} = \frac{(n_1 - 1)\boldsymbol{S}_1 + \ldots + (n_K - 1)\boldsymbol{S}_K}{n_1 + \ldots + n_K - K},
+$$
+where $\boldsymbol{S}_1, \ldots, \boldsymbol{S}_K$ are sample covariance matrices of $\boldsymbol{X}$'s from class $1, \ldots, K$, respectively.
+
+The corresponding classification method is known as *Linear Discriminant Analysis (LDA)*, and the decision boundaries are linear!
 
 In general, various classification methods specify or estimate the densities in different ways, giving rise to different classification rules. Some of these methods are shown below:
 
-+ **Linear discriminant analysis** (LDA):^[`lda` function in `MASS` library] use Gaussian densities with different means but *same* covariance matrix for each class
++ **Linear discriminant analysis** (LDA) (`lda` function in `MASS` library): use Gaussian densities with different means but *same* covariance matrix for each class
 
-+ **Quadratic discriminant analysis** (QDA):^[`qda` function in `MASS` library] use Gaussian densities with different means and *different* covariance matrices for each class;
++ **Quadratic discriminant analysis** (QDA) (`qda` function in `MASS` library): use Gaussian densities with different means and *different* covariance matrices for each class
 
-+ **Naive Bayes Classifier**:^[`NaiveBayes` in `klaR` library] uses estimated density assuming that the inputs are conditionally independent in each class;
++ **Naive Bayes Classifier** (`NaiveBayes` function in `klaR` library): uses estimated density assuming that the inputs are conditionally independent in each class
 
++ **Regularized Discriminant Analysis** (`rda` function in `klaR` library): using regularized group covariance matrices that are robust against multicollinearity in the data
 
-+ **Regularized Discriminant Analysis**:^[`rda` function in `klaR` library] using regularized group covariance matrices that are robust against multicollinearity in the data;
++ **Flexible discriminant analysis** (`fda` function in `mda` library): regerssion based classifier, captures nonlinear features of the covariates
 
++ **Mixture discriminant analysis** (`mda` function in `mda` library): density of each class is modeled using a *mixture* (weighted sum) of normal densities, can model multimodal densities
 
-+ **Flexible discriminant analysis**:^[`fda` function in `mda` library] regerssion based classifier, captures nonlinear features of the covariates;
-
-+ **Mixture discriminant analysis**:^[`mda` function in `mda` library] density of each class is modeled using a *mixture* (weighted sum) of normal densities, can model multimodal densities;
-
-+ **Kernel Density Classification**:^[`kda` function in `ks` library] densities are estimated nonparametrically using kernel density estimation.
++ **Kernel Density Classification** (`kda` function in `ks` library): densities are estimated nonparametrically using kernel density estimation.
  
+The figure below shows the decision boundaries of a few classification methods applied to `wines` data. 
 
-\noindent Figure \ref{fig:cbd} shows the decision boundaries of a few classification methods applied to wines data. Keep in mind that there are *many* more discrimination analysis methods available in literature and in various R packages. 
-
+- Keep in mind that there are *many* more discrimination analysis methods available in literature and in various R and python packages!
 
 ```{r cbd, echo=FALSE, fig.width=12, fig.height=3, warning=FALSE, message=FALSE, fig.fullwidth=T, fig.cap="Classification boundaries for four classifiers.", cache=TRUE, fig.margin = FALSE, fig.fullwidth = TRUE}
 set.seed(1001)
@@ -711,19 +761,30 @@ points(df$alc, df$pro, pch=19, col=colors)
 
 Even though QDA can be considered more general method that LDA (due to the restrictive assumption made in LDA that each class has the same variance-covariance matrix), we might still prefer LDA in some situations over QDA.
 
-This is because QDA requires estimation of a larger number of parameters than LDA. In our wine data example, suppose we use all $p=13$ predictors, with $K=3$ classes. QDA estimates $K$ variance-covariance matrix with size $p\times p$. Thus QDA estimates a total of $Kp(p+1)/2 = `r 3*(13*14)/2`$ parameters. In comparison, LDA requires estimation of only one common variance-covariance matrix. Since LDA is a less flexible model, it may have more bias but less variance. Thus sometimes LDA might have better prediction performance than QDA.  
+- QDA requires estimation of a larger number of parameters than LDA. 
 
-However, we should keep in mind that if LDA’s assumption of a common variance-covariance matrix of the $K$ classes is badly violated, then LDA can suffer from high bias. Roughly speaking, LDA tends to be a better choice than QDA if training sample size is small and so reducing variance is crucial. In contrast, QDA is recommended if the training set is very large, so that the variance of the classifier is not a major concern, or if the assumption of a common covariance matrix for the $K$ classes is clearly untenable.
+    + In our `wine` data example, suppose we use all $p=13$ predictors, with $K=3$ classes. 
+    + QDA estimates $K$ variance-covariance matrix with size $p\times p$. 
+    + Thus QDA estimates a total of $Kp(p+1)/2 = `r 3*(13*14)/2`$ parameters! 
+    + In comparison, LDA requires estimation of only one common variance-covariance matrix. 
+    + Since LDA is a less flexible model, it may have more bias but less variance. Thus sometimes LDA might have better prediction performance than QDA.  
+
+Roughly speaking, LDA tends to be a better choice than QDA if training sample size is small and so reducing variance is crucial. In contrast, QDA is recommended if the training set is very large, so that the variance of the classifier is not a major concern, or if the assumption of a common covariance matrix for the $K$ classes is clearly untenable.
 
 
 ```{r ldavsqda, echo=FALSE, fig.cap="LDA vs QDA in two simulated example. Left panel shows a data set where each class has the same covariance matrix. The right panel shows a data set with different covariance matrices for each class. The Bayes (purple dashed), LDA (black dotted), and QDA (green solid) decision boundaries are displayed. The shading indicates the QDA decision rule", fig.margin = FALSE, fig.width=8, fig.height=4}
 
-knitr::include_graphics("Hastie_ISLR2_figures/Chapter4/4_9.pdf")
+knitr::include_graphics("img/4_9.png")
 ```
 
-Figure \ref{fig:ldavsqda} shows examples of simulated data sets -- figure taken from *Introduction to Statistical Learning*. Each of the data sets contains two variables $X_1$ and $X_2$ and two classes. The left panel shows the data with $cor(X_1, X_2) = 0.7$ for both the classes. Thus the Bayes decision boundary is linear in this case, and LDA performs better than QDA, because QDA suffers from higher variance without a corresponding decrease in bias.   The right panel shows a data set with $cor(X_1, X_2) = 0.7$ in one class and $cor(X_1, X_2) = -0.7$ in the other. Here, the assumption os a common variance-covariance matrix is not apppropriate and thus, LDA suffers from high bias but QDA performs better. 
+The figure above shows examples of simulated data sets -- figure taken from *Introduction to Statistical Learning*. 
 
-A possible disadvantage of QDA/LDA is the assumption of multivariate normality of predictors in each class. When this assumotion is unreasonable LDA/QDA can perfrom badly. However, assumption of normality is more crucial for QDA than LDA since another formulation of LDA^[Fisher, 1936] does not require normality of the predictors. 
+- Each of the data sets contains two variables $X_1$ and $X_2$ and two classes. 
+- The left panel shows the data with $cor(X_1, X_2) = 0.7$ for both the classes. Thus the Bayes decision boundary is linear in this case, and LDA performs better than QDA, because QDA suffers from higher variance without a corresponding decrease in bias.   
+- The right panel shows a data set with $cor(X_1, X_2) = 0.7$ in one class and $cor(X_1, X_2) = -0.7$ in the other. Here, the assumption of a common variance-covariance matrix is not appropriate and thus, LDA suffers from high bias but QDA performs better. 
+
+A possible disadvantage of QDA/LDA is the assumption of multivariate normality of predictors in each class. When this assumption is unreasonable LDA/QDA can perform badly. 
+However, assumption of normality is more crucial for QDA than LDA since another formulation of LDA does not require normality of the predictors. 
 
 ## Naive Bayes classifier
 
@@ -819,7 +880,7 @@ bwplot(resamples(list(LDA = lda,
 
 # Comparison of a few classifiers
 
-Chapter 4.5 of the textbook \textit{Introduction to Statistical Learning} provides a nice comparison of the different classifiers we learned in this chapter. I recommend you read the chapter to get more insight. We will provide only a brief  overview of the discussion presented in the book.
+Chapter 4.5 of the textbook \textit{Introduction to Statistical Learning} provides a nice comparison of the different classifiers we learned. I recommend you read the chapter to get more insight. We will provide only a brief  overview of the discussion presented in the book.
 
 Analytically, we can compare the form of log-odds of LDA, QDA, naive Bayes and logistic regression. We can show that:
 
@@ -829,23 +890,22 @@ Analytically, we can compare the form of log-odds of LDA, QDA, naive Bayes and l
 
 + Naive Bayes classifier model the log-odds as a sum of non-linear functions of the predictors. 
 
-\noindent We can observe that LDA is a special case of QDA since LDA assumes  the covariance matrix for each class is the same. On the other hand, any classifier with a linear decision boundary is a special case of naive Bayes. However, neither QDA nor naive Bayes is a special case of the other. Between LDA and logistic regression, we expect LDA to perform better if the assumptions for LDA are satisfied. 
+Any classifier with a linear decision boundary is a special case of naive Bayes. 
 
+However, neither QDA nor naive Bayes is a special case of the other. 
 
-The textbook \textit{Introduction to Statistical Learning} also provides numerical comparison between various classifiers discussed so far. Figure \ref{fig:comp} shows test error rates under different scenarios -- see the textbook for details for each scenarios.
+Between LDA and logistic regression, we expect LDA to perform better if the assumptions for LDA are satisfied. 
+
+The textbook \textit{Introduction to Statistical Learning} also provides numerical comparison between various classifiers discussed so far. The figure below shows test error rates under different scenarios -- see the textbook for details for each scenarios.
 
 ```{r, echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE}
-knitr::include_graphics("Hastie_ISLR2_figures/Chapter4/4_11.pdf")
+knitr::include_graphics("img/4_11.png")
 ```
 
 ```{r comp, echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE, fig.cap="Test error rates for a few classifiers in linear (top row) and nonlinear (bottom row) scenarios described in \\textit{Introduction to Statistical Learning}, section 4.5."}
-knitr::include_graphics("Hastie_ISLR2_figures/Chapter4/4_12.pdf")
+knitr::include_graphics("img/4_12.png")
 ```
 
-In general, no single classifier performs best in every scenario. Their test performance depends on the underlying structure (distribution, variance-covariance patterns) of the the data. If it often a good idea to build several classifiers, and evaluate them using their test error rate. 
+In general, no single classifier performs best in every scenario. Their test performance depends on the underlying structure (distribution, variance-covariance patterns) of the the data. 
 
-
-
-# High Dimensional Problems
-
-For example, we can extend LDA for high-dimensional data by assuming a *diagonal* covariance matrix (i.e., assuming features are independent in each class). This method is called *Diagonal Linear Discriminant Analysis*.^[A special case of Naive Bayes classifier, see section 18 of \textit{Element of Statistical Learning} by Hastie et al. if you are interested in more details.] Similar approach can be taken for QDA as well resulting in *Diagonal Quadratic Discriminant Analysis*.^[Dudoit, S., Fridlyand, J., and Speed, T. P. (2002). "Comparison of Discrimination Methods for the Classification of Tumors Using Gene Expression Data," Journal of the American Statistical Association, 97, 457, 77-87.] Regularized versions of LDA such as *nearest shrunken centroids (NSC)*, *Regularized discriminant analysis (RDA)*, and many other methods are also available in literature. R packages such as `sparsediscrim`, `HDclassif`, `HiDimDA` among others have various classifiers for high-dimensional data. 
+- If it often a good idea to build several classifiers, and evaluate them using their test error rate!
