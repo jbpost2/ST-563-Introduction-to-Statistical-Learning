@@ -375,6 +375,40 @@ $$
 - This classification method is called **Quadratic Discriminant Analysis (QDA)**. 
 
     + The name is due to the fact that the discriminant functions, $\widehat\delta_k(x)$ are quadratic polynomials of $x$. 
+    
+    + Let's see the decision boundary here.
+    
+```{r}
+qda <- train(Class ~ Alcohol,
+            data = wine_small,
+            method = "qda")
+Alcohol <- seq(10, 16, length.out = 501)
+preds <- predict(qda, newdata = data.frame(Alcohol))
+```
+
+```{r, fig.width=8, fig.height=5, echo=FALSE, fig.cap="Estimated distribution of Alcohol for the two groups.", fig.margin=T}
+first2_alc <- 10
+first3 <- min(which(preds==3))
+first3_alc <- Alcohol[first3]
+first1 <- min(which(preds==1))
+first1_alc <- Alcohol[first1]
+last1_alc <- 16
+# Normal pdfs of two groups
+f1 <- dnorm(Alcohol, mean = xbar[1], sd = sdev[1])
+f2 <- dnorm(Alcohol, mean = xbar[2], sd = sdev[2])
+f3 <- dnorm(Alcohol, mean = xbar[3], sd = sdev[3])
+df <- data.frame(Alcohol, f1, f2, f3)
+
+gg <- gather(df, "Class", "Density", -Alcohol)
+ggplot(gg) + 
+  geom_line(aes(Alcohol, Density, col = Class), lwd = 2) + 
+  theme_bw(base_size = 18) + 
+  labs(col=guide_legend(title="Class")) + 
+  scale_color_discrete(labels = 1:3) +
+  geom_segment(x = first2_alc, xend = Alcohol[first3-1], y = 0, yend = 0, lwd =2, col = "#00BA38")+
+  geom_segment(x = first3_alc, xend = Alcohol[first1-1], y = 0, yend = 0, lwd =2, col = "#619CFF")+
+  geom_segment(x = first1_alc, xend = last1_alc, y = 0, yend = 0, lwd =2, col = "#F8766D")
+```
 
 - If we assumed the variances were the same across the Normal densities, the discriminant functions would be linear in $x$. This procedure is called **Linear Discriminant Analysis**
 
