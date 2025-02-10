@@ -22,6 +22,7 @@ library(rsample)
 library(ISLR2)
 library(knitr)
 library(tidyverse)
+library(mda)
 ```
 
 
@@ -549,10 +550,10 @@ where $\boldsymbol{\mu}_k$ and $\boldsymbol{\Sigma}_k$ are the mean vector and v
 
 - As with our univariate predictor case, the true values of $\boldsymbol{\mu}_k$ and $\boldsymbol{\Sigma}_k$ are unknown, we estimate these parameters as
 $$
-\hat\boldsymbol{\mu}_k = \mbox{ sample mean of group $k$ }
+\hat{\boldsymbol{\mu}}_k = \mbox{ sample mean of group k}
 $$
 $$
-\hat \boldsymbol{\Sigma} = \mbox{ sample variance-covariance matrix of group $k$}
+\hat{\boldsymbol{\Sigma}} = \mbox{ sample variance-covariance matrix of group k}
 $$
 
 The rest of the process is exactly as before! 

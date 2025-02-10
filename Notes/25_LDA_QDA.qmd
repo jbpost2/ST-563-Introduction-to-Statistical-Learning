@@ -22,6 +22,7 @@ library(rsample)
 library(ISLR2)
 library(knitr)
 library(tidyverse)
+library(mda)
 ```
 
 
@@ -599,10 +600,10 @@ where $\boldsymbol{\mu}_k$ and $\boldsymbol{\Sigma}_k$ are the mean vector and v
 
 - As with our univariate predictor case, the true values of $\boldsymbol{\mu}_k$ and $\boldsymbol{\Sigma}_k$ are unknown, we estimate these parameters as
 $$
-\hat\boldsymbol{\mu}_k = \mbox{ sample mean of group $k$ }
+\hat{\boldsymbol{\mu}}_k = \mbox{ sample mean of group k }
 $$
 $$
-\hat \boldsymbol{\Sigma} = \mbox{ sample variance-covariance matrix of group $k$}
+\hat{\boldsymbol{\Sigma}} = \mbox{ sample variance-covariance matrix of group k}
 $$
 
 The rest of the process is exactly as before! 
@@ -628,7 +629,7 @@ $$
 \widehat\delta_k(\boldsymbol{x}) = -\frac{1}{2}(\boldsymbol x - \widehat{\boldsymbol{\mu}}_k)^T\widehat{\boldsymbol{\Sigma}}_k^{-1}(\boldsymbol{x} - \widehat{\boldsymbol{\mu}}_k) -\frac{1}{2}|\widehat{\boldsymbol{\Sigma}}_k| + log(\widehat p_Y(k)).
 $$
 
-- As before, an equivalent classification rule can be constructed using $\widehat\delta_k(\x)$: 
+- As before, an equivalent classification rule can be constructed using $\widehat{\delta}_k(x)$: 
 
     + Assign $\boldsymbol{x}$ to class $k$ where   $\widehat\delta_k(\boldsymbol{x})$ is largest among $\widehat\delta_1(\boldsymbol{x}), \ldots, \widehat\delta_K(\boldsymbol{x})$
     
@@ -656,7 +657,7 @@ mu
 Sigma
 ```
 
-    + The figure below shows the data for the three classes, overlayed with bivariate normal density contours for each class. 
++ The figure below shows the data for the three classes, overlayed with bivariate normal density contours for each class. 
 
 ```{r fullwine, echo=FALSE, fig.cap="Three class wines data overlayed with normal density contours.", message=FALSE, warning=FALSE, fig.width=8, fig.height=6, fig.margin = TRUE}
 library(car)
@@ -678,7 +679,7 @@ legend(11, 1600, c("1", "2", "3"), title = "Class",
        pch = pc, col = cl, cex = 2)
 ```
 
-    + As before, **for a given data point** $\boldsymbol{x}$, we can compute $\widehat p_Y(k) \widehat f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y=k)$, and the associated posterior probabilities.
++ As before, **for a given data point** $\boldsymbol{x}$, we can compute $\widehat p_Y(k) \widehat f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y=k)$, and the associated posterior probabilities.
     
 ```{r, warning=FALSE, message=FALSE}
 # For multivariate normal density
@@ -943,10 +944,11 @@ ggplot() +
 + If $X_{ij}$ is qualitative, then, conditional on the class $k$, we can simply take the proportion of sample observations for each value of the predictor. 
 
     + In other words, $\widehat f_{X_j|Y}(x_j|y=k)$ is the estimated *probability mass function* of the $j$-th predictor:
+
 $$
-\widehat f_{X_j|Y}(x_j|y=k) = \frac{1}{n_{\rm train, k}} \sum_i I(X_{ij} = x_j), 
+\widehat f_{X_j|Y}(x_j|y=k) = \frac{1}{n_{train, k}} \sum_i I(X_{ij} = x_j) 
 $$
-where $n_{\rm train, k}$ is the size of the training set for the $k$-th class.
+where $n_{train, k}$ is the size of the training set for the $k$-th class.
 
 In R, we can use the `NaiveBayes()` function in the `klaR` library for build a naive Bayes classifier. 
 
