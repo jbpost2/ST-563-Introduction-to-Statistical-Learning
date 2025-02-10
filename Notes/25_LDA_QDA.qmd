@@ -51,9 +51,18 @@ LDA & QDA take the generative model approach!
 To understand how generative models work, let's start with understanding Bayes' theorem. Bayes' theorem is built on the idea of conditional probability. 
 
 **Conditional Probability** - Let $A$ and $B$ be two events where $P(B\neq 0)$. The conditional probability of A given B has occurred is
-$$P(A|B) = \frac{P(A\cap B)}{P(B)}$$
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 Assuming the $P(A)>0$, we can use conditional probability on $P(B|A)$ to rewrite this as
-$$P(A|B) = \frac{P(B|A)P(A)}{P(B)}$$
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 This is essentially Bayes' theorem!
 
@@ -64,14 +73,25 @@ $$P(A_1) = 0.7, P(A_2) = 0.1, P(A_3) = 0.2$$
 
 We can use Bayes' theorem to find the probability the wine is of type $A_1$ given its good or bad status.
 
-$$P(A_1|\mbox{Good}) = \frac{P(\mbox{Good}|A_1)P(A_1)}{P(\mbox{Good})}$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 We just need to find the overall probability of good wine. This can be found using the law of total probability!
 
-$$P(\mbox{Good}) = P(\mbox{Good}|A_1)P(A_1)+P(\mbox{Good}|A_2)P(A_2)+P(\mbox{Good}|A_3)P(A_3)$$
-
-Thus, we have 
-$$P(A_1|\mbox{Good}) = \frac{P(\mbox{Good}|A_1)P(A_1)}{P(\mbox{Good}|A_1)P(A_1)+P(\mbox{Good}|A_2)P(A_2)+P(\mbox{Good}|A_3)P(A_3)}$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 The Bayes' theorem can be extended to probability distributions (PDFs and PMFs if you are familiar with that language) rather than simply events like these. 
 
@@ -92,15 +112,23 @@ P(Y_i = k | X_i = x) = \frac{p_Y(k)f_{X_i|Y_i}(x|k)}{p_Y(1)f_{X_i|Y_i}(x|1) + \l
 $$
 The sample is predicted to be in the class that has the *highest posterior probability*. Notice that the denominator in the expression is same for any value of $k$. 
 
-- The posterior probability is thus highest where the numerator $p_Y(k)f_{X|Y}(x|k)$ is highest.
-
-Of course, the density functions $f_{X|Y}(x|y)$ and the prior probabilities $p_Y(k)$ are unknown. 
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 - We can estimate $p_Y(k)$ by using the relative proportion of its occurrence (assuming a random sample). 
-$$
-\widehat p_k = n_k/n.
-$$
-where $n_k$ represents the number of observations in class $k$.
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 For the unknown densities, we need to estimate them from the data! This can be modeled in a number of different ways.
 
@@ -132,7 +160,12 @@ p_Y <- table(wines$Class)/nrow(wines)
 p_Y
 ```
 
-Now we just need to obtain estimates for the conditional distributions of $X|Y$ and we can use Bayes' theorem to get a classifier!
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 
 - Let's look at the relationships between our wine `Class` and some of the numeric variables in the data
 
@@ -219,12 +252,16 @@ f_{X|Y}(x|y) = \frac{1}{\sqrt{2\pi\sigma_k^2}}exp\left\{-\frac{1}{2\sigma_k^2}(x
 $$
 To estimate the densities, we need to estimate the unknown mean and variance parameters:
 
-$$
-\widehat\mu_k = \mbox{sample mean of $X_i$'s from the $k$-th group}
-$$
-$$
-\widehat\sigma_k^2  = \mbox{sample variance of $X_i$'s from the $k$-th group}
-$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 
 ```{r}
 means_variances <- wine_small |>
@@ -304,7 +341,10 @@ pf <- p_Y * f
 round(pf, 4) 
 ```
 
-We see that Class 2 is our predicted class
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 - The posterior probabilities are
 
@@ -336,14 +376,24 @@ We can try to develop rules around this to understand the idea more clearly.
 
 - We can see that we favor Class 1 over Class 2 if our $x$ (Alcohol) is greater than some value, call it $c$.
 
-- To see this, we see that we favor Class 1 if $\widehat p_Y(1)\widehat f_{X|Y}(x|1) > \widehat p_Y(2)\widehat f_{X|Y}(x|2)$. This is equivalent to favoring class 1 if
-$$
-log(\widehat p_Y(1)) + log(\widehat f_{X|Y}(x|1)) > log(\widehat p_Y(2)) + log(\widehat f_{X|Y}(x|2))
-$$
-Substituting the functional form of $\widehat f_{X|Y}(x|y)$, we can rewrite the condition above as
-$$
-log(\widehat p_Y(1)) - log(\widehat\sigma_1) - \frac{(x - \widehat\mu_1)^2}{2\widehat\sigma_1^2} > log(\widehat p_Y(2)) - log(\widehat\sigma_2) - \frac{(x - \widehat\mu_2)^2}{2\sigma_2^2}.
-$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
 Define the functions 
 $$
 \widehat \delta_k(x) = log(\widehat p_Y(k)) - log(\widehat\sigma_k) - \frac{(x - \widehat\mu_k)^2}{2\sigma_k^2}, k = 1, 2, 3 
@@ -557,11 +607,21 @@ $$
 
 The rest of the process is exactly as before! 
 
-- We need values for our 'prior' distributions, $\widehat p_Y(k)$
-
-- We find the value of $\widehat p_Y(k) \widehat f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y=k)$
-
-- We classify a new observation with data $\boldsymbol{x}$ to class $k$ if the estimated posterior probability of class $k$ is highest, or equivalently, if $\widehat p_Y(k) \widehat f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y=k)$ is highest. 
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 The discriminant functions are quadratic in each of the predictors in $\boldsymbol{x}$ and are given by 
 $$
@@ -826,10 +886,18 @@ Recall that LDA and QDA estimate the densities $f_{\boldsymbol{X}|Y}(\cdot)$ for
 
 The naive Bayes classifier makes a single simplifying assumption: 
 
-- The joint density of $X_{i1}, \ldots, X_{ip}$ conditional on $Y$ is the product of $p$ individual conditional density functions,
-$$
-f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y) = f_{X_1|Y}(x_1|y) \times \ldots \times f_{X_p|Y}(x_p|y). 
-$$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 - In other words, within each class the $p$ predictors are assumed to be *independent*. 
 - This is a quite strong assumption -- this will also imply that there is *no relation* (linear or otherwise) between the predictors *within each class*. 
@@ -837,9 +905,13 @@ $$
 - However, a classifier can still be constructed based on this assumption, and it often gives good results (especially for smaller $n$)!
 
 With this assumption, we only need to form estimates of the *marginal conditional density functions*, $\widehat f_{X_j|Y}(x_j|y), j = 1, \ldots, p$, to obtain an estimate of $f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y)$:
-$$
-\widehat f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y) = \widehat f_{X_1|Y}(x_1|y) \times \ldots \times \widehat f_{X_p|Y}(x_p|y).
-$$
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 The rest of the procedure is the same as before: 
 
