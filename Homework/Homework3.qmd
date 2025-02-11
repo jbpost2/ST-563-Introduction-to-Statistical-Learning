@@ -33,6 +33,6 @@ Section 4.7
 
 Section 4.7
 
-- Book Problem 11
+- Book Problem 14
 
     + For this problem you may want to use the `caret` package in R! [The reference for the package is here](https://topepo.github.io/caret/).
