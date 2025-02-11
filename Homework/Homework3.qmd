@@ -1,0 +1,38 @@
+---
+title: "Homework 3"
+always_allow_html: yes
+format: docx
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+#for nicer table output
+library(knitr)
+```
+
+# Conceptual Problems
+
+## Book Problems
+
+Complete the following problems from the Introduction to Statistical Learning with R book (I'm not sure if the problems are in the same order in the python book so use the R book to identify which problems to do).
+
+Section 4.7
+
+- Book Problem 4
+
+- Book Problem 5
+
+- Book Problem 6
+
+- Book Problem 9
+
+# Implementation Problems 
+
+## Book Problems
+
+Section 4.7
+
+- Book Problem 11
+
+    + For this problem you may want to use the `caret` package in R! [The reference for the package is here](https://topepo.github.io/caret/).

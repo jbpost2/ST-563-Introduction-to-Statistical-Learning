@@ -58,7 +58,7 @@ Now we'll talk about other models that are commonly used for the classification 
 
 We talked about two major ways to create classification models:
 
-- Models that directly try to model the conditional class probabilities, $P(Y|X)$
+- Models that directly try to model the conditional class probabilities, $P(Y|X)$. Here $Y$ is a categorical response taking on values 1, 2, ..., K where these values represent categories. We don't want to treat this variable as numeric.
 - Generative models that model $X|Y$'s distribution and use Bayes' theorem to obtain estimated conditional class probabilities
 
 Logistic regression takes the first approach.
@@ -72,16 +72,15 @@ Often, logistic regression models are used for their abilities to help us unders
 We might first ask, why can't we use our usual MLR model for the classification setting?
 
 
-Consider just a binary response
+Consider just a binary response. Here the variable takes on only two values. Let's say $Y = 1$ or $Y =0$.
 
 - What is the mean of the response?
 
-<!-- Here write out some 0 and 1's as the population values. Look at probability as the mean-->    
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-
+    + Consider a small population of values: 5 1's and 10 0's
+    + The population mean is just the sample average, $\mu = 5/15$.
+    + this value is the proportion of 1's in the population. That is, it represents the probability of obtaining a 1.
+    + This means we are really modeling $E(Y) = P(Y=1)$ when we have a binary response!
+    
 Suppose you have a predictor variable as well, call it $X$
     
 - Given two values of $X$ we could model separate proportions
@@ -101,8 +100,9 @@ heart_data <- read_csv("https://www4.stat.ncsu.edu/online/datasets/heart.csv") |
   filter(RestingBP > 0) |> #remove one value
   mutate(HeartDiseaseFac = factor(HeartDisease))
 heart_data |> 
-  dplyr::select(HeartDiseaseFac, everything()) 
-#Cholesterol has many values set to 0 so we ignore that
+  dplyr::select(HeartDiseaseFac, everything()) |>
+  slice(1:4) |>
+  kable()
 ```
 
 - Heart Disease is our response variable. We can look at the mean of the binary variable to estimate $E(Y) = P(Y=1)$
@@ -110,7 +110,8 @@ heart_data |>
 ```{r}
 heart_data |>
   group_by(HeartDiseaseFac) |> 
-  summarize(prop = n()/nrow(heart_data))
+  summarize(prop = n()/nrow(heart_data)) |>
+  kable()
 ```
 
 - Of course, we may think that these probabilities may differ based on the values of a predictor variable
@@ -119,23 +120,24 @@ heart_data |>
 heart_data |>
   group_by(HeartDiseaseFac) |>
   summarize(mean_Age = mean(Age),
-            mean_RestingBP  = mean(RestingBP))
+            mean_RestingBP  = mean(RestingBP)) |>
+  kable()
 ```
 
 We can try to fit our SLR model with `Age` as our predictor.
 
 $$P(Y=1|Age) = E(Y|Age) = \beta_0+\beta_1Age$$
 
-```{r, out.width = "400px", fig.align = 'center', message = FALSE, warning = FALSE}
-ggplot(heart_data, aes(x = Age, y = HeartDisease, color = RestingBP)) +
+```{r, out.width = "400px", fig.align = 'center', message = FALSE, warning = FALSE, fig.alt = ''}
+ggplot(heart_data, aes(x = Age, y = HeartDisease)) +
          geom_point() +
   geom_smooth(method = "lm")
 ```
 
 That doesn't quite look right... why? The points all lie on top of one another. Let's fix that by jittering them.
 
-```{r, out.width = "400px", fig.align = 'center', message = FALSE, warning = FALSE}
-ggplot(heart_data, aes(x = Age, y = HeartDisease, color = RestingBP)) +
+```{r, out.width = "400px", fig.align = 'center', message = FALSE, warning = FALSE, fig.alt = ''}
+ggplot(heart_data, aes(x = Age, y = HeartDisease)) +
          geom_jitter() +
   geom_smooth(method = "lm")
 ```
@@ -150,12 +152,13 @@ heart_data_grouped <- heart_data |>
   mutate(Age_groups = cut(Age, breaks = Age_x)) |>
   group_by(Age_groups) |>
   summarize(HeartDisease_mean = mean(HeartDisease), counts = n())
-heart_data_grouped
+heart_data_grouped |>
+  kable()
 ```
 
 - Now plot that data as well!
 
-```{r, out.width = '400px', fig.align = 'center'}
+```{r, out.width = '400px', fig.align = 'center', fig.alt = ''}
 ggplot(data = heart_data, aes(x = Age, y = HeartDisease)) +
   geom_jitter(aes(color = RestingBP)) +
   geom_point(data = heart_data_grouped, aes(x = Age_x, y = HeartDisease_mean, size = counts)) +
@@ -173,7 +176,7 @@ Here SLR isn't actually terrible! However, theoretically we have some issues.
 
 The SLR model doesn't require this! We just got lucky. Consider a much wider set of `Age` values.
 
-```{r, out.width = '400px', fig.align = 'center'}
+```{r, out.width = '400px', fig.align = 'center', fig.alt = ''}
 ggplot(data = heart_data, aes(x = Age, y = HeartDisease)) +
   geom_jitter(aes(color = RestingBP)) +
   geom_point(data = heart_data_grouped, aes(x = Age_x, y = HeartDisease_mean, size = counts)) +
@@ -189,11 +192,11 @@ Ideally, we should consider a model that requires this. One option is a logistic
 
 - The basic Logistic Regression model uses a *logistic function* to model the success probability:
 
-$$P(Y =1|X) = P(success|X) = \frac{e^{\beta_0+\beta_1X}}{1+e^{\beta_0+\beta_1X}}$$
+$$E(Y|X) = P(Y =1|X) = P(success|X) = \frac{e^{\beta_0+\beta_1X}}{1+e^{\beta_0+\beta_1X}}$$
  
-This function never goes below 0 or above 1!
+This is a nonlinear function of the $\beta$'s that never goes below 0 or above 1!
 
-```{r, echo = FALSE, out.width = '400px', fig.align = 'center'}
+```{r, echo = FALSE, out.width = '400px', fig.align = 'center', fig.alt = ''}
 x <- seq(0, 2, 0.01)
 b0 <- -5
 b1 <- 11
@@ -225,12 +228,13 @@ How can we relate this to our usual linear model?
 $$log\left(\frac{P(success|X)}{1-P(success|X)}\right) = \beta_0+\beta_1 X$$
 - Coefficient interpretation changes greatly from linear regression model!
 
-    - $\frac{P(success|X)}{1-P(success|X)}$ is call the odds of success
-    - $\beta_1$ represents a change in the log-odds of success  
+$\frac{P(success|X)}{1-P(success|X)}$ is call the odds of success
+
+$\beta_1$ represents a change in the log-odds of success  
 
 Let's plot the logistic regression model that uses `Age` to predict `HeartDisease`:
 
-```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE}
+```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE, fig.alt = ''}
 log_reg_fit <- glm(HeartDiseaseFac ~ Age, data = heart_data, family = "binomial")
 x <- seq(from = min(heart_data$Age), to = max(heart_data$Age), length = 200)
 plot_df <- tibble(Age = x, Logistic_Pred = predict(log_reg_fit, newdata = data.frame(Age = x), type = "response"))
@@ -241,7 +245,7 @@ ggplot(plot_df, aes(x = Age, y = Logistic_Pred)) +
 
 This is a sigmoid function that looks linear close up! Let's zoom out:
 
-```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE}
+```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE, fig.alt = ''}
 x <- seq(from = -0, to = 120, length = 2000)
 plot_df <- tibble(Age = x, Logistic_Pred = predict(log_reg_fit, newdata = data.frame(Age = x), type = "response"))
 ggplot(plot_df, aes(x = Age, y = Logistic_Pred)) + 
@@ -274,7 +278,8 @@ heart_data_grouped2$Age_x <- rep(seq(from = Age_x[1]+(Age_x[2]-Age_x[1])/2, to =
 ```
 
 
-```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE}
+```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE, fig.alt = ''}
+log_reg_fit <- glm(HeartDiseaseFac ~ Age +Sex, data = heart_data, family = "binomial")
 x <- seq(from = min(heart_data$Age), to = max(heart_data$Age), length = 200)
 plot_df <- tibble(Age = rep(x, times = 2), Sex = factor(rep(c("F", "M"), length(x))),
                   Logistic_Pred = predict(log_reg_fit, 
@@ -294,28 +299,29 @@ We can see that we don't have parallel lines in this case. Let's investigate the
 ```{r}
 log_reg_fit <- glm(HeartDiseaseFac ~ Age + Sex, 
                    data = heart_data, family = "binomial")
-summary(log_reg_fit)
+summary_fit <- summary(log_reg_fit)
+summary_fit$coefficients |>
+  kable()
 ```
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+What are our fitted equations for Males? For Females?
+
+- Female model: $$ln\left(\frac{\hat{p}}{1-\hat{p}}\right) = -4.632 + 0.066(Age)$$
+- Male model: $$ln\left(\frac{\hat{p}}{1-\hat{p}}\right) = -4.632 + 0.066(Age)+1.639$$
 
 - If we fit an interaction term between `Age` and our `Sex` dummy variable, we essentially fit two separate logistic regression models
 
 ```{r}
 log_reg_fit_int <- glm(HeartDiseaseFac ~ Age + Sex + Age*Sex, 
                    data = heart_data, family = "binomial")
-summary(log_reg_fit_int)
+summary_fit_int <- summary(log_reg_fit_int)
+summary_fit_int$coefficients |>
+  kable()
 ```
 
 - Let's check out the visual of the fits
 
-```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE}
+```{r, echo = FALSE, fig.align='center', out.width = '400px', message = FALSE, warning = FALSE, fig.alt = ''}
 plot_df_int <- tibble(Age = rep(x, times = 2), Sex = factor(rep(c("F", "M"), length(x))),
                   Logistic_Pred = predict(log_reg_fit_int, 
                                           newdata = data.frame(Age = rep(x, times = 2), 
@@ -331,7 +337,7 @@ ggplot(plot_df_int, aes(x = Age, y = Logistic_Pred, color = Sex)) +
 
     - The plot below shows a model with a linear and quadratic term included
     
-```{r, echo = FALSE, out.width = '200px', fig.align = 'center'}
+```{r, echo = FALSE, out.width = '200px', fig.align = 'center', fig.alt = ''}
 x <- seq(-1, 5, 0.01)
 b0 <- -1
 b1 <- 3
@@ -362,6 +368,8 @@ $$
 
 - The parameters $\beta_0, \beta_1, \dots, \beta_p$ quantify the impact of the covariates to the prediction of $Y$
 
+- The $\beta$'s are still called slope terms and we often test $H_0:\beta_j = 0$ vs $H_A:\beta_j\neq 0$.
+
 - The group used in the denominator (class 0 in our formulation above) is called the *reference group*. The choice of reference group is arbitrary as the estimates of the conditional (posterior) probabilities are same. 
 
 ### Fitting the Logistic Regression Model
@@ -372,26 +380,6 @@ For the MLR model we said we could use least squares or maximum likelihood to fi
 - Maximum likelihood still works! However, we don't get a closed form solution as we did in the MLR case
 
     + We can show that the equation to find the 'best' $\beta$'s is equivalent to minimizing the negative log loss over the training data!
-
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
 
 # Inference on the Logistic Regression Model
 
@@ -437,7 +425,8 @@ heart_glm =  glm(HeartDiseaseFac ~ Age + RestingBP + Sex,
 The estimated coefficients are as follows.
 ```{r}
 heart_coef <- heart_glm$coefficients
-heart_coef
+heart_coef |>
+  kable()
 ```
 
 ```{r, echo=FALSE}
@@ -482,10 +471,14 @@ Let's check out our confusion matrix.
 
 ```{r}
 # Confusion matrix
-confusionMatrix(table(heart_data$HeartDiseaseFac, 
-                         predicted = ifelse(predict(heart_glm, type = "response") > 0.5,
-                                            1, 0)
-))
+conf_mat <- confusionMatrix(table(predicted = ifelse(predict(heart_glm, type = "response") > 0.5,
+                                            1, 0),
+                      heart_data$HeartDiseaseFac))
+conf_mat$table |> 
+  kable()
+stats <- data.frame(Statistic = names(conf_mat$overall), Value = conf_mat$overall)
+stats |>
+  kable(row.names = FALSE)
 ```
 
 As we have only a couple of predictors, we can plot the decision boundary of the classifier!
@@ -498,7 +491,7 @@ $$
 `r cc[1]` + `r cc[2]`*Age + `r cc[3]`*RestingBP = 0.
 $$
 
-```{r lgdb, echo=FALSE, fig.cap="Decision boundary of a 2-class logistic regression based classifier."}
+```{r lgdb, echo=FALSE, fig.cap="Decision boundary of a 2-class logistic regression based classifier.", fig.alt = ''}
 cc <- heart_coef
 newx <- expand.grid(Age = seq(28, 77, len = 201),
                     RestingBP = seq(80, 200, len = 201))
@@ -510,7 +503,7 @@ ggplot() +
   geom_raster(aes(newx$Age, 
                   newx$RestingBP, 
                   fill = pp))  + 
-  theme_bw(base_size = 18) + 
+  theme_bw(base_size = 12) + 
 #  geom_contour(aes(newx$Age, 
 #                  newx$RestingBP,
 #                   z = pp), lwd=1.2, bins=2, 
@@ -528,7 +521,6 @@ ggplot() +
                       labels = c("Yes", "No"),
                       values = c(16, 17)) +
   scale_fill_viridis_c(option = "B", guide = guide_colorbar(title = "Predicted Probability")) + 
-  theme(legend.position = "top", legend.text = element_text(angle = 45)) +
   geom_abline(slope = -cc[2]/cc[3], 
               intercept = -cc[1]/cc[3],
               col = "white")
@@ -538,14 +530,19 @@ ggplot() +
 Now the confusion matrix for Females:
 
 ```{r}
-confusionMatrix(table(heart_data |> 
-                        filter(Sex == "F") |> 
-                        pull(HeartDiseaseFac), 
-                      predicted = ifelse(predict(heart_glm, 
+conf_mat_female <- confusionMatrix(table(predicted = ifelse(predict(heart_glm, 
                                                  newdata = heart_data |> filter(Sex == "F"), 
                                                  type = "response") > 0.5,
-                                         1, 0)
+                                         1, 0),
+                      heart_data |> 
+                        filter(Sex == "F") |> 
+                        pull(HeartDiseaseFac)
                       ))
+conf_mat_female$table |>
+  kable()
+stats_female <- data.frame(Statistic = names(conf_mat_female$overall), Value = conf_mat_female$overall)
+stats_female |>
+  kable(row.names = FALSE)
 ```
 
 - The boundary (for males) is given by all the solutions of the linear equation (the estimated formula of log-odds):
@@ -554,7 +551,7 @@ $$
 `r cc[1]` + `r cc[2]`*Age + `r cc[3]`*RestingBP + `r cc[4]`= 0.
 $$
 
-```{r , echo=FALSE, fig.cap="Decision boundary of a 2-class logistic regression based classifier."}
+```{r , echo=FALSE, fig.cap="Decision boundary of a 2-class logistic regression based classifier.", fig.alt = ''}
 cc <- heart_coef
 newx <- expand.grid(Age = seq(28, 77, len = 201),
                     RestingBP = seq(80, 200, len = 201))
@@ -566,15 +563,15 @@ ggplot() +
   geom_raster(aes(newx$Age, 
                   newx$RestingBP, 
                   fill = pp))  + 
-  theme_bw(base_size = 18) + 
+  theme_bw(base_size = 12) + 
 #  geom_contour(aes(newx$Age, 
 #                  newx$RestingBP,
 #                   z = pp), lwd=1.2, bins=2, 
 #               col = "white") +  
   geom_point(aes(Age, RestingBP,
-                 col = HeartDiseaseFac, pch = HeartDiseaseFac), size = 2,
+                 col = HeartDiseaseFac, shape = HeartDiseaseFac), size = 2,
              data = heart_data |> dplyr::filter(Sex == "M")) +
-  labs(fill = "P(Y = 1 | Age, RestingBP, Male)", 
+  labs(fill = NULL, 
        x = "Age",
        y = "RestingBP") +
   scale_color_manual( name = "Heart Disease",
@@ -584,23 +581,27 @@ ggplot() +
                       labels = c("Yes", "No"),
                       values = c(16, 17)) +
   scale_fill_viridis_c(option = "B", guide = guide_colorbar(title = "Predicted Probability")) + 
-  theme(legend.position = "top", legend.text = element_text(angle = 45)) +
   geom_abline(slope = -cc[2]/cc[3], 
-              intercept = -cc[1]/cc[3],
+              intercept = -(cc[1]+cc[4])/cc[3],
               col = "white")
 ```
 
 Now the confusion matrix for Males:
 
 ```{r}
-confusionMatrix(table(heart_data |> 
-                        filter(Sex == "M") |> 
-                        pull(HeartDiseaseFac), 
-                      predicted = ifelse(predict(heart_glm, 
+conf_mat_male <- confusionMatrix(table(predicted = ifelse(predict(heart_glm, 
                                                  newdata = heart_data |> filter(Sex == "M"), 
                                                  type = "response") > 0.5,
-                                         1, 0)
+                                         1, 0),
+                      heart_data |> 
+                        filter(Sex == "M") |> 
+                        pull(HeartDiseaseFac)
                       ))
+conf_mat_male$table |>
+  kable()
+stats_male <- data.frame(Statistic = names(conf_mat_male$overall), Value = conf_mat_male$overall)
+stats_male |>
+  kable(row.names = FALSE)
 ```
 
 - Perhaps an interaction term would help us here!
@@ -639,7 +640,8 @@ $$
 Reconsider our logistic regression model with `Age`, `RestingBP`, and `Sex`. We can get a summary of the fit as follows.
 
 ```{r}
-summary(heart_glm)
+summary(heart_glm)$coefficients |>
+  kable()
 ```
 
 - `summary()` of the fit produces $z$-tests for coefficient of each covariate
@@ -723,7 +725,7 @@ This situation happens when the outcome variable separates a predictor completel
 - The figure below shows relationship between $Y$ and the two predictors. 
 - In such a case, logistic regression may produce unreasonable over-inflated estimates of regression coefficients. 
 
-```{r septwo, echo=FALSE, fig.cap="Simulated data set. The response separates the data completely -- the boundary (dashed line) is $X_1 + X_2 = 0$. Negative values of $X_1 + X_2$ corresponds to $Y=2$, and positive values corresponds to $Y = 1$."}
+```{r septwo, echo=FALSE, fig.cap="Simulated data set. The response separates the data completely -- the boundary (dashed line) is $X_1 + X_2 = 0$. Negative values of $X_1 + X_2$ corresponds to $Y=2$, and positive values corresponds to $Y = 1$.", fig.alt = ''}
 set.seed(1001)
 x1 <- rnorm(200)
 x2 <- rnorm(200)
@@ -735,7 +737,7 @@ ggplot() +
 ```
 
 ```{r}
-glm(y ~ x1 + x2, family = binomial())
+fit <- glm(y ~ x1 + x2, family = binomial())
 ```
 
 In general, if there is a linear combination $Z = aX_1 + bX_2$ that is completely separated by $Y$, logistic regression will fail to produce reasonable results! Figure \ref{fig:septwo} shows one such example where the data is completely separated by the line $X_1 + X_2 = 0$. 
@@ -782,7 +784,7 @@ logit_cv <- cv.glmnet(x = as.matrix(heart_data |>
              alpha = 1)
 ```
 
-```{r, echo=FALSE, fig.cap="CV results for logistic regression of wines data with lasso penalty."}
+```{r, echo=FALSE, fig.cap="CV results for logistic regression of wines data with lasso penalty.", fig.alt = ''}
 plot(logit_cv)
 ```
 
@@ -798,7 +800,11 @@ heart_lasso <- glmnet(x = as.matrix(heart_data |>
 
 ```{r}
 # Estimated coefs
-coef(heart_lasso)
+coef_mat <- coef(heart_lasso) |> 
+  as.matrix()
+dimnames(coef_mat)[[2]] <- c("Estimate")
+coef_mat |>
+  kable()
 ```
 
 

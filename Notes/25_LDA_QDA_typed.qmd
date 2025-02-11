@@ -123,25 +123,23 @@ Recall: The dataset contains quantities of 13 constituents found in each of the 
 # Read the data
 wines <- read_table("https://www4.stat.ncsu.edu/online/datasets/Wines.txt")
 # classes of wine
-table(wines$Class)
+tab <- table(wines$Class) |> data.frame()
+names(tab) <- c("Class", "Frequency")
+tab |>
+  kable()
 ```
 
 We can easily approximate $p_Y(k)$ for $k = 1, 2, 3$.
 
 ```{r}
 p_Y <- table(wines$Class)/nrow(wines)
-p_Y
+p_Y_df <- data.frame(p_Y)
+names(p_Y_df) <- c("Class", "Probability")
+p_Y_df |> 
+  kable()
 ```
 
 Now we just need to obtain estimates for the conditional distributions of $X|Y$ and we can use Bayes' theorem to get a classifier!
-
-- Let's look at the relationships between our wine `Class` and some of the numeric variables in the data
-
-```{r winepair, fig.width=6, fig.height=6, fig.cap="Pair-wise scatterplots of the wine data.", fig.margin=T, echo=FALSE, fig.cap="Pairs-plot of a few variables of the wine data."}
-# pairs plot
-colors <- c("darkgreen", "darkorange", "#990000")[wines$Class]
-pairs(wines[, c(2:5, 14)], pch = 16, cex = .5, gap = 0, col = colors, xaxt = "n", yaxt = "n")
-```
 
 Let's just consider the `Alcohol` variable in creation of our model.
 
@@ -163,7 +161,7 @@ We might consider the Normal distribution as a candidate for $X|Y$'s distributio
 
 - We really have three distributions, one for each value $Y$ can take on.
 
-```{r qqa, fig.height=4, fig.width=8, fig.margin=T, echo=FALSE, fig.cap="QQ plot for Alcohol for the two groups."}
+```{r qqa, fig.height=4, fig.width=8, fig.margin=T, echo=FALSE, fig.cap="QQ plot for Alcohol for the two groups.", fig.alt = 'QQplots are shown comparing the observations of alcohol within each class to a Normal distribution. All three qqplots show a roughly straight line, indicating that Normal distributions may be reasonable for the alcohol values within a particular class.'}
 # Normal Q-Q plots
 par(mfrow=c(1,3))
 alc_1 <- wine_small |> 
@@ -187,7 +185,7 @@ qqline(alc_3)
 - Not unreasonable to assume that the data from all three classes follow normal distributions with possibly different means and variances. 
 
 
-```{r winealc, echo=FALSE, fig.cap="Estimated density functions of Alcohol for the two classes in wine data.", eval=FALSE}
+```{r winealc, echo=FALSE, fig.cap="Estimated density functions of Alcohol for the two classes in wine data.", eval=FALSE, fig.alt= 'Density plots for the distribution of alcohol for each class of wine are shown. The alcohol distribution for class 2 is located towards the smaller values of alcohol, 11-13, and the data appear to be unimodal, roughly bell-shaped, but with a bit of a skew towards the right. The alcohol distribution for class 3 is located in the middle of the alcohol values, 12-14, and the data appears to be roughly normally distributed. The alcohol distribution for class 1 is located furthest to the right, values between 13 and 15. This distribution is unimodal and roughly bell-shaped as well.'}
 ggplot(wine_small) + 
   geom_density(aes(x = Alcohol, group = Class, fill = Class), lwd=2, alpha = 0.3) + 
   theme_bw(base_size = 18) + 
@@ -231,7 +229,8 @@ $$
 means_variances <- wine_small |>
   group_by(Class) |>
   summarize(means = mean(Alcohol), vars = var(Alcohol))
-means_variances
+means_variances |>
+  kable()
 ```
 
 ```{r, echo=FALSE}
@@ -260,7 +259,7 @@ $$
 
 as shown in the figure below.
 
-```{r dda, fig.width=8, fig.height=5, echo=FALSE, fig.cap="Estimated distribution of Alcohol for the two groups.", fig.margin=T}
+```{r dda, fig.width=8, fig.height=5, echo=FALSE, fig.cap="Estimated distribution of Alcohol for the two groups.", fig.margin=T, fig.alt="Fitted Normal distributions for the alcohol variable are shown for each class of wine. The distributions show roughly the same spread of about 1 unit. Class 2's alcohol distribution haa a mean of 12, class 3's alcohol distribution has a mean of about 13, and class 1's alcohol distribution has a mean of about 13.75"}
 # set up the grid over which to plot
 Alcohol <- seq(10, 16, length.out = 101)
 
@@ -302,7 +301,10 @@ f <- dnorm(x,
            sd = sqrt(means_variances$vars))
 # p_k * f_k
 pf <- p_Y * f
-round(pf, 4) 
+pf_df <- data.frame(round(pf, 4))
+names(pf_df) <- c("Class", "Numerator")
+pf_df |>
+  kable()
 ```
 
 We see that Class 2 is our predicted class
@@ -311,27 +313,13 @@ We see that Class 2 is our predicted class
 
 ```{r}
 post_prob <- pf / sum(pf)
-round(post_prob,3)
+post_prob_df <- data.frame(round(post_prob, 3))
+names(post_prob_df) <- c("Class", "Prob")
+post_prob_df |>
+  kable()
 ```
 
 Reconsidering the image showing the three Normal densities, we see that 12 falls most closely to the middle of Class 2's distribution and furthest from Class 1.
-
-```{r, fig.width=8, fig.height=5, echo=FALSE, fig.cap="Estimated distribution of Alcohol for the two groups.", fig.margin=T}
-# set up the grid over which to plot
-Alcohol <- seq(10, 16, length.out = 101)
-
-# Normal pdfs of two groups
-f1 <- dnorm(Alcohol, mean = xbar[1], sd = sdev[1])
-f2 <- dnorm(Alcohol, mean = xbar[2], sd = sdev[2])
-f3 <- dnorm(Alcohol, mean = xbar[3], sd = sdev[3])
-df <- data.frame(Alcohol, f1, f2, f3)
-gg <- gather(df, "Class", "Density", -Alcohol)
-ggplot(gg) + 
-  geom_line(aes(Alcohol, Density, col = Class), lwd = 2) + 
-  theme_bw(base_size = 18) + 
-#  labs(col=guide_legend(title="Class")) + 
-  scale_color_discrete(labels = 1:3)
-```
 
 We can try to develop rules around this to understand the idea more clearly.
 
@@ -376,40 +364,6 @@ $$
 - This classification method is called **Quadratic Discriminant Analysis (QDA)**. 
 
     + The name is due to the fact that the discriminant functions, $\widehat\delta_k(x)$ are quadratic polynomials of $x$. 
-    
-    + Let's see the decision boundary here.
-    
-```{r}
-qda <- train(Class ~ Alcohol,
-            data = wine_small,
-            method = "qda")
-Alcohol <- seq(10, 16, length.out = 501)
-preds <- predict(qda, newdata = data.frame(Alcohol))
-```
-
-```{r, fig.width=8, fig.height=5, echo=FALSE, fig.cap="Estimated distribution of Alcohol for the two groups.", fig.margin=T}
-first2_alc <- 10
-first3 <- min(which(preds==3))
-first3_alc <- Alcohol[first3]
-first1 <- min(which(preds==1))
-first1_alc <- Alcohol[first1]
-last1_alc <- 16
-# Normal pdfs of two groups
-f1 <- dnorm(Alcohol, mean = xbar[1], sd = sdev[1])
-f2 <- dnorm(Alcohol, mean = xbar[2], sd = sdev[2])
-f3 <- dnorm(Alcohol, mean = xbar[3], sd = sdev[3])
-df <- data.frame(Alcohol, f1, f2, f3)
-
-gg <- gather(df, "Class", "Density", -Alcohol)
-ggplot(gg) + 
-  geom_line(aes(Alcohol, Density, col = Class), lwd = 2) + 
-  theme_bw(base_size = 18) + 
-  #labs(col=guide_legend(title="Class")) + 
-  scale_color_discrete(labels = 1:3) +
-  geom_segment(x = first2_alc, xend = Alcohol[first3-1], y = 0, yend = 0, lwd =2, col = "#00BA38")+
-  geom_segment(x = first3_alc, xend = Alcohol[first1-1], y = 0, yend = 0, lwd =2, col = "#619CFF")+
-  geom_segment(x = first1_alc, xend = last1_alc, y = 0, yend = 0, lwd =2, col = "#F8766D")
-```
 
 - If we assumed the variances were the same across the Normal densities, the discriminant functions would be linear in $x$. This procedure is called **Linear Discriminant Analysis**
 
@@ -442,95 +396,8 @@ $$
 $$f_{\boldsymbol{X}}(\boldsymbol{x}) = (2\pi)^{-1} |\boldsymbol{\Sigma}|^{-1/2} \exp\{ - (\boldsymbol{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\boldsymbol{x} - \boldsymbol{\mu}) /2 \}$$
 This is denoted by $\boldsymbol X \sim N_2(\boldsymbol{\mu}, \boldsymbol{\Sigma})$
 
-The plots below give an example of this joint distribution and an example of a random sample from it.
+The shape of the PDF (and that of the scatterplot of a random sample generated from the distribution) is determined by $\boldsymbol{\Sigma}$. Generally, a bivariate normal distribution looks like a mound. If the covariance is near 0 then the hill is symmetric in both directions. If there is a large covariance, the hill gets stretched to be longer.
 
-```{r, echo=FALSE, fig.width=10, fig.height=5, warning=FALSE, message=FALSE, fig.margin = FALSE, fig.cap="Density function of a bivariate normal distribution (left) and a scatterplot of a random sample of size 100 from a bivariate normal distribution."}
-library(mnormt)
-xx = seq(-3,3,len=51)
-yy = xx
-mm = cbind( rep(xx,51), rep(yy,each=51) )
-ff = dmnorm(mm, varcov=diag(1,2))
-
-par(mfrow=c(1,2))
-
-persp(xx,yy,matrix(ff,ncol=51,nrow=51), phi=45, theta=30, zlab="density", main = "PDF of a bivariate normal distribution",
-      xlab = "x1", ylab = "x2")
-# contour(xx,yy,matrix(ff,ncol=51,nrow=51))
-
-dd <- rmnorm(n = 100, mean = c(0,0), varcov = matrix(0.5, 2, 2) + diag(0.5,2))
-plot(dd, xlab = "x1", ylab = "x2", main = "A random sample of size 100", pch=19)
-```
-
-
-The shape of the PDF (and that of the scatterplot of a random sample generated from the distribution) is determined by $\boldsymbol{\Sigma}$.
-
-- An easy was to visualize the PDF of a bivariate distribution is to plot the constant probability density contours.
-
-**Constant probability density contours**
-
-We define the constant probability density contour (also called constant-density contour) of a bivariate normal PDF to be the set of vectors $\boldsymbol{x}$ such that $f(\boldsymbol{x})$ is constant, These sets are ellipses that are centered around $\boldsymbol{\mu}$.
-
-The figures below show three examples of bivariate normal distribution with different variance-covariance patterns. 
-
-Note:
-
-- If the two variables are uncorrelated (covariance is 0), the major and minor axes of the elliptical contours will be parallel to the $x$- and $y$-axis. 
-- In presence of correlation, the ellipses will be oriented according the sign/magnitude of the correlation. 
-
-```{r bvn1, echo=FALSE, fig.width=12, fig.height=6, fig.cap="PDF and contours of a bivariate normal distribution with $var(X_1) = var(X_2) = 1, cov(X_1,X_2) = 0$. The contours are concentric circles since $X_1$ and $X_2$ are uncorrelated, and have the same variance.", fig.margin = FALSE}
-m <- 51
-xx = seq(-3,3,len=m)
-yy = xx
-mm = cbind( rep(xx,m), rep(yy,each=m) )
-
-
-par(mfrow=c(1,2))
-
-ff = dmnorm(mm, varcov=diag(1,2))
-persp(xx,yy,matrix(ff,ncol=51,nrow=51), 
-      phi=45, theta=30, 
-      xlab = "x1", ylab = "x2", zlab="density", 
-      main = "PDF of a bivariate normal distribution\n v(x1) = v(x2) = 1, cov(x1,x2) = 0", zlim = c(0, 0.24))
-contour(xx,yy,matrix(ff,ncol=51,nrow=51), 
-        main = "Contour plot",
-        xlab = "x1", ylab = "x2")
-```
-
-```{r bvn2, echo=FALSE, fig.width=12, fig.height=6, fig.cap="PDF and contours of a bivariate normal distribution with $var(X_1) = 1, var(X_2) = 3, cov(X_1,X_2) = 1$. The countours are oriented accoring to the positive correlation between $X_1$ and $X_2$. Also, the contours are narrower along $X_1$ axis comapred to $X_2$ due to $var(X_1)$ being more that $var(X_2)$.", fig.margin = FALSE}
-m <- 51
-xx = seq(-4,4,len=m)
-yy = xx
-mm = cbind( rep(xx,m), rep(yy,each=m) )
-
-
-par(mfrow=c(1,2))
-ff = dmnorm(mm, varcov=matrix(1, 2, 2) + diag(c(0,2)))
-persp(xx,yy,matrix(ff,ncol=51,nrow=51), 
-      phi=45, theta=30, 
-      xlab = "x1", ylab = "x2", zlab="density",
-      main = "PDF of a bivariate normal distribution\n v(x1) = 1, v(x2) = 3, cov(x1,x2) = 1", zlim = c(0, 0.24))
-contour(xx,yy,matrix(ff,ncol=51,nrow=51), 
-        main = "Contour plot",
-        xlab = "x1", ylab = "x2")
-```
-
-```{r bvn3, echo=FALSE, fig.width=12, fig.height=6, fig.cap="PDF and contours of a bivariate normal distribution with v(x1) = 1, v(x2) = 1.3, cov(x1,x2) = -0.5", fig.margin = FALSE}
-m <- 51
-xx = seq(-3,3,len=m)
-yy = xx
-mm = cbind( rep(xx,m), rep(yy,each=m) )
-
-
-par(mfrow=c(1,2))
-ff = dmnorm(mm, varcov=matrix(-0.5, 2, 2) + diag(c(1.5,1.8)))
-persp(xx,yy,matrix(ff,ncol=51,nrow=51), 
-      phi=45, theta=30, 
-      xlab = "x1", ylab = "x2", zlab="density",
-      main = "PDF of a bivariate normal distribution\n v(x1) = 1, v(x2) = 1.3, cov(x1,x2) = -0.5", zlim = c(0, 0.24))
-contour(xx,yy,matrix(ff,ncol=51,nrow=51), 
-        main = "Contour plot",
-        xlab = "x1", ylab = "x2")
-```
 
 ### Multivariate Normal Distribution
 
@@ -593,13 +460,17 @@ for(ii in 1:3){
   mu[[ii]] <- colMeans(X[wines$Class == ii, ])
   Sigma[[ii]] <- cov(X[wines$Class == ii, ])
 }
-mu
-Sigma
+for (ii in 1:3){
+  mu[[ii]] |>
+    kable(col.names = paste0("Class ", ii, " Means"))
+  Sigma[[ii]] |>
+    kable(col.names = c("Alcohol", "Proline"), label = paste0("Class ", ii, " Variance/Covariance Matrix"))
+}
 ```
 
-    + The figure below shows the data for the three classes, overlayed with bivariate normal density contours for each class. 
++ The figure below shows the data for the three classes, overlayed with bivariate normal density contours for each class. 
 
-```{r fullwine, echo=FALSE, fig.cap="Three class wines data overlayed with normal density contours.", message=FALSE, warning=FALSE, fig.width=8, fig.height=6, fig.margin = TRUE}
+```{r fullwine, echo=FALSE, fig.cap="Three class wines data overlayed with normal density contours.", message=FALSE, warning=FALSE, fig.width=8, fig.height=6, fig.margin = TRUE, fig.alt = "A scatterplot between Alcohol and Proline is shown. The alcohol values range from 11 to 15 and the proline values from 400 to 1600. The points are colored by the wine class. Three distinct groups are shown with class 2's values mostly being located around alcohol values from 11.5 to 13 and proline values from 400 to 1000. Class 3's values are mostly located around alcohol values of 12.5 to 14.5 and proline values from 500 to 800. Class 1's values re mostly located around alcohol values from 13 to 15 and proline values from 800 to 1600. Bivariate mormal distribution contours are overlayed on top of these showing roughly where the bivariate normal distributions are located. The mean of class 2's bivariate normal distribution is at alochol of 12.25 and proline of 550. The mean of class 3's bivariate normal distribution is at alcohol of 13.2 and proline of 700. The mean of class 1's bivariate normal distribution is at alcohol of 13.75 and proline of 1150."}
 library(car)
 lv <- c(0.25, 0.5, 0.75)
 cl <- c("#990000", "darkgreen", "orange")
@@ -619,7 +490,7 @@ legend(11, 1600, c("1", "2", "3"), title = "Class",
        pch = pc, col = cl, cex = 2)
 ```
 
-    + As before, **for a given data point** $\boldsymbol{x}$, we can compute $\widehat p_Y(k) \widehat f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y=k)$, and the associated posterior probabilities.
++ As before, **for a given data point** $\boldsymbol{x}$, we can compute $\widehat p_Y(k) \widehat f_{\boldsymbol{X}|Y}(\boldsymbol{x}|y=k)$, and the associated posterior probabilities.
     
 ```{r, warning=FALSE, message=FALSE}
 # For multivariate normal density
@@ -635,7 +506,10 @@ for(ii in 1:3){
 }
 # Posterior prob
 post_prob <- p*f / sum(p*f)
-round(post_prob, 3)
+post_prob_df <- data.frame(round(post_prob, 4))
+names(post_prob_df) <- c("Class", "Probability")
+post_prob_df |>
+  kable()
 ```
 
 - In general, we can use the `qda()` function in `MASS` package to build QDA models. 
@@ -645,14 +519,17 @@ wine_qda <- qda(Class ~ Alcohol + Proline, data = wines)
 wine_qda
 # prediction of new x
 pred <- predict(wine_qda, newdata = newx)
-pred
+pred_df <- data.frame(round(pred$posterior, 4))
+names(pred_df) <- c("Class 1 Probability", "Class 2 Probability", "Class 3 Probability")
+pred_df |>
+  kable()
 ```
 
 The decision boundaries for this QDA are shown in the figure below. 
 
 - Here the boundaries are quadratic functions of `Alcohol` and `Proline` since the discriminant functions are quadratic!  
 
-```{r qdadis, echo=FALSE, fig.cap="Decision boundary of QDA when applied to wines data."}
+```{r qdadis, echo=FALSE, fig.cap="Decision boundary of QDA when applied to wines data.", fig.alt = "A scatterplot of alcohol and proline is shown along with a decision boundary for the QDA classifier. The decision boundary for class 2 is formed by two curves: one roughly straight line from alcohol 11 and proline of 1600 to alcohol 12.7 and proline of 850. The second curve sprouts out of alcohol of 12.7 and proline of 850 heads down and to the left to roughly alcohol of 12.7 and proline of 700 before becoming mostly a straight line heading down and to the right, ending at alcohol of 13.7 and proline of 350. The decision boundary for class 3 is formed by the curve that sprouts out of alcohol of 12.7 and proline of 850 heads down and to the left to roughly alcohol of 12.7 and proline of 700 before becoming mostly a straight line heading down and to the right, ending at alcohol of 13.7 and proline of 350 and a mostly straight line from alcohol of 12.7 and proline of 850 to alcohol of 15 and proline of 800. The rest of the plot, the upper right area, corresponds to the class 1 region." }
 drawparti(as.factor(wines$Class), 
           wines$Alcohol, 
           wines$Proline, 
@@ -678,8 +555,12 @@ caret_qda <- train(factor(Class) ~ Alcohol + Proline,
                    method = "qda",
                    trControl = trainControl(method = "CV",
                                             number = 10))
-caret_qda$results
-confusionMatrix(caret_qda)
+caret_qda$results |>
+  as.data.frame() |> 
+  kable()
+#columns represent the true value and rows the predicted value for each class
+confusionMatrix(caret_qda)$table |>
+  kable()
 ```
 
 
@@ -722,7 +603,7 @@ The figure below shows the decision boundaries of a few classification methods a
 
 - Keep in mind that there are *many* more discrimination analysis methods available in literature and in various R and python packages!
 
-```{r cbd, echo=FALSE, fig.width=12, fig.height=3, warning=FALSE, message=FALSE, fig.fullwidth=T, fig.cap="Classification boundaries for four classifiers.", cache=TRUE, fig.margin = FALSE, fig.fullwidth = TRUE}
+```{r cbd, echo=FALSE, fig.width=12, fig.height=3, warning=FALSE, message=FALSE, fig.fullwidth=T, fig.cap="Classification boundaries for four classifiers.", cache=TRUE, fig.margin = FALSE, fig.fullwidth = TRUE, fig.alt = 'The decision boundaries for four different classifiers are shown as applied to the wine data using alcohol and proline as predictors. The LDA model shows decision boundaries that are straight lines. The QDA model shows decision boundaries that are curved. The flexible discriminant analysis model show decision boundaries that are piecewise linear. The naive bayes model shows decision boundaries that are very wiggly lines. All of the decision boundaries roughly separate the predictor space into the same three regions.'}
 set.seed(1001)
 library(caret)
 library(earth)
@@ -806,18 +687,6 @@ Even though QDA can be considered more general method that LDA (due to the restr
 
 Roughly speaking, LDA tends to be a better choice than QDA if training sample size is small and so reducing variance is crucial. In contrast, QDA is recommended if the training set is very large, so that the variance of the classifier is not a major concern, or if the assumption of a common covariance matrix for the $K$ classes is clearly untenable.
 
-
-```{r ldavsqda, echo=FALSE, fig.cap="LDA vs QDA in two simulated example. Left panel shows a data set where each class has the same covariance matrix. The right panel shows a data set with different covariance matrices for each class. The Bayes (purple dashed), LDA (black dotted), and QDA (green solid) decision boundaries are displayed. The shading indicates the QDA decision rule", fig.margin = FALSE, fig.width=8, fig.height=4}
-
-knitr::include_graphics("img/4_9.png")
-```
-
-The figure above shows examples of simulated data sets -- figure taken from *Introduction to Statistical Learning*. 
-
-- Each of the data sets contains two variables $X_1$ and $X_2$ and two classes. 
-- The left panel shows the data with $cor(X_1, X_2) = 0.7$ for both the classes. Thus the Bayes decision boundary is linear in this case, and LDA performs better than QDA, because QDA suffers from higher variance without a corresponding decrease in bias.   
-- The right panel shows a data set with $cor(X_1, X_2) = 0.7$ in one class and $cor(X_1, X_2) = -0.7$ in the other. Here, the assumption of a common variance-covariance matrix is not appropriate and thus, LDA suffers from high bias but QDA performs better. 
-
 A possible disadvantage of QDA/LDA is the assumption of multivariate normality of predictors in each class. When this assumption is unreasonable LDA/QDA can perform badly. 
 However, assumption of normality is more crucial for QDA than LDA since another formulation of LDA does not require normality of the predictors. 
 
@@ -857,7 +726,7 @@ We can form $\widehat f_{X_j|Y}(x_j|y)$ by following any of the options below:
 
     + Examples of such estimators are *relative frequency  histograms* and *kernel density estimators* -- a smoothed version of histogram. 
 
-```{r, echo=FALSE, fig.cap="Relative frequancy histogram and kernel density estimator (solid line) of a sample."}
+```{r, echo=FALSE, fig.cap="Relative frequancy histogram and kernel density estimator (solid line) of a sample.", fig.alt = "A histogram of the alcohol variable is shown with a smoothed density overlayed. The alcohol distribution looks roughly bell-shaped."}
 Alcohol <- wines |> 
   filter(Class == 1) |>
   pull(Alcohol)
@@ -887,10 +756,14 @@ nb_wine <- NaiveBayes(as.factor(Class) ~ Alcohol + Proline,
 nb_kern <- NaiveBayes(as.factor(Class) ~ Alcohol + Proline, 
                       data = wines,
                       usekernel = TRUE)
-predict(nb_wine, newdata = data.frame(Alcohol = 13,
+pred_normal <- predict(nb_wine, newdata = data.frame(Alcohol = 13,
                                       Proline = 600))
-predict(nb_kern, newdata = data.frame(Alcohol = 13,
+pred_normal$posterior |> 
+  kable()
+pred_kernel <- predict(nb_kern, newdata = data.frame(Alcohol = 13,
                                       Proline = 600))
+pred_kernel$posterior |>
+  kable()
 ```
 
 - In the first fit, we assumed normal distribution for each predictor (`usekernel = FALSE`)
@@ -928,7 +801,7 @@ nb_k <- train(as.factor(Class) ~ Alcohol + Proline,
 
 Here we can plot the accuracy and kappa values across the repeated test sets.
 
-```{r, out.width = '400px', fig.cap="Accuracy and Kappa values for the four models on the wine data set."}
+```{r, out.width = '400px', fig.cap="Accuracy and Kappa values for the four models on the wine data set.", fig.alt = "Accuracy estimates and kappa estimates are shown as boxplots for each of the four classifiers fit: QDA, LDA, Naive Bayes using a normal distribution, and Naive Bayes using a kernel density estimate. The distributions of each quantity are roughly similar with accuracies centered at 0.85 and kappa values centered at around 0.75"}
 bwplot(resamples(list(LDA = lda, 
                       QDA = qda, 
                       NaiveB_gauss = nb_g,
@@ -955,15 +828,7 @@ However, neither QDA nor naive Bayes is a special case of the other.
 
 Between LDA and logistic regression, we expect LDA to perform better if the assumptions for LDA are satisfied. 
 
-The textbook \textit{Introduction to Statistical Learning} also provides numerical comparison between various classifiers discussed so far. The figure below shows test error rates under different scenarios -- see the textbook for details for each scenarios.
-
-```{r, echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE}
-knitr::include_graphics("img/4_11.png")
-```
-
-```{r comp, echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE, fig.cap="Test error rates for a few classifiers in linear (top row) and nonlinear (bottom row) scenarios described in \\textit{Introduction to Statistical Learning}, section 4.5."}
-knitr::include_graphics("img/4_12.png")
-```
+The textbook \textit{Introduction to Statistical Learning} also provides numerical comparison between various classifiers discussed so far. 
 
 In general, no single classifier performs best in every scenario. Their test performance depends on the underlying structure (distribution, variance-covariance patterns) of the the data. 
 

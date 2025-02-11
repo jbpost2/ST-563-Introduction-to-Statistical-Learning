@@ -485,10 +485,9 @@ Let's check out our confusion matrix.
 
 ```{r}
 # Confusion matrix
-confusionMatrix(table(heart_data$HeartDiseaseFac, 
-                         predicted = ifelse(predict(heart_glm, type = "response") > 0.5,
-                                            1, 0)
-))
+confusionMatrix(table(predicted = ifelse(predict(heart_glm, type = "response") > 0.5,
+                                            1, 0),
+                      heart_data$HeartDiseaseFac))
 ```
 
 As we have only a couple of predictors, we can plot the decision boundary of the classifier!
@@ -540,13 +539,13 @@ ggplot() +
 Now the confusion matrix for Females:
 
 ```{r}
-confusionMatrix(table(heart_data |> 
-                        filter(Sex == "F") |> 
-                        pull(HeartDiseaseFac), 
-                      predicted = ifelse(predict(heart_glm, 
+confusionMatrix(table(predicted = ifelse(predict(heart_glm, 
                                                  newdata = heart_data |> filter(Sex == "F"), 
                                                  type = "response") > 0.5,
-                                         1, 0)
+                                         1, 0),
+                      heart_data |> 
+                        filter(Sex == "F") |> 
+                        pull(HeartDiseaseFac)
                       ))
 ```
 
@@ -594,13 +593,13 @@ ggplot() +
 Now the confusion matrix for Males:
 
 ```{r}
-confusionMatrix(table(heart_data |> 
-                        filter(Sex == "M") |> 
-                        pull(HeartDiseaseFac), 
-                      predicted = ifelse(predict(heart_glm, 
+confusionMatrix(table(predicted = ifelse(predict(heart_glm, 
                                                  newdata = heart_data |> filter(Sex == "M"), 
                                                  type = "response") > 0.5,
-                                         1, 0)
+                                         1, 0),
+                      heart_data |> 
+                        filter(Sex == "M") |> 
+                        pull(HeartDiseaseFac)
                       ))
 ```
 
