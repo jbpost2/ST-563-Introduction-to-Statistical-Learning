@@ -17,7 +17,7 @@ library(knitr)
 
 Complete the following problems from the Introduction to Statistical Learning with R book (I'm not sure if the problems are in the same order in the python book so use the R book to identify which problems to do).
 
-Section 4.7
+Section 4.8
 
 - Book Problem 4
 
@@ -31,7 +31,7 @@ Section 4.7
 
 ## Book Problems
 
-Section 4.7
+Section 4.8
 
 - Book Problem 14
 

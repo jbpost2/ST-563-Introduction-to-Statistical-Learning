@@ -1,0 +1,146 @@
+---
+title: "Homework 3"
+always_allow_html: yes
+format: docx
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+#for nicer table output
+library(knitr)
+```
+
+# Conceptual Problems
+
+- Book Problem 4
+
+    a) 10% of the data will be used as the distribution is uniform and our range accounts for 10% of the total range of [0, 1]. (Not asked for, but we can show this via simulation.)
+    
+```{r}
+set.seed(10)
+unif_values <- runif(100000)
+mean(unif_values < 0.65 & unif_values > 0.55)
+```
+    
+    b) Since we have 0.1 probability of X1 being in the range and, separately/independently, a 0.1 probability of X2 being in the range, we have 0.1*0.1 = 0.01 probability of a value falling in the range. So 1% of our observations would fall in the range.
+    
+```{r}
+unif_values_2 <- runif(100000)
+mean((unif_values< 0.65 & unif_values > 0.55) & (unif_values_2 > 0.3 & unif_values_2 < 0.4))
+```
+    
+    c) Here only $0.1^{100} = $`r 0.1^(100)` of the observations fall in the region! Almost no chance of a value falling in the interval of choice.
+    
+    d) We can see that, if we want to use the same 'size' region, as $p$ grows we will have fewer and fewer observations. That means we either need to have way more observations or we need to make our 'near' range larger as $p$ grows.
+    
+    e) Let $L$ be the length. 
+    
+        i) For $p = 1$, 10% of the observations fall in any area of length L = 0.1 in [0,1]. 
+        ii) For $p = 2$, we want $L^2 = 0.1$. This means $L=(0.1)^{1/2} = $ `r (0.1)^(1/2)`
+        iii) Generically, for $p$ we want $L^p = 0.1$ or $L = (0.1)^{1/p}$. For a few values of $p$ we can see the lengths below:
+        
+```{r}
+p <- 1:30
+L <- (0.1)^(1/p)
+data.frame(p, L) |>
+  knitr::kable()
+```
+
+- Book Problem 5:
+
+    a) If the Bayes decision boundary is truly linear, then we would expect LDA to do better on the test set as QDA would be finding relationships that don't truly exist in the data and, therefore, should not exist in the test set. As QDA is able to better fit data, we would expect QDA to perform better on the training set.
+    b) If the Bayes decision boundary is truly non-linear, we expect QDA to perform better on both the training and test set. QDA generally fits more closely to the training data due to being a more complicated of a model. With a non-linear decision boundary, we'd also expect QDA to translate better to the test set.
+    c) We would generally assume that QDA's performance would improve relative to LDA as we'd have more data to fit the more complicated model better. If the true boundary is linear (the equal covariance assumption being reasonable), then LDA may continue to outpeform QDA. QDA should get closer and closer to the LDA fit in that situation as well.
+    d) False - the performance of QDA may approach that of LDA as the sample size increases but QDA is generally going to be fitting too complicated of a relationship and, thus, won't perform as well on the test set.
+
+- Book Problem 6
+Suppose we collect data for a group of students in a statistics class with variables X1 = hours studied, X2 = undergrad GPA, and Y = receive an A. We fit a logistic regression and produce estimated coefficients given by intercept = -6, slope on hours studied = 0.05, and slope on undergraduate GPA of 1.
+
+    a) Our (esitmated) log-odds of success are equal to $-6 + 0.05(hours) + 1(GPA)$. Our probability of success is $\hat{p} = \frac{e^{-6 + 0.05(hours) + 1(GPA)}}{1+e^{-6 + 0.05(hours) + 1(GPA)}}$$ = `r exp(-6 + 0.05*40+3.5)/(1+exp(-6 + 0.05*40+3.5))`
+    
+    b) To have a 50% probability we would also have a log-odds of 0. Setting our log-odds equation to 0 with GPA equal to 3.5 we get $0 = -6 + 0.05(hours) + 3.5$ which implies we need to have $hours = $`r (6-3.5)/0.05`.
+
+- Book Problem 9
+
+    a) Let $p$ be the probability of success. If the odds are 0.37, then $p/(1-p) = 0.37$. Solving for $p$ this gives 0.27. So 27% of people will default.
+    b) The odds are $p/(1-p)$ so here we have odds of 0.1905 of defaulting.
+    
+# Implementation Problems 
+
+- Book Problem 14
+
+    a) The binary variable can be created in a lot of ways. We'll use `mutate()` and `if_else()` from the `dplyr` package.
+```{r}
+library(tidyverse)
+library(ISLR2)
+Auto <- Auto
+Auto <- Auto |>
+  mutate(mpg01 = factor(if_else(mpg > median(mpg), 1, 0), 
+                        levels = c(0, 1), 
+                        labels = c("Low", "High")))
+```
+    b) Answers will vary. A couple of plots are made below.
+```{r}
+ggplot(Auto, aes(y = displacement)) +
+  geom_boxplot(aes(x = mpg01))
+ggplot(Auto, aes(y = cylinders)) +
+  geom_boxplot(aes(x = mpg01))
+```
+The boxplots show that the lower MPG cars tend to have higher displacement. Similarly, the lower MPG cars tend to have a higher number of cylinders.
+
+```{r}
+ggplot(Auto, aes(x = displacement, y = cylinders, color = mpg01)) +
+  geom_point()
+```
+This scatter plot shows a generally increasing relationship between displacement and cylinders. The points also show that the MPG are generally lower for a higher displacement, higher number of cylinder car.
+
+```{r}
+ggplot(Auto, aes(x = horsepower, y = acceleration, color = mpg01)) +
+  geom_point()
+```
+
+We see a strong trend that a higher horsepower is associated with lower acceleration. Most of the higher horsepower and lower acceleration points also happen to have lower gas mileage.
+
+(More plots and exploration could be done!)
+
+    c) Split the data into a training set and a test set.
+```{r}
+library(caret)
+set.seed(11)
+split <- createDataPartition(Auto$mpg01, p = 0.7, list = FALSE)
+train <- Auto[split, ]
+test <- Auto[-split, ]
+tc <- trainControl(method = "cv", number = 10)
+```
+    d) Perform LDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+```{r}
+#your variables may vary
+LDA_fit <- train(mpg01 ~ cylinders + weight + acceleration,
+                 data = train, 
+                 method="lda",
+                 trControl = tc)
+LDA_fit
+confusionMatrix(test$mpg01, predict(LDA_fit, test))
+```
+
+    e) Perform QDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+```{r}
+
+```
+
+    f) Perform logistic regression on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+```{r}
+
+```
+
+    g) Perform naive Bayes on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+```{r}
+
+```
+
+    h) Perform KNN on the training data, with several values of K, in order to predict mpg01. Use only the variables that seemed most associated with mpg01 in (b). What test errors do you obtain? Which value of K seems to perform the best on this data set?
+
+```{r}
+
+```
