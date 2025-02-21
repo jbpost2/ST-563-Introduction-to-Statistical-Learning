@@ -15,34 +15,33 @@ library(knitr)
 
 - Book Problem 4
 
-    a) 10% of the data will be used as the distribution is uniform and our range accounts for 10% of the total range of [0, 1]. (Not asked for, but we can show this via simulation.)
-    
+a) 10% of the data will be used as the distribution is uniform and our range accounts for 10% of the total range of [0, 1]. (Not asked for, but we can show this via simulation.)
+
 ```{r}
 set.seed(10)
 unif_values <- runif(100000)
 mean(unif_values < 0.65 & unif_values > 0.55)
 ```
-    
-    b) Since we have 0.1 probability of X1 being in the range and, separately/independently, a 0.1 probability of X2 being in the range, we have 0.1*0.1 = 0.01 probability of a value falling in the range. So 1% of our observations would fall in the range.
-    
+
+b) Since we have 0.1 probability of X1 being in the range and, separately/independently, a 0.1 probability of X2 being in the range, we have 0.1*0.1 = 0.01 probability of a value falling in the range. So 1% of our observations would fall in the range.
+
 ```{r}
 unif_values_2 <- runif(100000)
 mean((unif_values< 0.65 & unif_values > 0.55) & (unif_values_2 > 0.3 & unif_values_2 < 0.4))
 ```
+
+c) Here only $0.1^{100}$ of the observations fall in the region! Almost no chance of a value falling in the interval of choice.
+d) We can see that, if we want to use the same 'size' region, as $p$ grows we will have fewer and fewer observations. That means we either need to have way more observations or we need to make our 'near' range larger as $p$ grows.
+e) Let $L$ be the length. 
     
-    c) Here only $0.1^{100} = $`r 0.1^(100)` of the observations fall in the region! Almost no chance of a value falling in the interval of choice.
-    
-    d) We can see that, if we want to use the same 'size' region, as $p$ grows we will have fewer and fewer observations. That means we either need to have way more observations or we need to make our 'near' range larger as $p$ grows.
-    
-    e) Let $L$ be the length. 
-    
-        i) For $p = 1$, 10% of the observations fall in any area of length L = 0.1 in [0,1]. 
-        ii) For $p = 2$, we want $L^2 = 0.1$. This means $L=(0.1)^{1/2} = $ `r (0.1)^(1/2)`
-        iii) Generically, for $p$ we want $L^p = 0.1$ or $L = (0.1)^{1/p}$. For a few values of $p$ we can see the lengths below:
-        
+    i) For $p = 1$, 10% of the observations fall in any area of length L = 0.1 in [0,1]. 
+    ii) For $p = 2$, we want $L^2 = 0.1$. This means $L=(0.1)^{1/2}$
+    iii) Generically, for $p$ we want $L^p = 0.1$ or $L = (0.1)^{1/p}$. For a few values of $p$ we can see the lengths below:
+
 ```{r}
 p <- 1:30
 L <- (0.1)^(1/p)
+L <- round(L, 3)
 data.frame(p, L) |>
   knitr::kable()
 ```
@@ -57,9 +56,9 @@ data.frame(p, L) |>
 - Book Problem 6
 Suppose we collect data for a group of students in a statistics class with variables X1 = hours studied, X2 = undergrad GPA, and Y = receive an A. We fit a logistic regression and produce estimated coefficients given by intercept = -6, slope on hours studied = 0.05, and slope on undergraduate GPA of 1.
 
-    a) Our (esitmated) log-odds of success are equal to $-6 + 0.05(hours) + 1(GPA)$. Our probability of success is $\hat{p} = \frac{e^{-6 + 0.05(hours) + 1(GPA)}}{1+e^{-6 + 0.05(hours) + 1(GPA)}}$$ = `r exp(-6 + 0.05*40+3.5)/(1+exp(-6 + 0.05*40+3.5))`
+    a) Our (esitmated) log-odds of success are equal to $-6 + 0.05(hours) + 1(GPA)$. Our probability of success is $\hat{p} = \frac{e^{-6 + 0.05(hours) + 1(GPA)}}{1+e^{-6 + 0.05(hours) + 1(GPA)}}$ = `r exp(-6 + 0.05*40+3.5)/(1+exp(-6 + 0.05*40+3.5))`
     
-    b) To have a 50% probability we would also have a log-odds of 0. Setting our log-odds equation to 0 with GPA equal to 3.5 we get $0 = -6 + 0.05(hours) + 3.5$ which implies we need to have $hours = $`r (6-3.5)/0.05`.
+    b) To have a 50% probability we would also have a log-odds of 0. Setting our log-odds equation to 0 with GPA equal to 3.5 we get $0 = -6 + 0.05(hours) + 3.5$ which implies we need to have hours = `r (6-3.5)/0.05`.
 
 - Book Problem 9
 
@@ -70,8 +69,8 @@ Suppose we collect data for a group of students in a statistics class with varia
 
 - Book Problem 14
 
-    a) The binary variable can be created in a lot of ways. We'll use `mutate()` and `if_else()` from the `dplyr` package.
-```{r}
+a) The binary variable can be created in a lot of ways. We'll use `mutate()` and `if_else()` from the `dplyr` package.
+```{r, warning = FALSE, message = FALSE}
 library(tidyverse)
 library(ISLR2)
 Auto <- Auto
@@ -80,7 +79,8 @@ Auto <- Auto |>
                         levels = c(0, 1), 
                         labels = c("Low", "High")))
 ```
-    b) Answers will vary. A couple of plots are made below.
+
+b) Answers will vary. A couple of plots are made below.
 ```{r}
 ggplot(Auto, aes(y = displacement)) +
   geom_boxplot(aes(x = mpg01))
@@ -104,8 +104,8 @@ We see a strong trend that a higher horsepower is associated with lower accelera
 
 (More plots and exploration could be done!)
 
-    c) Split the data into a training set and a test set.
-```{r}
+c) Split the data into a training set and a test set.
+```{r, warning = FALSE, message = FALSE}
 library(caret)
 set.seed(11)
 split <- createDataPartition(Auto$mpg01, p = 0.7, list = FALSE)
@@ -113,34 +113,90 @@ train <- Auto[split, ]
 test <- Auto[-split, ]
 tc <- trainControl(method = "cv", number = 10)
 ```
-    d) Perform LDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+
+d) Perform LDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
 ```{r}
 #your variables may vary
 LDA_fit <- train(mpg01 ~ cylinders + weight + acceleration,
                  data = train, 
                  method="lda",
                  trControl = tc)
-LDA_fit
-confusionMatrix(test$mpg01, predict(LDA_fit, test))
+LDA_fit$results |>
+  kable()
+LDA_conf <- confusionMatrix(test$mpg01, predict(LDA_fit, test))
+LDA_conf$table |>
+  kable()
+LDA_conf$overall |>
+  kable()
 ```
 
-    e) Perform QDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+e) Perform QDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
 ```{r}
-
+#your variables may vary
+QDA_fit <- train(mpg01 ~ cylinders + weight + acceleration,
+                 data = train, 
+                 method="qda",
+                 trControl = tc)
+QDA_fit$results |>
+  kable()
+QDA_conf <- confusionMatrix(test$mpg01, predict(QDA_fit, test))
+QDA_conf$table |>
+  kable()
+QDA_conf$overall |>
+  kable()
 ```
 
-    f) Perform logistic regression on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+f) Perform logistic regression on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
 ```{r}
-
+#your variables may vary
+LR_fit <- train(mpg01 ~ (cylinders + weight + acceleration)^2,
+                 data = train, 
+                 method="glm",
+                 family = "binomial",
+                 trControl = tc)
+LR_fit$results |>
+  kable()
+LR_fit$finalModel$coefficients |>
+  kable()
+LR_conf <- confusionMatrix(test$mpg01, predict(LR_fit, test))
+LR_conf$table |>
+  kable()
+LR_conf$overall |>
+  kable()
 ```
 
-    g) Perform naive Bayes on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+g) Perform naive Bayes on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
 ```{r}
-
+#your variables may vary
+NB_fit <- train(mpg01 ~ cylinders + weight + acceleration,
+                 data = train, 
+                 method="nb",
+                 trControl = tc)
+#this warning can safely be ignored
+NB_fit$results |>
+  kable()
+NB_conf <- confusionMatrix(test$mpg01, predict(NB_fit, test))
+NB_conf$table |>
+  kable()
+NB_conf$overall |>
+  kable()
 ```
 
-    h) Perform KNN on the training data, with several values of K, in order to predict mpg01. Use only the variables that seemed most associated with mpg01 in (b). What test errors do you obtain? Which value of K seems to perform the best on this data set?
+h) Perform KNN on the training data, with several values of K, in order to predict mpg01. Use only the variables that seemed most associated with mpg01 in (b). What test errors do you obtain? Which value of K seems to perform the best on this data set?
 
 ```{r}
-
+#your variables may vary
+kNN_fit <- train(mpg01 ~ cylinders + weight + acceleration,
+                 data = train, 
+                 method="knn",
+                 tuneGrid = data.frame(k = 1:40),
+                 trControl = tc)
+kNN_fit$results |>
+  kable()
+kNN_fit$bestTune
+kNN_conf <- confusionMatrix(test$mpg01, predict(kNN_fit, test))
+kNN_conf$table |>
+  kable()
+kNN_conf$overall |>
+  kable()
 ```
