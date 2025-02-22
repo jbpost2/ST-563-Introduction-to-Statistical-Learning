@@ -1,0 +1,732 @@
+---
+title: "Introduction to Nonparametric Regression: Basis Expansions, Regularization, Local Regression"
+author: "Arnab Maity"
+always_allow_html: yes
+format: docx
+include-in-header: 
+      - header.tex
+editor_options: 
+  chunk_output_type: console
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+
+```{r setup, include=FALSE, message=FALSE}
+#library(MASS)
+#library(klaR)
+library(tidyverse)
+library(caret)
+#library(rsample)
+library(ISLR2)
+library(knitr)
+#library(AppliedPredictiveModeling)
+#library(kableExtra)
+```
+
+```{r  include=FALSE, message=FALSE}
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, 
+                      cache.extra = packageVersion('tufte'),
+                      kable.force.latex = TRUE,
+                      fig.margin = TRUE, 
+                      fig.height = 5, 
+                      fig.width = 6)
+options(htmltools.dir.version = FALSE)
+```
+
+\newpage
+
+# Introduction
+
+So far, many of our regression and classification methods used linear combinations of the predictors variables. Both linear and logistic regression models as well as LDA rely on linear model. In general, the association between $Y$ and $X$ may be nonlinear and non-additive. 
+
+There are some straightforward ways to incorporate nonlinearity in the models. For example, we can include higher order terms such as $X^2$, $X^3$, $X_1X_2$ etc. as predictors, and the resulting regression functions/classification boundaries will be nonlinear in the predictors. Polynomial regression is one such example where we posit
+$$
+E(Y_i | X_i) = f(X)
+$$
+for a linear regression model, or
+$$
+log\left[\frac{P(Y_i = 1 | X_i)}{P(Y_i = 2 | X_i)}\right] = f(X)
+$$
+for a logistic regression model, where 
+$$f(X) = \beta_0 + X_i\beta_1 + \ldots + X_i^d\beta_d.
+$$ 
+Thus we are assuming that the true function $f(X)$ is a *linear combination* of the monomial terms $X, \ldots, X^d$. These terms are examples of *basis functions.* In general, given a set of predictors $X_i = (X_{i1}, \ldots, X_{ip})$, we may assume that there are there are functions $h_1(\cdot), \ldots, h_M(\cdot)$ such that the function $f(X_i)$ can be written as or can be approximated as,
+$$
+f(X_i) = \beta_0 + h_1(X_i)\beta_1 + \ldots + h_M(X_i)\beta_M,
+$$
+where $\beta_0, \ldots, \beta_M$ are unknown coefficients. The functions $h_1(\cdot), \ldots, h_M(\cdot)$ are called *basis functions*. and the representation above is called a *linear basis expansion* in $X$. Once we have specified the basis functions, we can simply use the linear model approach to fit this model.
+
+```{r, echo=FALSE, fig.cap="Examples of a linear (blue), cubic (red) and piecewise constant (orange) fit to a simulated data set with one predictor. The true function is shown in black.", message=FALSE, warning=FALSE, fig.alt = "A plot of simulated data is shown. The true curve follows an S-shape, starting in the lower left and moving up and to the right. A sample data set is shown randomly scattered about this true line. Three models are fit to this data. A linear model, which does not fit well except in the middle range of the data, a cubic model, which follows the curvature of the data reasonably well, and a piecewise constant fit (or a step function), which roughly follows along the data but with large jumps between regions."}
+#| label: bsex
+
+fx <- function(x){
+  exp(2*x)/(1 + exp(2*x))
+}
+n <- 201
+x <- seq(-2.9, 2.9, len=n)
+y <- fx(x) + rnorm(n)/10
+df <- data.frame(x = x,
+                 f = fx(x),
+                 y = y)
+kn <- seq(-3, 3, by=1)
+B <- cut(x, kn)
+pcfit <- lm(y ~ B)$fitted
+
+ggplot(df) +
+  geom_line(aes(x, fx(x)), lwd=1.1, lty=2) + 
+  geom_point(aes(x,y), alpha = 0.3) + 
+  geom_smooth(aes(x, y), method = "lm", se = FALSE) +
+  geom_smooth(aes(x, y), 
+              method = "lm", 
+              se = FALSE,
+              formula = y ~ poly(x,3), col = "red") + 
+  geom_line(aes(x, pcfit), col = "darkorange", lwd = 1.1) + 
+  theme_bw(base_size = 18) + 
+  ylab("")
+```
+
+
+Some examples of basis representations are shoes below:
+
++ Linear model in each predictors: $h_m(X_i) = X_{im}$
+
++ Polynomial regressions: $h_m(X)$ takes forms such as $X_{im}^2$ or $X_{ij}X_{im}$. 
+
++ Nonlinear transformations: $h_m(X)$ can take form such as $log(X_{im})$ or $\sqrt{X_{im}}$. 
+
++ Piecewise constant: $h_m(X) = I(L_m \leq X_k \leq U_m)$. By
+breaking the range of $X_k$ up into such non-overlapping regions, we can model $f(X)$ with a piecewise constant function. 
+
+\noindent The figure above shows examples of a linear, polynomial (3rd degree) and piecewise constant fit to a simulated data set with one predictor.
+
+Depending on the problem at hand, we might use specific basis functions such as logarithms or power functions. Often we use the basis to achieve more flexible representations for $f(X)$ -- polynomial regression is an example of this. However, a drawback of polynomial regression is their global nature, that is, changing the coefficients to obtain a form in one region of the data might result in wild variations in the remote/boundary regions. A more useful approach is to consider families of *piecewise-polynomials* and *splines* that allow for local polynomial representations. Note that piecewise-constants are a special case of piecewise-polynomials with degree being set to zero.
+
+In each of the approaches above, the number of basis functions has to be determined by the user. Thus the *number of basis functions* can be viewed as a tuning parameter. An alternative approach  is to produce a *dictionary* consisting of typically a very large number of basis functions, along with the a method for *controlling the complexity* of our model. There are three common approaches: 
+
++ *Restriction methods*, where we decide before-hand to limit the class of functions. Generalized additive models (GAM) is an example, where we assume that our model has the form
+$$
+f(X_i) = \beta_0 + f_1(X_{i1}) + \ldots + f_p(X_{ip}), 
+$$
+where $f_1(\cdot), \ldots, f_p(\cdot)$ are assumed to be smooth non-linear functions. It is called an additive model because we calculate a separate $f_j$ for each $X_j$, and then add together all of their contributions. Each of these functions are then models using basis expansion:
+$$
+f_j(X_{ij}) = \beta_{j1}h_{j1}(X_{ij}) + \ldots + \beta_{jM_j}h_{jM_j}(X_{ij}),
+$$
+where $M_j$ is the number of basis functions used to model $f_j$. The size of the model is limited by the number of basis functions used for each component function. Notice that the final form of $f(X)$ is still linear in terms of $h_{11}, \ldots, h_{pM_p}$. 
+
++ *Selection methods*, which adaptively scan the dictionary and include only those basis functions that contribute significantly to the fit of the model. Here the variable selection techniques discussed before (e.g., LASSO etc) are useful. There are other stage-wise greedy approaches as well -- examples are classification and regression trees (CART), multivariate adaptive regression splines (MARS) and boosting.
+
++ *Regularization methods*, where we use the entire dictionary but restrict the coefficients. Ridge and lasso regressions are a simple examples of a regularization approach. We will also discuss more sophisticated methods for regularization.
+
+
+# Piecewise Polynomials and Splines
+
+For simplicity, let us assume that we have only one predictor $X$ -- we will relax this assumption in later sections when appropriate. Let us start with piecewise-constant basis functions: given a set of points $c_1, \ldots, c_{M}$ in the domain of $X$, define
+$$
+h_0(X) = I(X < c_1), \;\; h_1(X) = I(c_1 \leq X < c_2), \;\;  \ldots, \;\; h_{M-1} = I(c_{M-1} \leq X < c_M), \;\; h_M(X) = I(X > c_M).
+$$
+The boundaries of each regions, $c_1, \ldots, c_{M}$, are called *knots*.
+
+For linear regression, we will then fit a model
+$$
+Y_i = \beta_0 + h_1(X_i)\beta_1 + \ldots + h_M(X_i)\beta_m + \epsilon_i.
+$$
+Note that we have omitted $h_0(\cdot)$ from the model above. This is because it is redundant with the intercept. Each $X_i$ can be in only one region $[c_{m-1},c_m)$. Thus, only one of the $h_m(X_i)$ will equal to one, and every other functions will be zero. Therefore, $h_0(X_i)+h_1(X_i)+\ldots+h_M(X_i)=1$. Including the intercept will thus introduce multicollinearity. Since the regions $[c_{m-1}, c_m)$ are disjoint, the least squares estimate of $\beta_m$ is simply the sample mean of those $Y$'s that have $X$'s in the $m$-th region. Also note that when $X < c_1$, then $h_1(X_i) = \ldots = h_M(X_i) = 0$. Thus $\beta_0$ is the mean of the $Y$'s with $X$ values in the first region. 
+
+To see the piecewise-constant fit in practice, let us revisit the `Boston` data, where we regress `medv` of `lstat` -- see the figure below.
+
+```{r boston, fig.cap="Piecewise-constant fit for Boston data.", fig.alt = "A scatterplot with lstat on the x-axis and medv on the y-axis is shown. The data generally starts in the upper left of the plot and curves down as lstat increases. A piecewise model is shown. This model is constant within ranges of the quantiles of lstat. The piecewise fit generally follows the pattern of the data well."}
+# Define region boundaries
+kn <- quantile(Boston$lstat, 
+               probs = seq(.10, .90, by = .1))
+# Basis functions
+basis <- cut(Boston$lstat, 
+             breaks =  c(-Inf, kn, Inf))
+# Linear model fit and plot
+out <- lm(Boston$medv ~ basis)
+plot(Boston$lstat, Boston$medv, 
+     pch = 19, cex = 0.4,
+     xlab = "lstat", ylab = "medv")
+points(Boston$lstat, out$fitted.values, 
+       pch =15, col="darkorange")
+abline(v = kn, lty = 2)
+```
+\noindent The vertical lines are the the knots. We can see that in each region, the estimated $f(X)$ is constant.  
+
+
+
+We can similarly fit a logistic regression model using the same basis functions as covariates. Consider the [South African Heart Disease data](https://raw.githubusercontent.com/harpreetSinghGuller/Data-Science-R/refs/heads/master/SAHeart.csv). The dataset is a subset of the Coronary Risk-Factor Study (CORIS) baseline survey. The study was carried out in three rural areas of the Western Cape, South Africa. The aim of the study was to establish the intensity of ischemic heart disease risk factors in that high-incidence region. The data represent white males between 15 and 64, and the response variable is the *presence or absence of myocardial infarction (MI)* at the time of the survey.
+
+
+```{r, message= FALSE, warning = FALSE}
+heart <- read_csv("https://raw.githubusercontent.com/harpreetSinghGuller/Data-Science-R/refs/heads/master/SAHeart.csv")
+heart |>
+  dplyr::select(sbp, chd) |>
+  slice(1:4) |>
+  kable()
+```
+
+\noindent We use `chd` as response and `sbp` (systolic blood pressure) as predictor. The figure below shows the fitted function.  
+
+```{r saconst, fig.cap="Piecewise-constant fit for SA heart data.", fig.alt = "A graph between sbp and the estimated value for sbp from the piecewise-constant fit is shown. This model gives a piece-wise constant fit. The estimated values take on -1 for sbp values less than 120, slowly increases to -0.75 over small ranges of sbp until a value of sbp qual to 130. Here it drops down to a value of -1.2. It then jumps back up to values near -0.7, continuing up as sbp increases until sbp of 170. From sbp of 170 and on, the estimated value is 0.5"}
+# Define region boundaries
+kn_logit <- quantile(heart$sbp, 
+               probs = seq(.1, .9, by = .1))
+# Basis functions
+basis_logit <- cut(heart$sbp, 
+             breaks =  c(-Inf, kn_logit, Inf))
+# Logistic model fit and plot
+out_logit <- glm(heart$chd ~ basis_logit, 
+                 family = binomial())
+# Grid for prediction
+xgrid <- seq(min(heart$sbp), 
+             max(heart$sbp),
+             len = 201)
+ps <- cut(xgrid, 
+          breaks =  c(-Inf, kn_logit, Inf))
+pred <- predict(out_logit, 
+                newdata = data.frame(basis_logit = ps))
+# Plot the estimated function
+plot(heart$sbp, out_logit$linear.predictors, 
+     pch = 19,
+     xlab = "sbp", ylab = "f(sbp)")
+points(xgrid, pred, 
+       pch =15, col="darkorange", type = "l", lwd=2)
+abline(v = kn, lty = 2)
+```
+
+
+It is easy to see that we can extend this concept to piecewise-polynomial by positing a polynomial model for $h_m(\cdot)$ in each region. For example, the two figures below show piecewise-linear and piecewise-quadratic fits for `Boston` data. 
+
+```{r}
+# piecewise-linear fit
+outlin <- lm(Boston$medv ~ basis + 
+               basis:Boston$lstat)
+# piecewise-quadratic fit
+outquad <- lm(Boston$medv ~ basis + 
+                basis:Boston$lstat + 
+                basis:I(Boston$lstat^2))
+```
+```{r bostonl, fig.cap="Piecewise-linear fit for Boston data.", echo=FALSE, fig.alt = "A scatterplot with lstat on the x-axis and medv on the y-axis is shown. The data generally starts in the upper left of the plot and curves down as lstat increases. A piecewise linear model is shown. This model shows a line being fit within different quantile regions. For instance, from lstat prior to 5 a line is shown with a steep downward trend. From lstat of 5 to 6 (representing the 10th through 20th percentiles of data) another sharply downward line is shown although it does not connect to the line from the first region. This process continues across the 8 other regions."}
+plot(Boston$lstat, Boston$medv, pch = 19, cex = 0.4)
+points(Boston$lstat, outlin$fitted.values, pch =15, col="darkorange")
+abline(v = kn)
+```
+```{r bostonq, fig.cap="Piecewise-quadratic fit for Boston data.", echo=FALSE, fig.alt = "A scatterplot with lstat on the x-axis and medv on the y-axis is shown. The data generally starts in the upper left of the plot and curves down as lstat increases. A piecewise quadratic model is shown. This model shows a quadratic being fit within different quantile regions. For instance, from lstat prior to 5 a curve in the form of the right side of an upside down parabola is shown. From lstat of 5 to 6 (representing the 10th through 20th percentiles of data) the left side of an upward facing quadratic is shown. The quadratic fits at the end points of the regions do not connect. This process continues across the 8 other regions."}
+plot(Boston$lstat, Boston$medv, pch = 19, cex = 0.4)
+points(Boston$lstat, outquad$fitted.values, pch =15, col="darkorange")
+abline(v = kn)
+```
+
+One drawback of this approach is that the estimated function is discontinuous at the boundaries of the regions, $c_1, \ldots, c_M$. Except in special cases, we would typically prefer piecewise-polynomials that are restricted to be continuous at the knots. For example, if we have only two regions, that is, only one knot $c$, a piecewise-linear functions have the form
+$$
+h_1(X) = (\beta_0 + X\beta_1)I(X < c), \;\; h_1(X) = (\beta_2 + X\beta_3)I(c \leq X).
+$$
+With the restriction that the overall function is continuous at $c$, we have an additional condition that $h_1(\cdot)$ has the same value as $h_2(\cdot)$ at $X = c$, that is,
+$$
+\beta_0 + c\beta_1 = \beta_2 + c\beta_3.
+$$
+Thus, instead of four original parameters $\beta_0, \ldots, \beta_3$, we will have *three* free parameters with the additional restriction of continuity. 
+
+It can be shown that a more direct way to proceed in this case is to use a basis that incorporates the continuity constraints,
+$$
+h_1(X) = 1, \;\; h_2(X) = X, \;\; h_3(X) = (X - c)_{+},
+$$
+where $t_+ = 0$ if $t \leq 0$, $t$ otherwise. In the general case with $M$ knots, $c_1, \ldots, c_M$, it can be shown that the continuity constraints can be incorporated by adding $(X - c_m)_+$ terms to the basis -- for piecewise-linear functions we can use
+$$
+h_1(X) = 1, \;\; h_2(X) = X, \;\; h_3(X) = (X - c_1)_{+}, \;\; \ldots, \;\; h_{M+2}(X) = (X - c_M)_{+},
+$$
+We often prefer smoother functions, and these can be achieved by increasing the order of the local polynomial. For a $d$-th degree piecewise-polynomial model with $M$ knots, we use the basis functions,
+$$
+h_1(X) = 1, \;\; h_2(X) = X, \;\;, \ldots, \;\; h_{d + 1}(X) = X^d, \;\;, h_{d+2}(X) = (X - c_1)_{+}^d, \;\; \ldots, \;\; h_{d + M + 1}(X) = (X - c_M)_{+}^d.
+$$
+The terms $(X - c_k)_{+}^d$ are known as *truncated power basis functions*. 
+
+In spline literature, we also call the formulation above to have *order* $d+1$. Thus piecewise-constant and linear splines have orders  1 and 2, respectively. Typically, we use piecewise-constant, linear and cubic (order-1, 2, and 4) splines in practice. Thus a order-$(d+1)$ spline with $M$ knots needs $d + M + 1$ basis functions including intercept. The number $d + M + 1$ (the total number of basis functions) is called *degrees of freedom*. For example, a cubic spline with 4 knots has degrees of freedom $3 + 4 + 1 = 8$. 
+
+These splines with fixed knots are also known as *regression splines*. One needs to select the *order*/*degree* of the spline, the *number of knots* and their *placement*. One simple approach is to parameterize a family of splines by the number of basis functions, and have the $X$ observations determine the positions of the knots. Placing the knots at specific quantiles of observed $X$ values is often a reasonable approach. 
+
+Since the space of spline functions of a particular order and knot sequence is a vector space, there are many equivalent bases for representing them.^[Just as there are for ordinary polynomials.] While the truncated power basis is conceptually simple, it is not too attractive numerically: powers of large numbers can lead to severe rounding problems. The *B-spline basis* allows for efficient computations even when the number of knots is large.
+
+In R, we can use the function `bs()` in the `splines` library. Below we fit a cubic spline to Boston data.
+```{r, message=FALSE, warning=FALSE, fig.alt = "A scatterplot with lstat on the x-axis and medv on the y-axis is shown. The data generally starts in the upper left of the plot and curves down as lstat increases. A cubic spline model is shown. This model's fit is similar to the piecewise quadratic fit except the fitted model agrees at the end points of each region."}
+library(splines)
+# Define region boundaries
+kn <- quantile(Boston$lstat, 
+               probs = seq(.10, .90, by = .1))
+# Cubic splines basis functions
+basis <- bs(Boston$lstat,
+            degree = 3,
+            knots = kn)
+# Linear model fit
+outbs <- lm(Boston$medv ~ basis)
+```
+```{r, fig.cap="Cubic spline fit of Boston data.", echo=FALSE}
+plot(Boston$lstat, Boston$medv, pch = 19, cex = 0.4,
+     xlab = "lstat", ylab = "medv")
+points(Boston$lstat, outbs$fitted.values, 
+       pch =15, col="darkorange")
+abline(v = kn)
+```
+
+Similarly, we fit a cubic spline to the SA heart data below. We use two internal knots for this fit. The figure below shows the estimated function. 
+
+```{r sacubic, fig.cap="Cubic spline fit with two knots of the SA heart data.", fig.alt = "A graph between sbp and the estimated value for sbp from the cubic spline fit with two knots is shown. This model gives a smooth downward trend from sbp of 100 and estimated value of 0 until sbp of 120 and estimated value of -1.2. The model then increases in a roughly linear fashion until sbp of 220 and estimated sbp of 1."}
+# Basis with 3 knots
+basis_cubic <- bs(heart$sbp, df = 6)
+# logistic fit
+heart_logit <-  glm(heart$chd ~ basis_cubic, 
+                    family = binomial())
+# Plot the estimated f of the observed data
+plot(heart$sbp, heart_logit$linear.predictors,
+     xlab = "sbp", ylab = "f(sbp)", pch=19)
+# grid for prediction
+xnew <- seq(min(heart$sbp), 
+            max(heart$sbp), 
+            by = 1)
+ps <- predict(basis_cubic, newx = xnew)
+# Estimated function
+fest <- cbind(1, ps) %*% heart_logit$coefficients
+lines(xnew, fest, lwd = 2, col = "darkorange")
+```
+
+
+
+
+## Natural Cubic Splines
+
+It is well known that polynomial fits can be erratic near boundaries. Also extrapolating beyond observed data range is generally not advisable. These issues are even more pronounced in spline fits. The polynomials fit beyond the boundary
+knots behave even more wildly than the corresponding global polynomials in that region.  
+
+A *natural cubic spline* adds additional constraints: the function is *linear* beyond the boundary knots (in the region where $X$ is smaller than the smallest knot, or larger than the largest knot). This constraint frees up four degrees of freedom (two constraints each in both boundary regions). This can be used to include more knots in the interior region. This additional constraint means that natural splines generally produce more stable estimates at the boundaries.
+
+A natural cubic spline with $M$ knots is represented by $M$ basis functions (equivalently, degrees of freedom is $M$). One can start from a basis for cubic splines, and derive the reduced basis by imposing the boundary constraints. For example, starting from the truncated power basis, the basis functions for natural cubic spline are
+$$
+N_1(X) = 1, \;\;, N_2(X) = X, \;\;, N_{m+2} = d_k(X) - d_{M-1}(X),
+$$
+for $m = 1, \ldots, M$, where
+$$
+d_m(X) = \frac{(X - c_m)_+^3 - (X - c_M)_+^3}{C_M - c_m}.
+$$
+
+
+In R, we can use `ns()` in `splines` library to create natural cubic spline basis functions. For the `Boston` data, we fit natural cubic spline as follows.
+
+```{r, fig.cap="Natural cubic spline fit for Boston data.", fig.alt = "A scatterplot with lstat on the x-axis and medv on the y-axis is shown. The data generally starts in the upper left of the plot and curves down as lstat increases. A natural cubic spline model is shown. This model's fit is similar to the cubic spline fit except the estimates are more linear near the lower and upper values of lstat."}
+# Linear model fit
+boston_ns <- lm(medv ~ ns(lstat, df = 9), 
+                data = Boston)
+# Grid for prediction
+xgrid <- seq(min(Boston$lstat), max(Boston$lstat), 
+             len = 101)
+pred <- predict(boston_ns, 
+                newdata = data.frame(lstat = xgrid))
+# Estimated function plot
+plot(Boston$lstat, Boston$medv,
+     xlab = "lstat", ylab = "medv", pch=19, cex = 0.5)
+lines(xgrid, pred, 
+      lwd = 3, col = "darkorange")
+```
+
+For the SA heart data, logistic regression can be fit in a similar way.
+
+```{r, fig.cap="Natural cubic spline fit for SA heart data.", fig.alt = "A graph between sbp and the estimated value for sbp from the natural cubic spline fit with two knots is shown. This model behaves nearly exactly as the cubic spline fit as the cubic spline had a reasonably linear fit for the smaller and larger values of sbp."}
+# logistic fit
+heart_ns <- glm(chd ~ ns(sbp, df = 6), 
+                data = heart,
+                family = binomial())
+# Grid for prediction
+xgrid <- seq(min(heart$sbp), max(heart$sbp), 
+             len = 101)
+pred <- predict(heart_ns, 
+                newdata = data.frame(sbp = xgrid))
+# Estimated function plot
+plot(xgrid, pred, 
+     lwd = 2, type = "l",
+     xlab = "sbp", ylab = "f(sbp)")
+```
+
+
+## Choosing the Number and Locations of the Knots
+
+We have so far placed knots at equally spaced quantiles of the observed predictor values. Another option is to place more knots in places where we suspect the function might vary most rapidly, and to place fewer knots where it seems more stable. In R, `bs()` and `ns()` uses the first option (quantiles) by default. 
+
+To choose the number of knots, $M$, we may test a few values of $M$, and choose one value depending on how the final fitted functions looks. Objectively, we can use cross-validation to select number of knots/degrees of freedom. For linear regression, we minimize prediction MSE/MAE, and for logistic regression, we minimize misclassification error. 
+
+For least squares, leave-one-out CV (LOOCV) becomes an viable option. An amazing shortcut makes the cost of LOOCV the same as that of a *single model fit*. The following formula holds for LOOCV prediction MSE:
+$$
+PMSE(\lambda) = \frac{1}{n}\sum_{i=1}^n \left(\frac{Y_i - \widehat Y_{i, M}}{1 - h_{i, M}}\right)^2,
+$$
+where where $\widehat Y_{i, M}$ is the $i$-th fitted value from the original least squares fit, and $h_{i, M}$ is the leverage, for a given $M$. This is like the ordinary MSE, except the $i$-th residual is divided by $1 - h_i$. Thus we can compute LOOCV prediction error for each $M$ from the original model fit for the whole data using that value of $M$, without fitting $n$ models.   
+
+# Smoothing Splines
+
+Another approach of creating splines is to completely avoid knot selection problem by using a maximal set of knots. The complexity of the fit is controlled by regularization. Let us assume $Y$ is continuous. Consider the following problem: among all functions $f(\cdot)$ with two continuous derivatives, find one that minimizes the penalized residual sum of squares
+$$
+\sum_{i=1}^n \{Y_i - f(X_i)\}^2 + \lambda \int\{f''(t)\}^2\, dt,
+$$
+where $\lambda$ is a fixed non-negative *tuning/smoothing parameter*. The first term measures closeness to the data, while the second term penalizes curvature in the function, and $\lambda$ establishes a trade-off between the two terms. 
+
+The notation $f''(t)$ indicates the second derivative of the function $f$. The first derivative $f'(t)$ measures the slope
+of a function at $t$, and the second derivative corresponds to the amount by which the slope is changing. Hence, broadly speaking, the second derivative of a function is a measure of its roughness: it is large in absolute value if $f(t)$ is very wiggly near $t$, and it is close to zero otherwise. Note that the second derivative of a straight line is zero; note that a line is perfectly smooth.
+
+Note that without the second term (equivalently $\lambda = 0$), the optimal choice of $f(\cdot)$ is a function that interpolates the data, and thus giving $RSS = 0$. On the other hand, if $\lambda = \infty$, we can not tolerate any second derivative. Thus the optimal form of $f$ would be linear (i.e., zero second derivative). This would result in a ordinary least squares fit. Thus, as $\lambda$ varies from zero to infinity, the fitted function varies from very rough to very smooth, and the hope is that $\lambda$ indexes an interesting class of functions in between.
+
+The criterion above is defined on an infinite-dimensional function space. It can be shown that the minimization problem has an explicit, finite-dimensional,
+unique minimizer: a *natural cubic spline* with knots at the unique values of $X_i$, $i = 1, \ldots, n$. At face value it seems that the family is still over-parametrized, since there are as many as $n$ knots/degrees of freedom! However, the penalty term translates to a penalty on the spline coefficients, which are shrunk some of the way toward the linear fit. The value of the tuning parameter $\lambda$ controls the level of shrinkage. 
+
+An equivalent way to specify smoothing is via *effective degrees of freedom*. Recall, even if we have $n$ knots, the regression coefficients are shrunk, and $\lambda$ controls the amount of shrinkage. So $n$ is not quite the degrees of freedom here. Usually degrees of freedom refer to the number of free parameters, such as the number of coefficients fit in a polynomial or cubic spline. Instead, we define effective degrees of freedom, $df_\lambda$. It is possible to show that as $\lambda$ increases from 0 to infinity, $df_\lambda$ decrease from $n$ to 2 (degrees of freedom for a linear fit). Hence $df_\lambda$ is a measure of the flexibility of the
+smoothing spline -- the higher it is, the more flexible (and the lower-bias but higher-variance) the smoothing spline. Formally, it can be shown that the estimated function $f$ is a linear combination of the response values: for a fixed $\lambda$
+$$
+[\widehat f(X_1), \ldots, \widehat f(X_n)]^T = S_\lambda Y,
+$$
+where $S_\lambda$ is an $n\times n$ matrix. The effective degrees of freedom is 
+$$
+df_\lambda = trace(S_\lambda) = \{S_\lambda\}_{11} + \ldots + \{S_\lambda\}_{nn}. 
+$$
+Thus, instead of specifying $\lambda$, one can specify effective degrees of freedom.
+
+
+In R, we can use the function `smooth.spline()` to fit smoothing splines. 
+```{r}
+boston_ss <- smooth.spline(Boston$lstat, Boston$medv, 
+                           lambda = 1/1000)
+boston_ss$df
+```
+
+```{r}
+boston_ss <- smooth.spline(Boston$lstat, Boston$medv, 
+                           df = 5)
+boston_ss$lambda
+```
+
+\noindent The figure below shows fitted function for Boston data for three different values of $\lambda$, equivalently different effective degrees of freedom.
+
+```{r bostonss, echo=FALSE, fig.cap="Smoothing spline fit for three different lambda values, and the corresponding effective degrees of freedom.", fig.alt = "A scatterplot with lstat on the x-axis and medv on the y-axis is shown. The data generally starts in the upper left of the plot and curves down as lstat increases. Three smoothing splines are shown with varying degrees of freedom. The model with roughly two degrees of freedom - a lambda of 100 - is essentially a linear model fit starting in the top left and showing a downward trend. This model does not fit the data well. The model with 3.61 degrees of freedom - a lambda of 1/10 - shows a roughly parabolic shape and fits the data well except for small values of lstat. The model with 9.57 degrees of freedom - a lambda of 1/1000 - shows a similar model to the previous but is more curved from samll and large values of lstat. This model seems to fit the data the best."}
+fit1 <- smooth.spline(Boston$lstat, Boston$medv, lambda = 1/1000)
+fit2 <- smooth.spline(Boston$lstat, Boston$medv, lambda = 1/10)
+fit3 <- smooth.spline(Boston$lstat, Boston$medv, lambda = 100)
+#fit3
+plot(Boston$lstat, Boston$medv, 
+     pch=19, cex = 0.5,
+     xlab = "lstat", ylab = "medv", col = "gray")
+lines(fit1, col = "red", lwd = 3, lty=1)
+lines(fit2, col = "orange", lwd = 3, lty=1)
+lines(fit3, col = "steelblue", lwd = 3, lty=1)
+legend(30, 50, c("1/1000", "1/10", "100"), title = "lambda", 
+       col = c("red", "orange", "steelblue"), lwd = 5, lty = 1)
+legend(20, 50, round(c(fit1$df, fit2$df, fit3$df),2), title = "df", 
+       col = c("red", "orange", "steelblue"), lwd = 5, lty = 1)
+```
+
+
+
+## Selection of smoothing parameter $\lambda$
+
+We can use cross-validation again to select $\lambda$ -- we can find the value of $\lambda$ that makes the cross-validated prediction MSE as small as possible. It turns out that the leave-one-out cross-validation (LOOCV) RSS can be computed very efficiently for smoothing splines, with essentially the same cost as *computing a single fit*, using the following formula:
+$$
+RSS_{loocv}(\lambda) = \sum_{i=1}^n \{Y_i - \widehat f_\lambda^{(-i)}(X_i)\}^2 = \sum_{i=1}^n\left[\frac{Y_i - \widehat f_\lambda(X_i)}{1 - \{S_\lambda\}_{ii}}\right]^2,
+$$
+where $\widehat f_\lambda^{(-i)}(\cdot)$ is the estimated function based on all of the training observations *except*
+for the $i$-th observation $(X_i, Y_i)$. In contrast, $\widehat f_\lambda(\cdot)$ indicates the smoothing spline function fit to all of the training observations. Therefore, that we can compute each of these leave-one-out fits using only the original fit to all of the data. 
+
+In R, we can use the option `CV = TRUE` without specifying `df` or `lambda` to get the LOOCV results.
+```{r, warning=FALSE, message=FALSE}
+boston_ss_cv <- smooth.spline(Boston$lstat, Boston$medv,
+                              cv = TRUE)
+boston_ss_cv$spar #chosen sparsity
+boston_ss_cv$lambda #chosen lambda
+boston_ss_cv$df #effective df
+boston_ss_cv$pen.crit #RSS
+boston_ss_cv$cv.crit #loocv
+```
+```{r, fig.cap="Smoothing spline fit with lambda/df chosen by LOOCV", echo=FALSE, fig.alt = "A scatterplot with lstat on the x-axis and medv on the y-axis is shown. The data generally starts in the upper left of the plot and curves down as lstat increases. The smoothing splines with degrees of freedom chosen by CV is shown. This model has 11.37 degrees of freedom - a lambda of 0.00047 - and fits the data very well across the entire region."}
+plot(Boston$lstat, Boston$medv, 
+     pch=19, cex = 0.5,
+     xlab = "lstat", ylab = "medv", col = "gray")
+lines(boston_ss_cv, col = "red", lwd = 3, lty=1)
+```
+
+
+We can fit smoothing splines for logistic regression using the `gam()` function in the `gam` library. The smoothing splines can be specified using the `s()` function as follows. Note: We could have used `gam()` in the `Boston` data as well.
+
+```{r, message=FALSE, warning=FALSE, fig.cap="Smoothing spline fit with logistic regression in SA heart data.", fig.alt = "A graph between sbp and the estimated value for sbp from the smoothing spline fit is shown. This model starts at a value of sbp of 100 and estimated sbp of -0.1 and trends downward until sbp of 120 and estimated sbp of -0.4. From there it trends upward in a linear fashion until sbp of 220 and an estimated sbp of 1.6."}
+library(gam)
+out <- gam(chd ~ s(sbp, df = 4), 
+           data = heart, 
+           family = binomial())
+plot(out)
+```
+
+\noindent Here we have fit a smoothing spline to `sbp` with 4 degrees of freedom -- by default `gam()` will exclude intercept when computing degrees of freedom.
+
+# Local Regression
+
+Local regression refers to a class of regression techniques that achieve flexibility in estimating the regression function $f(X)$ by fitting a different but simple models separately at each target point $x_0$. We have already seen one example of such a method -- the KNN regression. Recall, KNN takes only $x$ values "nearest" to $x_0$, and estimates $f(x_0)$ based on those points. Observations far away from $x_0$ have no impact on estimation of $f(x_0)$, thus making KNN a *local* regression method. In general, local regression uses only those observations close to the target point $x_0$ to fit the simple model, and in such a way that the resulting estimated function $\widehat f(\cdot)$ is smooth. 
+
+Suppose we have only one predictor, and observed data $(Y_i, X_i)$ for $i=1,\ldots, n$. Recall that KNN estimates $f(x_0)$ as
+$$
+\widehat{f}(x_0) = \frac{1}{K}\sum_{X_i \in {N}_K(x_0)} Y_i,
+$$
+where ${N}_K(x_0)$ is the set of $K$ observations with $X_i$ values nearest to $x_0$. As we have seen before, the resulting estimated function is rough and not continuous -- see the figure below for an example of 20-NN fit to the Boston data with `medv` as response and `lstat` as predictor. The estimated function is plotted on a equally spaced grid of points in $[2, 37]$.   
+
+```{r bostonknn, echo=FALSE, fig.cap="20-NN fit for Boston data.", fig.alt = "A scatterplot with lstat on the x-axis and medv on the y-axis is shown. The data generally starts in the upper left of the plot and curves down as lstat increases. The KNN fit with 20 neighbors is shown. This model fits the data reasonably well but is quite wiggly in the middle, possibly indicating an overfit model."}
+# Fit KNN with K=30
+knn_fit <- knnreg(medv ~ lstat,
+              data = Boston,
+              k = 20)
+# Create prediction grid
+xgrid <- list(lstat = seq(2, 37, len=201))
+# Perform prediction
+fitted_values <- predict(knn_fit, newdata = xgrid)
+# plot
+plot(Boston$lstat, Boston$medv, 
+     pch=19, 
+     col = "darkgray",
+     xlab = "Lower status of the population (percent)",
+     ylab = "Median value of owner occupied homes")
+lines(xgrid$lstat, fitted_values, lwd=2)
+```
+
+This discontinuity is unnecessary and often unwanted. It turns out the source of the problem is that all the $K$ points nearest to the target $x_0$ have the same weight, $1/K$, when computing $\widehat f(x_0)$. Rather than giving them the same, equal, weight, we can give more weight to points closer to $x_0$, and less for distant points. Another approach could be, rather than using $K$ nearest points,  we can pre-set a window $[x_0 \pm h]$, and use observations only within this window to form our estimator $\widehat f(x_0)$ with same weighting scheme as mentioned before. The figure below shows the two different methods. 
+
+```{r localw, echo=FALSE, fig.height=4, fig.width=12, fig.margin = FALSE, fig.fullwidth = TRUE, fig.cap="Examples of local weighting schemes. The left plot uses a fixed window $[x_0-h, x_0+h]$ with $h = 2$, and thus the number of points in the window may vary depending on the value of $x_0$. The right panel uses fixed number of neighbors, $K=30$. Thus depending on $x_0$, the window size changes.", fig.alt = "Side-by-side scatterplots are shown. Each has lstat on the x-axis and medv on the y-axis. The left plot shows two 'windows' for x. The first from 4 to 6 and the second from 19 to 21. Here the window size is the same however the number of points in each region varies quite a bit. The right plot shows two 'windows' for x, each with the same number of data points. The first window is from 4.8 to 5.2 and the second window is from 19 to 21."}
+y <- Boston$medv
+x <- Boston$lstat
+x0 <- 5
+x1 <- 20
+h <- 2
+ind0 <- which(abs(x0 - x) <= h)
+ind1 <- which(abs(x1 - x) <= h)
+
+par(mfrow = c(1,2))
+# Fixed window
+plot(x, y, 
+     pch = 19, col = "gray", 
+     ylim = c(0, 55), cex = 0.5,
+     main = "Fixed window size, varying K")
+points(x0, 0, pch = 15, cex = 1.2, col = "red")
+abline(v = x0 +c(-1,1)*h, lty = 2)
+lines(c(x0-h, x0+h), c(0,0), lwd=2)
+points(x[ind0], y[ind0], pch=19, cex = 0.5)
+
+points(x1, 0, pch = 15, cex = 1.2, col = "red")
+abline(v = x1 +c(-1,1)*h, lty = 2)
+lines(c(x1-h, x1+h), c(0,0), lwd=2)
+points(x[ind1], y[ind1], pch=19, cex = 0.5)
+
+## KNN
+K <- 30
+o0 <- order(abs(x - x0))[1:K]
+o1 <- order(abs(x - x1))[1:K]
+
+plot(x, y, 
+     pch = 19, col = "gray", 
+     ylim = c(0, 55), cex = 0.5,
+     main = "Fixed K, varying window size")
+points(x0, 0, pch = 15, cex = 1.2, col = "red")
+abline(v = c(min(x[o0]), max(x[o0])), lty = 2)
+lines(c(min(x[o0]), max(x[o0])), c(0,0), lwd=2)
+points(x[o0], y[o0], pch=19, cex = 0.5)
+
+points(x1, 0, pch = 15, cex = 1.2, col = "red")
+abline(v = c(min(x[o1]), max(x[o1])), lty = 2)
+lines(c(min(x[o1]), max(x[o1])), c(0,0), lwd=2)
+points(x[o1], y[o1], pch=19, cex = 0.5)
+```
+
+
+In general, for both the methods above, we can consider a general form of the estimator:
+$$
+\widehat f(x_0) = \frac{\sum_{i=1}^n w_iY_i}{\sum_{i=1}^n w_i},
+$$
+where $w_i$ are pre-specified wights designed in such a way that points nearest to $x_0$ get more weight than points further from $x_0$, that is, we can assign weights that die
+off smoothly with distance from the target point. 
+
+In general, we specify the weights using *kernel function*, $D(\cdot)$, as
+$$
+w_i = D(|x_0 - X_i|/h),
+$$
+where $h$ is a smoothing parameter that determines the the width of the local neighborhood. The kernel function is usually a positive and symmetric function that decays at the tails. Thus, when $|x_0 - X_i|/h$ is closer to zero (i.e., $X_i$ is closer to $x_0$), we have higher value of $w_i$. In contrast, for larger values of $|x_0 - X_i|/h$, the weight $w_i$ would be lower. 
+
+The smooth kernel fit still has problems, however, as exhibited in the figure above. When we take a weighted average of the $Y$ values for each window, we are essentially assuming the $f(x) \approx f(x_0)$ for all the $x$ values in the window. This approximation might lead to large bias, especially near the boundaries. For example,  in the left panel of the figure above, a local average (also called local *constant*) fit might be reasonable for $x_0 = 20$, but not quite reasonable for $x_0 = 5$. Fitting a straight line, rather than a constant, is much more reasonable here. In other words, we want to approximate $f(x) \approx a + x b$ in *each* window $[x_0 - h, x_0 + h]$. Hence $\widehat f(x_0) = \widehat a + x_0 \widehat b$. The figure below shows examples of two target points, one near boundary and one in the middle of data scatter -- this is for fixed window approach. This approach is called *local linear regression*.
+
+```{r ch79, echo=FALSE, fig.margin = FALSE, fig.height=4, fig.width=8, fig.cap="Example of local weights for two target points, one near boundary (left) and one in the middle (right) of data scatter. The orange colored points are local to the target point $x_0$, represented by the orange vertical line. The yellow bell-shape superimposed on the plot indicates weights assigned to each point, decreasing to zero with distance from the target point. The blue curve represents $f(x)$ from which the data were generated, and the light orange curve corresponds to the local regression estimate $\\widehat f(x)$.", fig.alt = "A scatter plot is shown between two variables. A point near the left boundary is highlighted and the points 'local' to it are shown. These points are weighted by a kernel function so that points further from the point of interest are weighted less. Similarly, a point near the middle is shown along with the points 'local' to it. Again, the points closer to the point of interest are weighted more and the points getting further away on either side are weighted less and less."}
+knitr::include_graphics("img/7_9.png")
+```
+
+It can be shown that, formally, we can fit a *weighted least squares* regression by minimizing
+$$
+\sum_{i=1}^n w_i (Y_i - a - X_i b)^2,
+$$
+with respect to $a$ and $b$, and estimate  $f(\cdot)$ accordingly. We can easily extend the local fit using polynomial of any degree. Such a general method is called *local polynomial regression*. 
+
+There are quite a few popular kernel functions -- examples of four kernel functions are shown in the next figure in the text:
+$$
+\mbox{Uniform: } D(t) = I(-1 \leq t \leq 1)
+$$
+$$
+\mbox{Epanechnikov: } D(t) = \frac{3}{4}(1 - t^2)\,I(-1 \leq t \leq 1)
+$$
+$$
+\mbox{Tri-cube: } D(t) = (1 - |t|^3)^3 \, I(-1 \leq t \leq 1)
+$$
+$$
+\mbox{Gaussian: } D(t) = exp(-t^2/2)
+$$
+
+\noindent The uniform, Epanechnikov and tri-cube kernels have compact support, and thus assign $w_i = 0$ when $X_i$ is outside $[x_0 - h, x_0 + h]$. The Gaussian kernel function on the other hand is a popular noncompact kernel that assigns weights to all data points (even outside $[x_0 - h, x_0 + h]$). The uniform kernel assigns same weights to every point in $[x_0 - h, x_0 + h]$, but zero outside. Thus uniform kernel is essentially performing KNN regression.  
+
+```{r kernex, echo=FALSE, fig.cap="Form of four kernel functions: Uniform (green dotted), Epanechnikov (black solid), Tri-cube (red dashed), and Gaussian (blue dash-dotted).", fig.alt = "Four example kernel functions are shown. A uniform function that gives every point between -1 and 1 equal weight. A normal distribution (or Gaussian) curve is shown that gives decaying weight as you move away from the center. A Tri-cube curve is shown which is similar to the normal distribution but weights the points more closely much more and gives no weight to points further than -1 or 1. The Epanechnikov curve is shown. This curve is similar to the Tri-cube but weights points more evenly."}
+epan <- function(t){
+  0.75*(1 - t^2)*I(abs(t) <= 1)
+}
+tri <- function(t){
+  (1 - abs(t)^3)^3*I(abs(t) <= 1)
+}
+uni <- function(t){
+  1*(abs(t) <= 1)
+}
+gauss <- function(t){
+  dnorm(t, 0, 1)
+}
+t <- seq(-3.2, 3.2, len = 201)
+df <- data.frame(epan(t), tri(t), uni(t), gauss(t))
+matplot(t, df, type = "l", lwd  = 4)
+```
+
+In order to perform local regression, there are a number of choices to be made: the kernel function $D$, the degree of polynomial to fit, the window size $h$ or the number of neighbors $K$. The choices of $D$ and degree of polynomial has some impact on the fit. The most important choice is that of $h$ or $K$: it controls the flexibility of the non-linear fit. The smaller the value of $h$ or $K$, the more local and wiggly will be our fit; alternatively, a very large value of $h$ or $K$ will lead to a global fit to the data using all of the training observations. We can again use cross-validation to choose $h$ or $K$. 
+
+An example of a local linear fit of the Boston data is shown below. 
+
+```{r, fig.cap="Local linear fit of Boston data with $h = 5$.", fig.alt = "A scatterplot with lstat on the x-axis and medv on the y-axis is shown. The data generally starts in the upper left of the plot and curves down as lstat increases. The local linear fit with h = 5 is shown. This model is not completely smooth but is continuous and fits the data reasonably well."}
+## Epanechnikov kernel
+epan <- function(t){
+  0.75*(1 - t^2)*I(abs(t) <= 1)
+}
+## Local linear fitting function
+kfit_linear <- function(x0, x, y, h){
+  # kernel weights
+  w <- epan(abs(x0 - x)/h)
+  w <- w / sum(w)
+  # Linear fit
+  out <- lm(y ~ x, weights = w)
+  # f(x0)
+  fx0 <- predict(out, newdata = data.frame(x = x0))
+  return(fx0)
+}
+## Grid for estimation of f
+xgrid <- seq(2, 37, len=201)
+## Compute fhat over grid with h = 5 
+fhat <- sapply(xgrid, kfit_linear, 
+               x = Boston$lstat, 
+               y = Boston$medv, 
+               h = 5)
+plot(Boston$lstat, Boston$medv, 
+     pch=19, 
+     col = "darkgray",
+     xlab = "Lower status of the population (percent)",
+     ylab = "Median value of owner occupied homes")
+lines(xgrid, fhat, lwd=2)
+```
+
+Alternatively, We can also use the `lo()` function in `gam` library. It uses fixed number of neighbors ($K$) as the smoothing parameter. The relevant argument is `span` which is $K/n$. 
+
+```{r, fig.cap="Local regression fit of Boston data using gam.", fig.alt = "A scatterplot with lstat on the x-axis and medv on the y-axis is shown. The data generally starts in the upper left of the plot and curves down as lstat increases. The local regression fit using a GAM is shown. This model is rougher than the previous fit but is still continuous and fits the data reasonably well."}
+out <- gam(medv ~ lo(lstat, span = 0.2), data = Boston)
+xgrid <- seq(2, 37, len=201)
+fhat <- predict(out, newdata = data.frame(lstat = xgrid))
+plot(Boston$lstat, Boston$medv, 
+     pch=19, col = "darkgray",
+     xlab = "Lower status of the population (percent)",
+     ylab = "Median value of owner occupied homes")
+lines(xgrid, fhat, lwd=2)
+```
+
+We can also fit a local linear logistic regression model by adding the argument `family = binomial()`. An example using the SA hear data is shown below. 
+
+```{r, fig.cap="Local regression fit of SA heart data using gam.", fig.alt = "A graph between sbp and the estimated value for sbp from the local regression fit is shown. This model starts at a value of sbp of 100 and estimated sbp of -0.4 and trends downward until sbp of 120 and estimated sbp of -1.2. From there it trends upward in a linear fashion until sbp of 175 and estimated sbp of 0.4. It briefly dips down before retunring to an upward linear trend."}
+out <- gam(chd ~ lo(sbp, span = 0.3), 
+           data = heart,
+           family = binomial())
+xgrid <- seq(105, 215, len=201)
+fhat <- predict(out, 
+                newdata = data.frame(sbp = xgrid))
+plot(xgrid, fhat, lwd=2, type = "l",
+     xlab = "sbp",
+     ylab = "log-odds")
+```
+
+Local regression can be generalized to incorporate multiple features $X_1,X_2, \ldots ,X_p$ as well. One very useful generalization involves fitting a multiple linear regression model that is global in some variables (e.g., linear effects), but local in another, such as time. Such models are called *varying coefficient models*. Local regression can be also generalized for bivariate problems, with a pair of variables $X_1$ and $X_2$, rather than one. We can simply use two-dimensional neighborhoods, and fit bivariate linear regression models using the observations that are near each target point in two-dimensional space. Theoretically the same approach can be implemented in higher dimensions, using linear regressions fit to $p$-dimensional neighborhoods. However, local regression can perform poorly if $p$ is much larger than about 3 or 4 because there will generally be very few training observations close to $x_0$.
+
+An example of a bivariate local regression is shown below using `Boston` data.
+
+```{r, fig.cap="Contour plot of a bivariate local regression fit of the Boston data."}
+out <- gam(medv ~ lo(lstat , nox , span = 0.5),
+           data = Boston)
+grid <- expand.grid(lstat = seq(2, 37, len=201),
+                    nox = seq(0.4, 0.85, len = 101))
+fhat <- predict(out, newdata = grid)
+contour(seq(2, 37, len=201), seq(0.4, 0.85, len = 101), 
+        fhat, nlevels = 50, 
+        xlab = "lstat", ylab = "nox")
+```
+
+
+
+# Generalized Additive Models
+
+Generalized additive models (GAMs) provide a general framework for extending a standard linear model by allowing non-linear functions of each of the variables, while maintaining additivity. In this framework, we assume that we have $p$ predictors $X_i = (X_{i1}, \ldots, X_{ip})$. In GAM, we model
+$$
+f(X_i) = \beta_0 + \sum_{j = 1}^p f_j(X_{ij}),
+$$
+where $f_j(\cdot)$ are assumed to be smooth non-linear functions. then we can use any of the previously discussed methods (polynomial regression, piecewise-polynomial splines, natural cubic splines, or smoothing splines) to model $f_j(\cdot)$. 
+
+In R, we can use the `gam()` function in the `gam` library to fit GAMs using smoothing splines. Let us use `Boston` data again but with two covariates, `lstat`, and `nox`. The figure below shows the estimated functions. 
+
+```{r bostongam, fig.cap="Estimated effects of lstat and nox in the Boston data using GAM.", fig.height=8, fig.alt = "A line graph with lstat on the x-axis and medv on the y-axis is shown. The line drawn is the fitted smoothing spline. This starts in the upper right and curves downward to the lower right. The curve is very smooth but levels off near the smaller and larger lstat values. A second line graph with nox on the x-axis and medv on the y-axis is shown. The line drawn is the fitted smoothing spline. This curve starts near nox of 0.5 and lstat of -3, curving upward until around nox of 0.6 and medv of 2, then curving downward until nox of 0.75 and medv of -1, before finally increasing to a nox of 0.9 and medv of 0."}
+out <- gam(medv ~ s(lstat, df = 4) + s(nox, df = 4), 
+           data = Boston)
+par(mfrow = c(2,1), mar = c(4,2,1,2))
+plot(out, terms = "s(lstat, df = 4)", se = TRUE)
+plot(out, terms = "s(nox, df = 4)", se = TRUE)
+```
+\noindent We call the `plot()` function with argument `se = TRUE`. This produces point-wise error bands (estimate $\pm$ two-SE) for the estimated functions.  
+
+If we want to fit natural cubic splines instead, we can simply use the `lm()` function again but with two sets of natural spline basis, as follows. The figure below shows the estimated functions. Even though we are using `lm()` we can still use `plot.Gam()` to plot the estimated functions. 
+
+```{r bostongamns, fig.cap="Estimated effects of lstat and nox in the Boston data using GAM.", fig.height=8, fig.alt = "A line graph with lstat on the x-axis and medv on the y-axis is shown. The line drawn is the fitted GAM model. This starts in the upper right and curves downward to the lower right. The curve is very smooth but levels off near the smaller and larger lstat values. The model is more wiggly than the previous model fit. A second line graph with nox on the x-axis and medv on the y-axis is shown. The line drawn is the fitted GAM model. This curve follows the same trend as the previous model but is overall smoother."}
+out <- lm(medv ~ ns(lstat, df = 5) + ns(nox, df = 5),
+          data = Boston)
+par(mfrow = c(2,1), mar = c(4,2,1,2))
+plot.Gam(out, se = TRUE)
+```
+
+
+To demonstrate GAM in logistic regression, we use `sbp`, `tobacco`,  `ldl`,  `famhist`, `obesity` and  `age` as covariates. Here `famhist`  is a categorical variable with two levels, it is coded by a simple binary or dummy variable, and is associated with a single coefficient in the fit of the model. The effects of the other predictors are modeled using natural splines with 4 degrees of freedom. 
+
+```{r, fig.margin = FALSE, fig.fullwidth = TRUE, fig.height=3, fig.width=12, fig.cap="Estimated effects of the predictors in the SA heart data using GAM.", fig.alt = "A natural spline fit is shown for each predictor in the model."}
+fh <- as.factor(ifelse(heart$famhist == "Present", 1, 0))
+out <- glm(chd ~ ns(sbp, df = 4) + 
+                ns(tobacco, df = 4) +
+                ns(ldl, df = 4) +
+                ns(obesity, df = 4) +
+                ns(age, df = 4) + 
+                fh,
+          data = heart,
+          family = binomial())
+par(mfrow = c(1,6), mar = c(4,2,1,2))
+plot.Gam(out, se = TRUE, scale = 10)
+```
+\noindent These effects at first may come as a surprise, but an explanation lies in the nature of the retrospective data.
+These measurements were made sometime after the patients suffered a heart attack, and in many cases they had already benefited from a healthier diet and lifestyle, hence the apparent increase in risk at low values for obesity and sbp.
+
+
+\begin{comment}
+# Multidimensional Splines
+
+# MARS
+\end{comment}
+
