@@ -1,0 +1,62 @@
+---
+title: "Homework 4"
+always_allow_html: yes
+format: docx
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, warning = FALSE, message = FALSE}
+#for nicer table output
+library(knitr)
+library(tidyverse)
+```
+
+# Conceptual Problems
+
+Section 7.9
+
+- Book Problem 3 (you can sketch these by hand and take a picture or use R/python/etc. to do so). The problem is reproduced below.
+
+Suppose we fit a curve with basis functions $b_1(X) = X, b_2(X) = (X-1)^2I(X\geq 1)$. (Note that $I(X\geq 1)$ equals 1 for $X\geq 1$ and 0 otherwise.) We fit the linear regression model
+
+$$Y=\beta_0+\beta_1b_1(X)+\beta_2b_2(X)+\epsilon$$
+and obtain estimates $\hat{\beta}_0=1, \hat{\beta}_1=1,\hat{\beta}_2 = -2$. Sketch the estimated curve between $X=-2$ and $X=2$. Note the intercepts, slopes, and other relevant information.
+
+- Book Problem 4 (you can sketch these by hand and take a picture or use R/python/etc. to do so). The problem is reproduced below.
+
+Suppose we fit a curve with basis functions $b_1(X) = I(0\leq X\leq 2)- (X-1)I(1\leq X \leq 2), \beta_2(X)=(X-3)I(3\leq X\leq 4)+I(4< X\leq 5)$. We fit the linear regression model
+
+$$Y=\beta_0+\beta_1b_1(X)+\beta_2b_2(X)+\epsilon$$
+and obtain estimates $\hat{\beta}_0=1, \hat{\beta}_1=1,\hat{\beta}_2 = 3$. Sketch the estimated curve between $X=-2$ and $X=6$. Note the intercepts, slopes, and other relevant information.
+
+
+- Book Problem 5.  The problem is reproduced below.
+
+Consdier two curves, $\hat{g}_1$ and $\hat{g}_2$, defined by 
+$$\hat{g}_1 = arg \underset{g}{min}\left(\sum_{i=1}^{n}(y_i-g(x_i))^2+\lambda\int \left[g^{(3)}(x)\right]^2dx\right)$$
+$$\hat{g}_2 = arg \underset{g}{min}\left(\sum_{i=1}^{n}(y_i-g(x_i))^2+\lambda\int \left[g^{(4)}(x)\right]^2dx\right)$$
+where $g^{(m)}$ represents the $m$th derivative of $g$. 
+
+a) As $\lambda\rightarrow\infty$, will $\hat{g}_1$ or $\hat{g}_2$ have the smaller training RSS?
+b) As $\lambda\rightarrow\infty$, will $\hat{g}_1$ or $\hat{g}_2$ have the smaller test RSS?
+c) For $\lambda = 0$, will $\hat{g}_1$ or $\hat{g}_2$ have the smaller training and test RSS?
+
+# Implementation Problems 
+
+1. This question uses the variables `dis` (the weighted mean of distances to five Boston employment centers) and `nox` (nitrogen oxides concentration in parts per 10 million) from the `Boston` data. We will treat `dis` as the predictor and `nox` as the response.
+
+    (a) Use the `poly()` function to fit a cubic polynomial regression to predict `nox` using `dis`. Report the regression output, and plot the resulting data and polynomial fits.
+    (b) Plot the polynomial fits for a range of different polynomial degrees (say, from 1 to 10), and report the associated residual sum of squares.
+    (c) Perform cross-validation or another approach to select the optimal degree for the polynomial, and explain your results.
+    (d) Fit a smoothing spline model to predict `nox` using `dis` using four degrees of freedom. How did you choose the knots? Plot the resulting fit.
+    (e) Now fit a smoothing spline for a range of degrees of freedom, and plot the resulting fits and report the resulting RSS. Describe the results obtained.
+    (f) Perform cross-validation or another approach in order to select the best degrees of freedom for a smoothing spline on this data. Describe your results.
+
+
+2. This question relates to the `College` data set in the `ISLR2` library.
+
+    (a) Split the data into a training set and a test set. Using out-of-state tuition as the response and the other variables as the predictors, perform forward stepwise selection on the training set in order to identify a satisfactory model that uses just a subset of the predictors.
+    (b) Fit a GAM on the training data, using out-of-state tuition as the response and the features selected in the previous step as the predictors. Plot the results, and explain your findings.
+    (c) Evaluate the model obtained on the test set, and explain the results obtained.
+    (d) For which variables, if any, is there evidence of a non-linear relationship with the response?
