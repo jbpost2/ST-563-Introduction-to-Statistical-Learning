@@ -174,6 +174,28 @@ we discussed that the optimal model here was a natural cubic spline with knots a
 
 Effective degrees of freedom is the measure of flexibility in the model here. When $\lambda$ is near 0 the effective degrees of freedom are very large (near $n$). However, when $\lambda$ is very large, the effective degrees of freedom decrease down to near 2 - which represents a linear fit.
 
+29. Suppose we have data on whether or not someone has heart disease (No = 0, Yes = 1) and a number of predictors such as Age (quantitative), ExerciseAngina (Y or N), and Cholesterol (quantitative). We fit a logistic regression model with 'main effects' for each of these predictors. Relevant output is given below.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+heart_data <- read_csv("https://www4.stat.ncsu.edu/online/datasets/heart.csv") |>
+  filter(Cholesterol > 0) |> #remove one value
+  mutate(HeartDiseaseFac = factor(HeartDisease))
+  
+heart_glm =  glm(HeartDiseaseFac ~ Age + ExerciseAngina + Cholesterol, 
+               family = "binomial", 
+               data = heart_data)
+summary(heart_glm)$coefficients |>
+  round(4) |>
+  knitr::kable()
+```
+    a) What is the fitted equation for those without Exercise Angina? Be careful how you write the left hand side of the model! No need to simplify.
+    
+    $$log\left(\frac{\hat{p}}{1-\hat{p}}\right) = -4.4039 + 0.0530(Age) + 0.0024(Cholesterol)$$
+
+    b) How do we interpret the 
+# Logistic regression
+
 
 
 Logistic regression output. Find fitted equation. Estimate the probability of success? HT or CI
