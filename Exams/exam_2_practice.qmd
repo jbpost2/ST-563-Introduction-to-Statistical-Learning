@@ -1,0 +1,182 @@
+---
+title: "Practice Exam 2 Questions"
+format: docx
+---
+
+Your actual exam will have questions similar to those below with space below each question to give answers. I've tried to emulate that here but I haven't taken the time to print the questions out and hand write the answers, which means there may be too much or too little space in this document. I'll make sure an appropriate amount of space is given on the actual exam (which can also help you gauge how detailed of an answer to give!)
+
+- Please note that the example questions below are not exhaustive! 
+- You may notice there are no programming questions below (that is, no R or python syntax at all)
+- There are some pseudo code questions. Here you are writing out the logic of the process and how you would go about doing it within a programming language without worrying about the syntax or the process.
+- There is very little calculation required for these questions. For most answers that involve output and reading/using it, you do not need to simplify calculations. 
+- I have not attempted to make the practice exam questions the same length as your actual exam (there will be fewer questions on your actual exam!)
+- If you have any other questions about the content or structure of the exam, please post to the discussion forum!  
+
+&nbsp;  
+
+1. In doing a classification task, we discussed the idea of classification and the idea of discrimination. What are these and what is the difference between the two?
+
+These two tasks often overlap, but not always. 
+
+Classification is about developing a rule to predict which class or category an observation falls into. 
+
+Discrimination is about understanding which features separate our data into the classes. 
+
+A classification rule is often based on the features that separate the groups!
+
+2. We discussed using K-Nearest Neighbors (KNN) for classifying a response. Suppose we've determined an appropriate $k$ to use for a classification problem with three classes. We have three predictors, $x_1$, $x_2$, and $x_3$. We want to use the KNN model to classify a response for a particular choice of $x_1$, $x_2$, and $x_3$. Describe how the KNN model would go about classifying this observation.
+
+We would first find the 'distance' (usually Euclidean) between our point of interest and all of the data points in the data set. We select the $k$ closest points in terms of this distance. We then classify based upon a majority vote (class with the highest proportion of occurrence in our $k$ neighbors).
+
+3. Suppose we have a categorical response with four levels. We could label those four levels with numeric values, say $Y = 1, 2, 3,$ or $4$.  Explain the implications of treating our problem as a regression task with these values for $Y$. Could it ever make sense to do this?
+
+If we did this, it would imply an ordering of the levels of the response and a magnitude for their differences. This does not make sense if we have a nominal variable. This is a categorical variable with no ordering to the categories. 
+
+This could be applied to an ordinal categorical response variable. However, this has big implications. This would imply that the difference between level $1$ and $2$ is the same as the difference between $2$ and $3$, etc. Similarly, the difference between $1$ and $3$ would need to be the same as $2$ and $4$, etc. In a case where that is reasonable, the regression model may do a ok job.
+
+4. Select true or false for each classification method.
+
+    a) KNN provides a discriminant for classifying our observations (FALSE)
+    b) We can never use the Bayes classifier in a real scenario. (TRUE)
+    c) LDA is a special case of QDA (TRUE)
+    d) The Naive Bayes provides a discriminant for classifying our observations (FALSE)
+    e) Logistic Regression provides a discriminant for classifying our observations (TRUE)
+    f) Logistic Regression can include interaction terms. (TRUE)
+    g) Binary logistic regression generally requires a larger sample size than multinomial logistic regression. (FALSE)
+    h) Shrinkage or penalized methods can be used with logistic regression (TRUE)
+    
+5. How does the Bayes' classifier classify an observation? Based on your answer, why can we never apply this classifier in a real data situation.
+
+The Bayes' classifier uses the most probable class from the set of conditional distributions of $Y|X$. 
+
+We would need to know the conditional distributions of $Y|X$ to use this! This is never known in practice.
+
+6. We discussed the idea of the Bayes' error rate. Can we ever do better than this rate? Explain.
+
+No, the Bayes' error rate is the optimal rate we could have. As the data has randomness, we have no way of finding a classifier that will have 100% accuracy. The (true) conditional distributions can be used to determine the 'best' classification but even this will produce misclassifications. The Bayes' error rate is this 'best' rate.
+
+7. Which classification models we investigated directly modeled the conditional distributions ($P(Y=k|X)$)?
+
+Logistic regression, KNN, 
+
+8. Which classification models we investigated were 'generative' models that modeled the distribution of $X|Y$ and used Bayes' theorem to obtain a classifier?
+
+LDA, QDA, Naive Bayes
+
+9. Does the bias-variance trade-off idea exist in the classification setting? Explain.
+
+Yes, an overly flexible model will be too flexible and train too closely to the data used to fit the model. This model will have high variability generally (training on a new data set would give very different classifications). A model that is not flexible enough will have high bias but low variance. That is, the decision boundary will not be flexible enough.
+
+10. One measure of the quality of a classification model is accuracy. Define the no information rate and describe how accuracy is related.
+
+The no information rate is the accuracy we'd obtain by simply using the most prevalent class as our classification. Any model we would consider useful should have accuracy higher than the no information rate.
+
+11. What is a confusion matrix? How is a confusion matrix more useful than simply looking at accuracy and misclassification rate?
+
+A confusion matrix gives a contingency table between the predicted classes from the model and the observed classes from the data. This can help us to understand the ways that our model is performing well and how it is classifying incorrectly. The diagonals of the confusion matrix represent agreement between the model and the observed values. The off-diagonals describe counts for observations that were incorrectly classified.
+
+12. Define the terms sensitivity and specificity. 
+
+Sensitivity is the true positive rate. That is, the number of positive cases correctly classified divided by the total number of positive cases.
+
+Specificity is the true negative rate. That is, the number of negative cases correctly classified divided by the total number of negative cases.
+
+
+13. Suppose we have a binary response variable. What major issue would come from treating the response as a numeric variable with values 0 and 1 and using a multiple linear regression model? Hint: Think about what our regression model is actually modeling, on average.
+
+Our regression model will model the mean response. In the case of a 0-1 variable, this corresponds to a probability of success. There are no restrictions on the predictions from the regression model. This means we may predict a negative probability or a probability greater than 1.
+
+14. Consider the (binary) logistic regression model with a single predictor variable $x$. How do we interpret the slope coefficient associated with $x$?
+
+The slope on $x$ corresponds to the change in the log odds of success for a unit change in $x$.
+
+14. Consider the (binary) logistic regression model with a single predictor variable $x$. How do we interpret the intercept coefficient?
+
+The intercept represents the log odds of success with $x$ is 0.
+
+15. Consider the (binary) logistic regression model with a single predictor variable $x$. How would we use the model to classify an observation with $x=x_0$?
+
+We could either use the estimated log odds or the estimated probability of success to determine the classification (these are equivalent). If the log odds of success are greater than 0 at $x=x_0$ we would classify the observation as a success, otherwise we'd classify as a failure. Similarly, we could check if the estimated probability of success is greater than 0.5. If so, we classify as a success, otherwise we classify as a failure. 
+
+16. When using a generative model for classification, we need to estimate the *prior probabilities* for each class. What is the most basic way we discussed for estimating these probabilities?
+
+Using the prevlance of each class in the data to estimate these. That is, we use the proportion of each class as the estimated probability.
+
+17. Suppose we have a categorical response with $m$ categories and a single predictor variable $X$. When fitting a QDA model, we use the Normal distribution. What quantities do we model with a Normal distribution?
+
+We model the distribution of $X|Y=1$, $X|Y=2$, ..., $X|Y=m$ each with their own normal distribution. That is, each Normal distribution is assumed to have its own mean and its own variance.
+
+18. Suppose we have a categorical response with $m$ categories and a single predictor variable $X$. When fitting an LDA model, we use normal distributions. What quantities do we model with a Normal distribution?
+
+We model the distribution of $X|Y=1$, $X|Y=2$, ..., $X|Y=m$ each with normal distributions. The means are assumed to be different but the variances are all assumed to be the same.
+
+19. When doing LDA or QDA we end up with discriminant functions. How do these discriminant functions relate to the terms *linear discriminant analysis* and *quadratic discriminant analysis*? Note: I'm not looking for you to recall these functions. I just want you to note how they relate to the names.
+
+The discriminant functions are functions of the estimated prior probabilities and the fitted normal distributions. We can compare them to determine which class to favor/classify. 
+
+When setting them equal, in the LDA setting we get a linear function of our predictor(s).
+
+When setting them equal, in the QDA setting we get a quadratic function of our predictor(s).
+
+20. When trying to use LDA or QDA with $p=10$ predictors, we can note that LDA is a special case of QDA. Why might we still prefer LDA to QDA even though QDA is more general?
+
+In using QDA we have to estimate a variance/covariance matrix for each class. This is a large number of parameters! As such, we would need a lot of data to have reasonably stable estimates. LDA assumes a common variance/covariance matrix and would therefore not require as many observations to have a reasonably stable fit.
+
+
+21. We discussed the Naive Bayes classifier. This is a generative model. What simplifying assumption do we make when using the Naive Bayes classifier?
+
+We assume that the (joint) distribution of our $X$'s given our response is the product of (marginal) individual distributions of each $X$ given the response (i.e. we assume conditional independence). That is, we simply model each $X_j|Y=m$ distribution separately and multiply them together to get our distribution of $X's|Y=m$.
+
+22. For the Naive Bayes' classifier we discussed the idea of using a *kernel density* estimator to model the distribution of a quantitative predictor given our response. That is, to approximate the distribution of each $X_j|Y=m$. Roughly describe what is meant by a kernel density estimator.
+
+A kernel density estimator can be described as a smoothed histogram. 
+
+23. We discussed the use of generalized additive models (GAMs) for a regression task. Here we model
+
+$$E(Y_i|X_i) = \beta_0 + f_1(X_{i1}) + ... + f_p(X_{ip})$$
+
+where each $f_j$ is of the form
+
+$$f_j(X_{ij}) = \beta_{j1}h_{j1}(X_{ij}) + ... + \beta_{jM_j}h_{jM_j}(X_{ij})$$
+
+and $M_j$ is the number of basis functions used to model $f_j$. This is an *additive* model. Why do we call this an additive model?
+
+This is an additive model because the contribution of each of our predictors is broken out by themselves, modeled, and then added together to form the estimate for the response. 
+
+24. Consider the piecewise polynomial regression model. Here we define our knots to be $c_1$, ..., $c_M$ and use the indicator functions
+$$h_1(X)=I(c_1≤X<c_2 ), ...,  h_{M-1}=I(c_{M-1}≤X<c_M ),  h_M (X)=I(X>c_M)$$
+in our regression equation given by
+$$Y_i = \beta_0 +h_1(X_i)\beta_1 + ... + h_M(X_i)\beta_M + \epsilon_i$$
+
+Suppose we have $n$ observations and we fit the model.
+
+    a) What is the estimate of $\beta_0$ in this model?
+    $\beta_0$ corresponds to the case when all the indicator functions are 0. This implies that our observation must fall in the region less than $c_1$. $\hat{\beta}_0$ is then the mean of all responses corresponding to these observations.
+    b) What is the estimate of $\beta_1$ in the model?
+    $\beta_1$ corresponds to the slope on the indicator that $x$ is between $c_1$ and $c_2$. That means our observation must fall in this region. $\hat{\beta}_1$ is then the mean of all responses corresponding to these observations.
+    
+25. Suppose we fit a piecewise linear model to a data set and then also fit a linear spline to the data set. What is the big difference between these two types of models?
+
+The spline function requires that the resulting function is continuous. That is, the end of a line for one region must match up with the start of the line for the next region. This is not the case in the piecewise linear model.
+
+26. What is the difference between a cubic spline model and a natural cubic spline model?
+
+A natural cubic spline model ensure that the boundaries of our model are linear rather than cubic. The two extra degrees of freedom from each boundary region are then added as additional knots. This tends to produce models with more stable estimates at the boundaries.
+
+
+27. What are two methods for choosing the number and placement of the knots in a piecewise polynomial or spline model?
+
+There are really three major answers here. We could use cross-validation or a training and test set to determine these. We can use equally spaced quantiles of the predictor. We could use a maximal set of knots (smoothing spline).
+
+28. When discussing smoothing splines where we minimize a penalized version of the residual sum of squares, 
+$$\sum_{i=1}^{n}\left\{Y_i-f(X_i)\right\}^2+\lambda\int \left\{f''(t)\right\}^2dt$$
+we discussed that the optimal model here was a natural cubic spline with knots at the unique values of the $X$'s. That seems to imply a huge number of parameters! However, we discussed the idea of effective degrees of freedom. Conceptually, what is meant by effective degrees of freedom and what 'controls' this quantity?
+
+Effective degrees of freedom is the measure of flexibility in the model here. When $\lambda$ is near 0 the effective degrees of freedom are very large (near $n$). However, when $\lambda$ is very large, the effective degrees of freedom decrease down to near 2 - which represents a linear fit.
+
+
+
+Logistic regression output. Find fitted equation. Estimate the probability of success? HT or CI
+
+Give prior probabilities and estimated distributions. Ask how to combine them to get the classifier
+
