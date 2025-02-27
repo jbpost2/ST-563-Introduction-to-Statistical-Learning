@@ -17,116 +17,68 @@ Your actual exam will have questions similar to those below with space below eac
 
 1. We discussed using K-Nearest Neighbors (KNN) for classifying a response. Suppose we've determined an appropriate $k$ to use for a classification problem with three classes. We have three predictors, $x_1$, $x_2$, and $x_3$. We want to use the KNN model to classify a response for a particular choice of $x_1$, $x_2$, and $x_3$. Describe how the KNN model would go about classifying this observation.
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+We would first find the 'distance' (usually Euclidean) between our point of interest and all of the data points in the data set. We select the $k$ closest points in terms of this distance. We then classify based upon a majority vote (class with the highest proportion of occurrence in our $k$ neighbors).
 
 2. Select true or false for each classification method.
 
-    a) KNN provides a discriminant for classifying our observations
-    b) The Naive Bayes provides a discriminant for classifying our observations
-    c) Logistic Regression can include interaction terms.
-    d) Shrinkage or penalized methods can be used with logistic regression
-
-\newpage
-
+    a) KNN provides a discriminant for classifying our observations (FALSE)
+    b) The Naive Bayes provides a discriminant for classifying our observations (FALSE)
+    c) Logistic Regression can include interaction terms. (TRUE)
+    d) Shrinkage or penalized methods can be used with logistic regression (TRUE)
+    
 3. How does the Bayes' classifier classify an observation? Based on your answer, why can we never apply this classifier in a real data situation.
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+The Bayes' classifier uses the most probable class from the set of conditional distributions of $Y|X$. 
+
+We would need to know the conditional distributions of $Y|X$ to use this! This is never known in practice.
 
 4. Which two classification models we investigated directly modeled the conditional distributions ($P(Y=k|X)$)?
 
-&nbsp;  
-&nbsp;  
+Logistic regression, KNN
 
 5. Which three classification models we investigated were 'generative' models that modeled the distribution of $X|Y$ and used Bayes' theorem to obtain a classifier?
 
-&nbsp;  
-&nbsp;  
+LDA, QDA, Naive Bayes
 
 6. Does the bias-variance trade-off idea exist in the classification setting? Explain.
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp; 
-&nbsp;  
-&nbsp;  
+Yes, an overly flexible model will be too flexible and train too closely to the data used to fit the model. This model will have high variability generally (training on a new data set would give very different classifications). A model that is not flexible enough will have high bias but low variance. That is, the decision boundary will not be flexible enough.
 
 7. What is a confusion matrix? How is a confusion matrix more useful than simply looking at accuracy and misclassification rate?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+A confusion matrix gives a contingency table between the predicted classes from the model and the observed classes from the data. This can help us to understand the ways that our model is performing well and how it is classifying incorrectly. The diagonals of the confusion matrix represent agreement between the model and the observed values. The off-diagonals describe counts for observations that were incorrectly classified.
 
 8. Suppose we have a binary response variable. What major issue would come from treating the response as a numeric variable with values 0 and 1 and using a multiple linear regression model? Hint: Think about what our regression model is actually modeling, on average.
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+Our regression model will model the mean response. In the case of a 0-1 variable, this corresponds to a probability of success. There are no restrictions on the predictions from the regression model. This means we may predict a negative probability or a probability greater than 1.
 
 9. Consider the (binary) logistic regression model with a single predictor variable $x$. How do we interpret the slope coefficient associated with $x$?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
+The slope on $x$ corresponds to the change in the log odds of success for a unit change in $x$.
 
 10. Consider the (binary) logistic regression model with a single predictor variable $x$. How do we interpret the intercept coefficient?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
+The intercept represents the log odds of success with $x$ is 0.
 
 11. Consider the (binary) logistic regression model with a single predictor variable $x$. How would we use the model to classify an observation with $x=x_0$?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-
+We could either use the estimated log odds or the estimated probability of success to determine the classification (these are equivalent). If the log odds of success are greater than 0 at $x=x_0$ we would classify the observation as a success, otherwise we'd classify as a failure. Similarly, we could check if the estimated probability of success is greater than 0.5. If so, we classify as a success, otherwise we classify as a failure. 
 
 12. Suppose we have a categorical response with $m$ categories and a single predictor variable $X$. When fitting a QDA model, we use the Normal distribution. What quantities do we model with a Normal distribution? Are those normal distributions related in anyway?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+We model the distribution of $X|Y=1$, $X|Y=2$, ..., $X|Y=m$ each with their own normal distribution. That is, each Normal distribution is assumed to have its own mean and its own variance.
 
 13. When doing LDA or QDA we end up with discriminant functions. How do these discriminant functions relate to the terms *linear discriminant analysis* and *quadratic discriminant analysis*? Note: I'm not looking for you to recall these functions. I just want you to note how they relate to the names.
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+The discriminant functions are functions of the estimated prior probabilities and the fitted normal distributions. We can compare them to determine which class to favor/classify. 
+
+When setting them equal, in the LDA setting we get a linear function of our predictor(s).
+
+When setting them equal, in the QDA setting we get a quadratic function of our predictor(s).
 
 14. For the Naive Bayes' classifier we discussed the idea of using a *kernel density* estimator to model the distribution of a quantitative predictor given our response. That is, to approximate the distribution of each $X_j|Y=m$. Roughly describe what is meant by a kernel density estimator.
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
+A kernel density estimator can be described as a smoothed histogram. 
 
 15. We discussed the use of generalized additive models (GAMs) for a regression task. Here we model
 
@@ -138,10 +90,7 @@ $$f_j(X_{ij}) = \beta_{j1}h_{j1}(X_{ij}) + ... + \beta_{jM_j}h_{jM_j}(X_{ij})$$
 
 and $M_j$ is the number of basis functions used to model $f_j$. This is an *additive* model. Why do we call this an additive model?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+This is an additive model because the contribution of each of our predictors is broken out by themselves, modeled, and then added together to form the estimate for the response. 
 
 16. Consider the piecewise polynomial regression model. Here we define our knots to be $c_1$, ..., $c_M$ and use the indicator functions
 $$h_1(X)=I(c_1≤X<c_2 ), ...,  h_{M-1}=I(c_{M-1}≤X<c_M ),  h_M (X)=I(X>c_M)$$
@@ -152,42 +101,27 @@ Suppose we have $n$ observations and we fit the model.
 
 a) What is the estimate of $\beta_0$ in this model?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+$\beta_0$ corresponds to the case when all the indicator functions are 0. This implies that our observation must fall in the region less than $c_1$. $\hat{\beta}_0$ is then the mean of all responses corresponding to these observations.
 
 b) What is the estimate of $\beta_1$ in the model?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-
+$\beta_1$ corresponds to the slope on the indicator that $x$ is between $c_1$ and $c_2$. That means our observation must fall in this region. $\hat{\beta}_1$ is then the mean of all responses corresponding to these observations.
+    
 25. Suppose we fit a piecewise linear model to a data set and then also fit a linear spline to the data set. What is the big difference between these two types of models?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+The spline function requires that the resulting function is continuous. That is, the end of a line for one region must match up with the start of the line for the next region. This is not the case in the piecewise linear model.
+
 
 
 17. What are two methods for choosing the number and placement of the knots in a piecewise polynomial or spline model?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+There are really three major answers here. We could use cross-validation or a training and test set to determine these. We can use equally spaced quantiles of the predictor. We could use a maximal set of knots (smoothing spline).
 
 18. When discussing smoothing splines where we minimize a penalized version of the residual sum of squares, 
 $$\sum_{i=1}^{n}\left\{Y_i-f(X_i)\right\}^2+\lambda\int \left\{f''(t)\right\}^2dt$$
 we discussed that the optimal model here was a natural cubic spline with knots at the unique values of the $X$'s. That seems to imply a huge number of parameters! However, we discussed the idea of effective degrees of freedom. Conceptually, what is meant by effective degrees of freedom and what 'controls' this quantity?
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+Effective degrees of freedom is the measure of flexibility in the model here. When $\lambda$ is near 0 the effective degrees of freedom are very large (near $n$). However, when $\lambda$ is very large, the effective degrees of freedom decrease down to near 2 - which represents a linear fit.
 
 
 19. Suppose we have data on whether or not someone has heart disease (No = 0, Yes = 1) and a number of predictor Age (quantitative). We fit an QDA model. Relevant output from the process is given below.
@@ -212,20 +146,20 @@ heart_data |>
 
 a. Specify the distribution we would use for Age given someone does not have heart disease.
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-
+For the QDA model, we model the Age given no heart disease with a normal distribution. This normal distribution would have mean 50.2 and standard deviation 9.3.
+    
 b. Specify the distribution we would use for Age given someone does have heart disease.
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+For the QDA model, we model the Age given heart disease with a normal distribution. This normal distribution would have mean 55.9 and standard deviation 8.8.
 
 c. Give the form of the posterior probabilities of heart disease and no heart disease using the QDA model for an arbitrary Age value. No need to simplify.
 
+Here we want to form two numerators, one for no heart disease and one for heart disease, via prior probability times the fitted normal distribution evaluated at Age. We then divide each of those by their sum to find the probabilities.
 
+Let $f$ be a normal pdf, the numerator of the probability of no heart disease is $\frac{390}{390+356}f(Age; mean = 50.2, sd = 9.3)$.
+
+The numerator of the probability of heart disease is $\frac{356}{390+356}f(Age; mean = 55.9, sd=8.8)$.
+
+The probabilities are found by taking these numerators and dividing by their sums.
     
 

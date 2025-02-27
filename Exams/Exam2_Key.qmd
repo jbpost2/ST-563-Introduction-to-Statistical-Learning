@@ -1,0 +1,109 @@
+---
+title: "Exam 2"
+format: docx
+---
+
+Please write your answers below each question. You should not have access nor use any materials during this exam. 
+
+A reminder that, by taking this exam, you are required to uphold the NC State honor pledge:
+
+"I have neither given nor received unauthorized aid on this test or assignment."
+
+&nbsp;  
+
+1. In doing a classification task, we discussed the idea of classification and the idea of discrimination. What are these and what is the difference between the two?
+
+These two tasks often overlap, but not always. 
+
+Classification is about developing a rule to predict which class or category an observation falls into. 
+
+Discrimination is about understanding which features separate our data into the classes. 
+
+A classification rule is often based on the features that separate the groups!
+
+
+2. Suppose we have a categorical response with four levels. We could label those four levels with numeric values, say $Y = 1, 2, 3,$ or $4$.  Explain the implications of treating our problem as a regression task with these values for $Y$. Could it ever make sense to do this?
+
+If we did this, it would imply an ordering of the levels of the response and a magnitude for their differences. This does not make sense if we have a nominal variable. This is a categorical variable with no ordering to the categories. 
+
+This could be applied to an ordinal categorical response variable. However, this has big implications. This would imply that the difference between level $1$ and $2$ is the same as the difference between $2$ and $3$, etc. Similarly, the difference between $1$ and $3$ would need to be the same as $2$ and $4$, etc. In a case where that is reasonable, the regression model may do a ok job.
+
+3. Select true or false for each classification method.
+
+    a) We can never use the Bayes classifier in a real scenario. (TRUE)
+    b) LDA is a special case of QDA (TRUE)
+    c) Logistic Regression provides a discriminant for classifying our observations (TRUE)
+    d) Binary logistic regression generally requires a larger sample size than multinomial logistic regression. (FALSE)
+            
+4. We discussed the idea of the Bayes' error rate. Can we ever do better than this rate? Explain.
+
+No, the Bayes' error rate is the optimal rate we could have. As the data has randomness, we have no way of finding a classifier that will have 100% accuracy. The (true) conditional distributions can be used to determine the 'best' classification but even this will produce misclassifications. The Bayes' error rate is this 'best' rate.
+
+5. One measure of the quality of a classification model is accuracy.  Define the no information rate and describe how interepreting the accuracy of a model is related.
+
+The no information rate is the accuracy we'd obtain by simply using the most prevalent class as our classification. Any model we would consider useful should have accuracy higher than the no information rate.
+
+6. Define the terms sensitivity and specificity. 
+
+Sensitivity is the true positive rate. That is, the number of positive cases correctly classified divided by the total number of positive cases.
+
+Specificity is the true negative rate. That is, the number of negative cases correctly classified divided by the total number of negative cases.
+
+
+7 When using a generative model for classification, we need to estimate the *prior probabilities* for each class. What is the most basic way we discussed for estimating these probabilities?
+
+Using the prevlance of each class in the data to estimate these. That is, we use the proportion of each class as the estimated probability.
+
+
+8. Suppose we have a categorical response with $m$ categories and a single predictor variable $X$. When fitting an LDA model, we use normal distributions. What quantities do we model with a Normal distribution? Are those normal distributions related in anyway?
+
+We model the distribution of $X|Y=1$, $X|Y=2$, ..., $X|Y=m$ each with normal distributions. The means are assumed to be different but the variances are all assumed to be the same.
+
+
+9. When trying to use LDA or QDA with $p=10$ predictors, we can note that LDA is a special case of QDA. Why might we still prefer LDA to QDA even though QDA is more general?
+
+In using QDA we have to estimate a variance/covariance matrix for each class. This is a large number of parameters! As such, we would need a lot of data to have reasonably stable estimates. LDA assumes a common variance/covariance matrix and would therefore not require as many observations to have a reasonably stable fit.
+
+10. We discussed the Naive Bayes classifier. This is a generative model. What simplifying assumption do we make when using the Naive Bayes classifier?
+
+We assume that the (joint) distribution of our $X$'s given our response is the product of (marginal) individual distributions of each $X$ given the response (i.e. we assume conditional independence). That is, we simply model each $X_j|Y=m$ distribution separately and multiply them together to get our distribution of $X's|Y=m$.
+
+
+11. What is the difference between a cubic spline model and a natural cubic spline model?
+
+A natural cubic spline model ensure that the boundaries of our model are linear rather than cubic. The two extra degrees of freedom from each boundary region are then added as additional knots. This tends to produce models with more stable estimates at the boundaries.
+
+12. Suppose we have data on whether or not someone has heart disease (No = 0, Yes = 1) and a number of predictors such as Age (quantitative), ExerciseAngina (Y or N), and Cholesterol (quantitative). We fit a logistic regression model with 'main effects' for each of these predictors. Relevant output is given below.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+heart_data <- read_csv("https://www4.stat.ncsu.edu/online/datasets/heart.csv") |>
+  filter(Cholesterol > 0) |> #remove one value
+  mutate(HeartDiseaseFac = factor(HeartDisease))
+  
+heart_glm =  glm(HeartDiseaseFac ~ Age + ExerciseAngina + Cholesterol, 
+               family = "binomial", 
+               data = heart_data)
+summary(heart_glm)$coefficients |>
+  round(4) |>
+  knitr::kable()
+```
+a) What is the fitted equation for those without Exercise Angina? Be careful how you write the left hand side of the model! No need to simplify.
+    
+$$log\left(\frac{\hat{p}}{1-\hat{p}}\right) = -4.4039 + 0.0530(Age) + 0.0024(Cholesterol)$$
+
+b) How would we use this fitted equation to find a decision boundary for those without exercise angina? This isn't something you can solve! Just write down how you would use the equation to find the boundary for values of Age and Cholesterol.
+
+As a 0 log-odds corresponds to the probability of success and probability of failure being the same we can set this estimated log odds to 0 and form an equation for the decision boundary in terms of Age and Cholestrol.
+    
+c) How do we interpret the meaning of the intercept coefficient for this model? Be sure to use the context of the data.
+
+The intercept of -4.4039 represents the log odds of having heart disease for those with an Age of 0, no exercise angina, and a cholesterol of 0. Very unlikely to have heart disease but also not meaningful in the context of this problem!
+
+d) How do we interpret the meaning of the age slope coefficient for this model? Be sure to use the context of the data.
+
+The Age slope of 0.0530 represents the change in log odds of heart disease for increasing age by one unit, while holding cholesterol and exercise angina status constant. This implies that your odds of heart disease increases as you get older.
+
+e) How do we interpret the meaning of the ExerciseAnginaY coefficient for this model? Be sure to use the context of the data.
+
+The exercise angina coefficient of 2.4644 represents the change in log odds of heart disease as compared to someone without exercise angina, while holding Age and Cholesterol constant. This positive value indicates that those with exercise angina are much more likely to have heart disease.
