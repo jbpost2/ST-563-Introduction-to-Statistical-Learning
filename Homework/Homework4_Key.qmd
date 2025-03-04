@@ -23,6 +23,23 @@ Suppose we fit a curve with basis functions $b_1(X) = X, b_2(X) = (X-1)^2I(X\geq
 $$Y=\beta_0+\beta_1b_1(X)+\beta_2b_2(X)+\epsilon$$
 and obtain estimates $\hat{\beta}_0=1, \hat{\beta}_1=1,\hat{\beta}_2 = -2$. Sketch the estimated curve between $X=-2$ and $X=2$. Note the intercepts, slopes, and other relevant information.
 
+```{r}
+#quick function to plot
+poly_to_plot <- function(x, beta_0, beta_1, beta_2){
+  if (x<1){
+    beta_0+beta_1*x
+  } else {
+    beta_0+beta_1*x+beta_2*(x-1)^2
+  }
+}
+poly_to_plot_V <- Vectorize(poly_to_plot)
+#sequence to plot
+x <- seq(from = -2, to = 2, by = 0.01)
+plot(x, poly_to_plot_V(x, 1, 1, -2), type = "l", ylab = "function")
+```
+
+We can see that the function is linear until we reach 1. At that point we become a quadratic function. The slope over the linear region is $\hat{\beta}_1$ and the intercept is $\hat{\beta}_0$. 
+
 - Book Problem 4 (you can sketch these by hand and take a picture or use R/python/etc. to do so). The problem is reproduced below.
 
 Suppose we fit a curve with basis functions $b_1(X) = I(0\leq X\leq 2)- (X-1)I(1\leq X \leq 2), \beta_2(X)=(X-3)I(3\leq X\leq 4)+I(4< X\leq 5)$. We fit the linear regression model
@@ -30,6 +47,30 @@ Suppose we fit a curve with basis functions $b_1(X) = I(0\leq X\leq 2)- (X-1)I(1
 $$Y=\beta_0+\beta_1b_1(X)+\beta_2b_2(X)+\epsilon$$
 and obtain estimates $\hat{\beta}_0=1, \hat{\beta}_1=1,\hat{\beta}_2 = 3$. Sketch the estimated curve between $X=-2$ and $X=6$. Note the intercepts, slopes, and other relevant information.
 
+```{r}
+#quick function to plot
+poly_to_plot_2 <- function(x, beta_0, beta_1, beta_2){
+  if (x > 0 & x <= 2){
+    if (x > 1) {
+      beta_0 + beta_1*(1-(x-1))
+    } else {
+      beta_0 + beta_1
+    }
+  } else if (x >= 3 & x <= 4) {
+    beta_0 + beta_2*(x-3)
+  } else if (x > 4 & x < 5){
+    beta_0 + beta_2
+  } else {
+    beta_0
+  }
+}
+poly_to_plot_2V <- Vectorize(poly_to_plot_2)
+#sequence to plot
+x <- seq(from = -2, to = 6, by = 0.01)
+plot(x, poly_to_plot_2V(x, 1, 1, 3), type = "l", ylab = "function")
+```
+
+We have a piecewise constant, and linear function.
 
 - Book Problem 5.  The problem is reproduced below.
 
@@ -39,24 +80,202 @@ $$\hat{g}_2 = arg \underset{g}{min}\left(\sum_{i=1}^{n}(y_i-g(x_i))^2+\lambda\in
 where $g^{(m)}$ represents the $m$th derivative of $g$. 
 
 a) As $\lambda\rightarrow\infty$, will $\hat{g}_1$ or $\hat{g}_2$ have the smaller training RSS?
+
+$\hat{g}_2$ will be more flexible and therefore, should be able to fit the training data better.
+
 b) As $\lambda\rightarrow\infty$, will $\hat{g}_1$ or $\hat{g}_2$ have the smaller test RSS?
+
+This really depends on the complexity of the true relationship! If the true relationship is highly non-linear, then $\hat{g}_2$ will likely do better. If the relationship is simpler, then $\hat{g}_1$ will likely do better.
+
 c) For $\lambda = 0$, will $\hat{g}_1$ or $\hat{g}_2$ have the smaller training and test RSS?
+
+They will be the same as we aren't penalizing anything!
+
 
 # Implementation Problems 
 
+```{r, warning = FALSE, message = FALSE}
+#Solutions from Dr. Maity, modified by Dr. Post
+# libraries
+library(ISLR2)
+library(rsample)
+library(boot)
+library(splines)
+library(leaps)
+library(caret)
+library(MASS)
+library(klaR)
+library(class)
+library(gam)
+set.seed(1)
+```
+
 1. This question uses the variables `dis` (the weighted mean of distances to five Boston employment centers) and `nox` (nitrogen oxides concentration in parts per 10 million) from the `Boston` data. We will treat `dis` as the predictor and `nox` as the response.
 
-    (a) Use the `poly()` function to fit a cubic polynomial regression to predict `nox` using `dis`. Report the regression output, and plot the resulting data and polynomial fits.
-    (b) Plot the polynomial fits for a range of different polynomial degrees (say, from 1 to 10), and report the associated residual sum of squares.
-    (c) Perform cross-validation or another approach to select the optimal degree for the polynomial, and explain your results.
-    (d) Fit a smoothing spline model to predict `nox` using `dis` using four degrees of freedom. How did you choose the knots? Plot the resulting fit.
-    (e) Now fit a smoothing spline for a range of degrees of freedom, and plot the resulting fits and report the resulting RSS. Describe the results obtained.
-    (f) Perform cross-validation or another approach in order to select the best degrees of freedom for a smoothing spline on this data. Describe your results.
+(a) Use the `poly()` function to fit a cubic polynomial regression to predict `nox` using `dis`. Report the regression output, and plot the resulting data and polynomial fits.
+    
+```{r, out.width='400px', fig.align='center', fig.cap="Scatter plot between dis (x) and nox (y) is shown with the cubic polynomial fit overlayed. The nox values generally decrease rapidly for smaller values of dis and then level off. The cubic polynomial fit does an excellent job fitting the data." }
+# fit the model
+fit <- lm(nox ~ poly(dis, 3), data = Boston)
+coef(summary(fit)) |>
+  knitr::kable()
+# plot the resulting data
+dis_grid <- seq(min(Boston$dis), max(Boston$dis))
+preds <- predict(fit, list(dis = dis_grid), se = TRUE)
+plot(nox ~ dis, data = Boston, col = "grey")
+lines(dis_grid, preds$fit, lwd = 2, col = "red")
+title("Cubic Polynomial Fit")
+```
+
+(b) Plot the polynomial fits for a range of different polynomial degrees (say, from 1 to 10), and report the associated residual sum of squares.
+    
+```{r, out.width='400px', fig.align='center', fig.cap="Ten scatter plots between dis (x) and nox (y) is shown with different polynomial models fit." }
+# create 10 separate plots
+MSEs <- rep(0, 10)
+sort_index <- sort(Boston$dis, index.return = T)$ix
+for (d in 1:10){
+  # scatter plot => data
+  plot(x=Boston$dis, y=Boston$nox, type = "p", lty=1,col="grey",
+       xlab="Dis", ylab="Nox", ylim=c(0.3,0.9),
+       main = paste(c("degree = ", as.character(d)), collapse = ""))
+  # lines => fit
+  fit_b <- lm(nox~poly(dis,d), data=Boston)
+  MSEs[d] <- sum((fit_b$fitted.values-Boston$nox)^2)
+  lines(x=Boston$dis[sort_index],
+        y=fit_b$fitted.values[sort_index],
+        type="l", lty=1, col="black")
+}
+```
+
+(c) Perform cross-validation or another approach to select the optimal degree for the polynomial, and explain your results.
+
+```{r, out.width='400px', fig.align='center', fig.cap="A plot of MSE values by degree (1-10) is shown. The plot starts with higher MSE values for lower polynomials and then dips down, taking a minimum value at a degree of 8, before slightly increasing for higher values of degree." }
+par(mfrow = c(1,1))
+MSEs <- rep(NA, 10)
+ind <- sample(1:dim(Boston)[1], floor(0.9 * dim(Boston)[1]), replace = F)
+train_set <- Boston[ind,]
+test_set <- Boston[-ind,]
+for (i in 1:10) {
+  fit <- lm(nox ~ poly(dis, i), data = train_set)
+  MSEs[i] <- mean((predict(fit, newdata = test_set) - test_set$nox)^2)
+}
+plot(1:10, MSEs, type = 'l')
+abline(v = which.min(MSEs), col = "red")
+```
+We see the minimum test error happens when degree equals to 8.
+
+(d) Fit a smoothing spline model to predict `nox` using `dis` using four degrees of freedom. How did you choose the knots? Plot the resulting fit.
+    
+```{r, out.width='400px', fig.align='center', fig.cap="Scatter plot between dis (x) and nox (y) is shown with the smoothing spline fit overlayed. The nox values generally decrease rapidly for smaller values of dis and then level off. The cubic polynomial fit does an excellent job fitting the data." }
+# scatter plot => data
+plot(x=Boston$dis, y=Boston$nox, type = "p", lty=1,col="grey",
+     xlab="Dis", ylab="Nox", ylim=c(0.3,0.9),
+     main = paste(c("Smooth Spline Degree = ", as.character(4)), collapse = ""))
+# lines => fit
+sspline1 <- smooth.spline(Boston$dis, Boston$nox, df=4)
+lines(sspline1[[1]], sspline1[[2]])
+```
+The knots were chosen by selecting the degrees of freedom and using the defaults from the function. From the help for `smooth.spline()`: If `spar` and `lambda` are missing or `NULL`, the value of `df` is used to determine the degree of smoothing. The knots used (scaled into $[0,1]$) are available in `sspline1$fit$knot`. In the notes for the function it is stated: 
+    > In this case where not all unique x values are used as knots, the result is not a smoothing spline in the strict sense, but very close unless a small smoothing parameter (or large df) is used.
+
+(e) Now fit a smoothing spline for a range of degrees of freedom, and plot the resulting fits and report the resulting RSS. Describe the results obtained.
+    
+```{r, out.width='600px', fig.align='center', fig.cap="Six scatter plots are shown with smoothing splines fit with degrees of freedom 4, 5, ..., 9.  The models become more complex as the degree increases." }
+df_range = c(4:9)
+MSEs <- rep(0, length(df_range))
+sort_index <- sort(Boston$dis, index.return = T)$ix
+for (d in df_range){
+  # scatter plot => data
+  plot(x=Boston$dis, y=Boston$nox, type = "p", lty=1,col="grey",
+       xlab="Dis", ylab="Nox", ylim=c(0.3,0.9),
+       main = paste(c("degree = ", as.character(d)), collapse = ""))
+  fit_b <- lm(nox~bs(dis, df = d), data=Boston)
+  MSEs[d-3] <- sum((fit_b$fitted.values-Boston$nox)^2)
+  lines(x=Boston$dis[sort_index],
+        y=fit_b$fitted.values[sort_index],
+        type="l", lty=1, col="black")
+}
+round(MSEs, 3)
+```
+After setting the range of df from 4-9, df is equal to 8 if we want to use the minimum MSE, but there isn't a large difference in fit.
+
+(f) Perform cross-validation or another approach in order to select the best degrees of freedom for a smoothing spline on this data. Describe your results.
+
+```{r, out.width='400px', fig.align='center', fig.cap="A plot of MSE values by degree (4-9) is shown. The plot starts with higher MSE value for df of 4 takes a minimum at df of 5 and then increases as the df increases." }
+# train/test tuning for degree of freedom
+MSEs <- rep(NA, length(df_range))
+for (i in df_range) {
+  fit <- lm(nox ~ bs(dis, df = i), data = train_set)
+  MSEs[i - 3] <- mean((predict(fit, newdata = test_set) - test_set$nox)^2)
+}
+plot(df_range, MSEs, type = 'l')
+abline(v = which.min(MSEs) + 3, col = "red")
+```
+The best df is equal to 5 when cv is being performed
 
 
 2. This question relates to the `College` data set in the `ISLR2` library.
 
-    (a) Split the data into a training set and a test set. Using out-of-state tuition as the response and the other variables as the predictors, perform forward stepwise selection on the training set in order to identify a satisfactory model that uses just a subset of the predictors.
-    (b) Fit a GAM on the training data, using out-of-state tuition as the response and the features selected in the previous step as the predictors. Plot the results, and explain your findings.
-    (c) Evaluate the model obtained on the test set, and explain the results obtained.
-    (d) For which variables, if any, is there evidence of a non-linear relationship with the response?
+(a) Split the data into a training set and a test set. Using out-of-state tuition as the response and the other variables as the predictors, perform forward stepwise selection on the training set in order to identify a satisfactory model that uses just a subset of the predictors.
+
+```{r}
+# split the data
+data_split <- initial_split(College, prop=0.8)
+test_set <- testing(data_split)
+train_set <- training(data_split)
+# forward selection
+forward <- regsubsets(Outstate ~., data=train_set, nvmax=17, method='forward')
+f_summary <- summary(forward)
+metrics <- data.frame(aic = f_summary$cp, bic = f_summary$bic, adjR2 = f_summary$adjr2)
+# coef for best model
+coef_forward <- coef(forward,6) |> 
+  as.data.frame()
+names(coef_forward) <- c("estimate")
+coef_forward |>
+  knitr::kable()
+# best model
+bestmod <- regsubsets(Outstate ~., data=train_set, nvmax=6)
+```
+
+(b) Fit a GAM on the training data, using out-of-state tuition as the response and the features selected in the previous step as the predictors. Plot the results, and explain your findings.
+    
+```{r, out.width='400px', fig.align='center', fig.cap= "Six plots are shown, one for each predictor in the model. The categorical predictor, private, shows box plots with very different locations and spreads for the no and yes groups. The other five plots show the polynomial fits for each predictor. These are smoothed lines in each case." }
+out <- gam(Outstate ~ Private + 
+             s(Room.Board, df=3) + 
+             s(PhD, df=3) + 
+             s(perc.alumni,df=3) + 
+             s(Expend,df=3) + 
+             s(Grad.Rate, df=3),
+           data=train_set)
+plot(out, se=TRUE, col="red")
+```
+
+There are 6 features was being selected by previous step. After fitting them in gam model and setting the df of 3, we can see that they are perform well with the response.
+
+(c) Evaluate the model obtained on the test set, and explain the results obtained.
+    
+```{r}
+predGAM <- predict(out, test_set)
+GAM_teste <- mean((test_set$Outstate - predGAM)^2)
+predlm <- predict(lm(Outstate~Private + Room.Board + PhD + perc.alumni + Expend + Grad.Rate, 
+                     data = train_set),
+                  test_set)
+LM_teste <- mean((test_set$Outstate - predlm)^2)
+c(GAM_teste, LM_teste)
+```
+
+We found gam model has a better performance since it has a smaller test error compared with the linear model.
+
+(d) For which variables, if any, is there evidence of a non-linear relationship with the response?
+    
+```{r}
+out_sum <- summary(out)
+#ANOVA for non-parametric effects
+out_sum$anova |>
+  knitr::kable()
+#ANOVA for parametric effects
+out_sum$parametric.anova |>
+  knitr::kable()
+```
+
+For Nonparametric effects, we noticed that all six predictors have non-linear relationships with the response
