@@ -78,7 +78,7 @@ With our two different types of supervised learning situations we can create eit
 
 These models are very easy for people to interpret! For instance, consider the tree below relating a predictor (`speed`) to stopping distance (`dist`).
 
-```{r, fig.align='center', out.width='400px', warning = FALSE, fig.cap = "Regression tree predicting stopping distance as a function of speed.", fig.alt = "A tree diagram is shown. The first split in the data corresponds to a speed of 17.5. If the speed is less than 17.5 a further split at 12.5 is done. If the speed is less than 12.5 a further split at 9.5 is done. For speed less than 9.5 a distance of 10.67 is predicted. For a speed between 9.5 and 12.5 a distance of 23.22 is predicted. For a speed between 12.5 and 17.5 a distance of 39.75 is predicted. For a speed greater than 17.5 a further split is created at 23.5. If the speed is between 17.5 and 23.5 the stopping distance is estimated at 55.71. If the speed is larger than 23.5, the stopping distance is estimated at 92."}
+```{r, fig.align='center', out.width='400px', warning = FALSE, fig.cap = "A tree diagram is shown. The first split in the data corresponds to a speed of 17.5. If the speed is less than 17.5 a further split at 12.5 is done. If the speed is less than 12.5 a further split at 9.5 is done. For speed less than 9.5 a distance of 10.67 is predicted. For a speed between 9.5 and 12.5 a distance of 23.22 is predicted. For a speed between 12.5 and 17.5 a distance of 39.75 is predicted. For a speed greater than 17.5 a further split is created at 23.5. If the speed is between 17.5 and 23.5 the stopping distance is estimated at 55.71. If the speed is larger than 23.5, the stopping distance is estimated at 92."}
 library(tree) #rpart is also often used
 fitTree <- tree(dist ~ speed, data = cars) #default splitting is deviance
 plot(fitTree)
@@ -87,7 +87,7 @@ text(fitTree)
 
 We can compare this to the simple linear regression fit to see the increased flexibility of a regression tree model.
 
-```{r, message = FALSE, warning = FALSE, fig.align='center', out.width='400px', fig.cap = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit.", fig.alt = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The line roughly goes through the points and has a y-intercept of about -17.5 and a slope of 4. The regression tree fit is a constant over different regions of the speed variable. For speeds less than 9.5 a distance of 10.67 is predicted. For a speed between 9.5 and 12.5 a distance of 23.22 is predicted. For a speed between 12.5 and 17.5 a distance of 39.75 is predicted. For a speed between 17.5 and 23.5 the stopping distance is estimated at 55.71. If the speed is larger than 23.5, the stopping distance is estimated at 92."}
+```{r, message = FALSE, warning = FALSE, fig.align='center', out.width='400px', fig.cap = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The line roughly goes through the points and has a y-intercept of about -17.5 and a slope of 4. The regression tree fit is a constant over different regions of the speed variable. For speeds less than 9.5 a distance of 10.67 is predicted. For a speed between 9.5 and 12.5 a distance of 23.22 is predicted. For a speed between 12.5 and 17.5 a distance of 39.75 is predicted. For a speed between 17.5 and 23.5 the stopping distance is estimated at 55.71. If the speed is larger than 23.5, the stopping distance is estimated at 92."}
 ggplot(cars, aes(x = speed, y = dist)) + 
   geom_point() +
   geom_smooth(method = "lm", se = FALSE, size = 2) + 
@@ -103,7 +103,7 @@ Suppose we have two predictors. The same idea can be used here. We can partition
 
 Consider this figure from the ISLR book:
 
-```{r tree1, fig.cap="Four plots are shown representing aspects of a two dimensional predictor space and a regression tree.", fig.alt = "Four plots are shown in a two by two grid. The top left plot shows a partition of two-dimensional feature space that could **not** result from recursive binary splitting as the resulting regions are not all rectangles. The top right plot shows one possible output of recursive binary splitting on a two-dimensional example. Here all of the regions are rectangles. The bottom left plot shows a tree diagram corresponding to the regions in the top right plot. This tree diagram splits on the X1 variable first. The left 'branch' then splits on X2. The right 'branch' splits on X1 again. The right branch of that splits on X2. The bottom right plots shows a perspective plot of the prediction surface corresponding to that tree Here the estimated function is a step function with constants across each of the regions mentioned previously.", fig.margin = FALSE, fig.width=8, fig.height=8, echo=FALSE}
+```{r tree1,  fig.cap= "Four plots are shown in a two by two grid. The top left plot shows a partition of two-dimensional feature space that could **not** result from recursive binary splitting as the resulting regions are not all rectangles. The top right plot shows one possible output of recursive binary splitting on a two-dimensional example. Here all of the regions are rectangles. The bottom left plot shows a tree diagram corresponding to the regions in the top right plot. This tree diagram splits on the X1 variable first. The left 'branch' then splits on X2. The right 'branch' splits on X1 again. The right branch of that splits on X2. The bottom right plots shows a perspective plot of the prediction surface corresponding to that tree Here the estimated function is a step function with constants across each of the regions mentioned previously.", fig.margin = FALSE, fig.width=8, fig.height=8, echo=FALSE}
 knitr::include_graphics("img/8_3.jpg")
 ```
 
@@ -149,7 +149,7 @@ Such trees can be used for classification problems as well.
 
 The figure below shows a basic (classification) tree and the corresponding terminology used for any tree.   
 
-```{r treeterm, echo=FALSE, fig.cap="Terminology ralated to a decision tree.", fig.alt = "The first node of a tree is called the root node. Each split off of a node is called a branch. The nodes that end a branch are called leafs or terminal nodes. The nodes that are neither a root node nor a leaf are called internal nodes."}
+```{r treeterm, echo=FALSE, fig.cap = "The first node of a tree is called the root node. Each split off of a node is called a branch. The nodes that end a branch are called leafs or terminal nodes. The nodes that are neither a root node nor a leaf are called internal nodes."}
 knitr::include_graphics("img/tree.jpg")
 ```
 
@@ -189,7 +189,7 @@ find_SSE <- function(df, response, predictor, split){
 ```
 
 
-```{r, fig.align='center', out.width='400px', fig.cap = "A scatterplot between speed (x) and stopping distance (y).", fig.alt = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100."}
+```{r, fig.align='center', out.width='400px', fig.cap = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100."}
 ggplot(cars, aes(x = speed, y = dist)) + 
   geom_point()
 ```
@@ -207,7 +207,7 @@ SSE <- find_SSE(df = cars, response = "dist", predictor = "speed", split = 17.5)
 
 Let's first try a split at `speed` = `r vals[1]`. The sum of squared errors based on this split is `r round(SSE1$info$RSS, 2)`.
 
-```{r, echo = FALSE, fig.align='center', out.width='400px', fig.cap = "A scatterplot between speed (x) and stopping distance (y) with a potential first regression tree model split and fit.", fig.alt = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The graph is broken into two regions for the speed (x) variable corresponding to being less than 7 and greater than 7. For values less than 7 the distance is estimated at about 10. For values larger than 7, the distance is estimated at about 48. The sum of squared errors corresponding to this fit is 27,665.5."}
+```{r, echo = FALSE, fig.align='center', out.width='400px', fig.cap = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The graph is broken into two regions for the speed (x) variable corresponding to being less than 7 and greater than 7. For values less than 7 the distance is estimated at about 10. For values larger than 7, the distance is estimated at about 48. The sum of squared errors corresponding to this fit is 27,665.5."}
 #plot and put on split
 g <- ggplot(data = cars, aes(x = speed, y = dist)) + 
   geom_point(size = 0.75, alpha = 0.75) +
@@ -223,7 +223,7 @@ Again, this is found by taking all the points in the first region, finding the r
 
 Is that the smallest it could be? Likely not! Let's try some other splits and see what SSE they give.
 
-```{r, echo = FALSE, fig.align='center', out.width='400px' fig.cap = "A scatterplot between speed (x) and stopping distance (y) with a potential first regression tree model split and fit.", fig.alt = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The graph displays several potention splits fo the speed (x) variable. The splits are at 7, 12, 15, and 20. The corresponding means for each region are displayed along with the sums of squared errors. The lowest sum of squared error occurs at speed equal to 12."}
+```{r, echo = FALSE, fig.align='center', out.width='400px', fig.cap = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The graph displays several potention splits fo the speed (x) variable. The splits are at 7, 12, 15, and 20. The corresponding means for each region are displayed along with the sums of squared errors. The lowest sum of squared error occurs at speed equal to 12."}
 #plot and put on   
 g <- g + 
   geom_segment(data = SSE2$info, aes(x = min, xend = split, y = lowmean, yend = lowmean), lwd = 1, color = "Red") +
@@ -248,7 +248,7 @@ g
 
 - We would try this for all possible splits (across each predictor) and choose the split that minimizes the sum of squared errors as our first split.  It turns out that `speed` = 17.5 is the optimal splitting point for this data set.
 
-```{r, echo = FALSE, fig.align='center', out.width='400px', fig.cap = "A scatterplot between speed (x) and stopping distance (y) with the optimal first regression tree model split and fit.", fig.alt = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The graph is broken into two regions for the speed (x) variable corresponding to being less than 17.5 and greater than 17.5. This corresponds to the optimal split in terms of sum of squared errors (17,322.5)."}
+```{r, echo = FALSE, fig.align='center', out.width='400px', fig.cap = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The graph is broken into two regions for the speed (x) variable corresponding to being less than 17.5 and greater than 17.5. This corresponds to the optimal split in terms of sum of squared errors (17,322.5)."}
 g2 <- ggplot(data = cars, aes(x = speed, y = dist)) + 
   geom_point(size = 0.75, alpha = 0.75) +
   geom_segment(data = SSE$info, aes(x = min, xend = split, y = lowmean, yend = lowmean), lwd = 1, color = "Blue") +
@@ -261,7 +261,7 @@ g2
 
 - Next, we'd go down the first branch of that split to that 'node'. This node has all the observations corresponding to that branch. Now we repeat this process there!
 
-```{r, echo = FALSE, fig.align='center', out.width='400px',  fig.cap = "A scatterplot between speed (x) and stopping distance (y) with the first split and a few potential second splits on the lower side.", fig.alt = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The graph is broken into two regions for the speed (x) variable corresponding to being less than 17.5 and greater than 17.5. The lower area is again broken into sever possible subregions at speed of 7, 12, and 15. The corresponding sum of squared errors are 6502.2, 4711.4, and 7771.3, respectively."}
+```{r, echo = FALSE, fig.align='center', out.width='400px',  fig.cap = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The graph is broken into two regions for the speed (x) variable corresponding to being less than 17.5 and greater than 17.5. The lower area is again broken into sever possible subregions at speed of 7, 12, and 15. The corresponding sum of squared errors are 6502.2, 4711.4, and 7771.3, respectively."}
 cars_r1 <- cars |>
   filter(speed < 17.5)
 vals <- c(7, 12, 15)
@@ -359,17 +359,17 @@ Hitters_sub[1:5, ] |>
   kable()
 ```
 
-```{r , echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE, fig.width=10, fig.height=6, fig.cap="Log Salary vs Years in the Hitters data.", fig.alt = "A scatterplot between years (x) and log salary (y) is shown. There is a general upward trend at first before leveling off."}
+```{r , echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE, fig.width=10, fig.height=6, fig.cap= "A scatterplot between years (x) and log salary (y) is shown. There is a general upward trend at first before leveling off."}
 ggplot(Hitters) + geom_point(aes(Years, Log_Salary)) + 
   theme_bw(base_size = 18)
 ```
 
-```{r , echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE, fig.width=10, fig.height=6, fig.cap="Log Salary vs Hits in the Hitters data.", fig.alt = "A scatterplot between hits (x) and log salary (y) is shown. There is a slight positive linear association between the variables."}
+```{r , echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE, fig.width=10, fig.height=6, fig.cap = "A scatterplot between hits (x) and log salary (y) is shown. There is a slight positive linear association between the variables."}
 ggplot(Hitters) + geom_point(aes(Hits, Log_Salary)) + 
   theme_bw(base_size = 18)
 ```
 
-```{r, echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE, fig.width=10, fig.height=6, fig.cap="Years and Hits colored by Log Salary in the Hitters data.", fig.alt = "A scatterplot between years (x) and hits (y) with points colored by log salary is shown. No strong trend between years and hits is visible but the higher log salaries ocur for those with more years and more hits, generally."}
+```{r, echo=FALSE, fig.margin = FALSE, fig.fullwidth = TRUE, fig.width=10, fig.height=6, fig.cap= "A scatterplot between years (x) and hits (y) with points colored by log salary is shown. No strong trend between years and hits is visible but the higher log salaries ocur for those with more years and more hits, generally."}
 ggplot(Hitters, aes(Years, Hits)) + 
   geom_point(aes(col = Log_Salary)) + 
   theme_bw(base_size = 18) + 
@@ -397,7 +397,7 @@ of splits for `Years`.
 - The optimal split point for this variable is $4.5$. 
 - The RSS associated with this split is compared to the optimal values for all of the other predictors (just `Hits` in this case) and the split corresponding to the absolute minimum error is used to form the two regions. 
 
-```{r trees1, fig.cap="RSS for different split points for Years. The minimum occurs at 4.5.", echo=FALSE, fig.alt = "A line plot between years (x) and residual sum of squares (y) is shown. The line starts higher, then dips down having a minimum at years equal to 4.5 before rising back up."}
+```{r trees1, echo=FALSE, fig.cap = "A line plot between years (x) and residual sum of squares (y) is shown. The line starts higher, then dips down having a minimum at years equal to 4.5 before rising back up."}
 u <- unique(sort(Hitters$Years))
 g <- (u[1:(length(u)-1)] + u[2:length(u)])/2
 rss <- NA*g
@@ -411,7 +411,7 @@ plot(g, rss, type = "b", pch =19,
 
 In our example, the `Years` variable was chosen to be the best, and the resulting tree shown below. 
 
-```{r treed1, echo=FALSE, fig.cap="Splitting the initial data into two regions.", fig.alt = "A tree diagram is shown with a split at years equal to 4.5. For the values with a year less than 4.5 a box plot of log salary is shown with a sample size of 90. This plot has a minimum at 4.2, q1 at 4.6, median at 5, q3 at 5.4, and maximum at 7.8. For values with a year greater than 4.5 a box plot of log salary is shown with a sample size of 173. This plot has a minimum at 4.5, q1 at 6, median at 6.5, q3 at 6.8, and maximum at 7.9."}
+```{r treed1, echo=FALSE, fig.cap = "A tree diagram is shown with a split at years equal to 4.5. For the values with a year less than 4.5 a box plot of log salary is shown with a sample size of 90. This plot has a minimum at 4.2, q1 at 4.6, median at 5, q3 at 5.4, and maximum at 7.8. For values with a year greater than 4.5 a box plot of log salary is shown with a sample size of 173. This plot has a minimum at 4.5, q1 at 6, median at 6.5, q3 at 6.8, and maximum at 7.9."}
 #rpartTree2 <- as.party(rpartTree)
 plot(as.party(rpartTree))
 ```
@@ -420,7 +420,7 @@ If stop building the tree at this point, all sample with values `Years` less tha
 
 Next, we split each of the regions into two using the same algorithm as above. The resulting three is shown below.
 
-```{r treed2, echo=FALSE, fig.cap="Splitting the regions further.", fig.width=8, fig.alt = "A tree diagram is shown with a split at years equal to 4.5. For the values with a year less than 4.5 another split at 3.5 is down. Box plots of log salary are shown below each branch with the box plot in the less than 3.5 years node showing smaller values. For values with a year greater than 4.5 another split occurs at hits of 117.5. Box plots of log salary are shown below each branch with the values less than 117.5 being larger than the previously mentioned nodes. Similarly, the box plot for values greater than 117.5 show values slightly larger than the other split."}}
+```{r treed2, echo=FALSE, fig.width=8, fig.cap = "A tree diagram is shown with a split at years equal to 4.5. For the values with a year less than 4.5 another split at 3.5 is down. Box plots of log salary are shown below each branch with the box plot in the less than 3.5 years node showing smaller values. For values with a year greater than 4.5 another split occurs at hits of 117.5. Box plots of log salary are shown below each branch with the values less than 117.5 being larger than the previously mentioned nodes. Similarly, the box plot for values greater than 117.5 show values slightly larger than the other split."}
 rpartTree <- rpart(Log_Salary ~ Years + Hits, data = Hitters,
                    control = rpart.control(maxdepth = 2))
 #rpartTree2 <- as.party(rpartTree)
@@ -536,7 +536,7 @@ To save space, we have shown only part of the output of the previous command.
 |  0.031  |    4    | 0.251 | 0.370| 0.060|
 |  0.013  |    5    | 0.220 | 0.281| 0.031|
 
-```{r, echo=FALSE, fig.cap="Cross-validated errors vs log of complexity parameter values.", fig.alt = "A line plot between log(cp) (x) and error (y) is shown. The error starts off higher, dips down around -4 and then increases rapidly."}
+```{r, echo=FALSE, fig.cap="A line plot between log(cp) (x) and error (y) is shown. The error starts off higher, dips down around -4 and then increases rapidly."}
 cp <- T0$cptable
 dd <- data.frame(CP = cp[,1], 
                  Error = cp[,4], 
@@ -563,7 +563,7 @@ m |>
 
 Thus we can use either `cp` = `r round(m[1],3)`, or use the 1-SE rule to chose `cp` = `r round(se1[1,1],3)`. Recall that larger `cp` implies smaller tree size. Now we can prune the tree using the chosen value of `cp` (using 1-SE rule) as follows.
 
-```{r, fig.cap="Final pruned tree for the Hitters data.", fig.alt = "The final pruned tree is displayed with the variables CAtBat, CHits, Hits, CRBI, and Walks having splits."}
+```{r, fig.cap= "The final pruned tree is displayed with the variables CAtBat, CHits, Hits, CRBI, and Walks having splits."}
 final <- prune(T0, cp = 0.013)
 rpart.plot(final)
 ```
@@ -582,7 +582,7 @@ hit_tree$bestTune
 ```
 
 
-```{r, echo=FALSE, fig.cap = "Cross validated errors using the caret package.", fig.alt = "A line plot between log(cp) (x) and error (y) is shown. The error starts off higher, dips down around -5 and -4 and then increases."}
+```{r, echo=FALSE, fig.cap = "A line plot between log(cp) (x) and error (y) is shown. The error starts off higher, dips down around -5 and -4 and then increases."}
 cp <- hit_tree$results
 dd <- data.frame(CP = cp[,1], 
                  Error = cp[,2], 
@@ -603,7 +603,7 @@ ggplot(dd, aes(log(CP), Error)) +
 
 \noindent While the minimum error is obtained for `cp` = `r round(hit_tree$bestTune,3)`, we can again apply 1-SE rule, and obtain a larger `cp` value of `r round(se1[nrow(se1),1] ,3)`. 
 
-```{r, fig.cap="Pruned tree for Hitters data using caret.", , fig.alt = "The final pruned tree using the caret package is displayed with the variables CAtBat, CHits, Hits, CRBI, and AtBat having splits."}
+```{r, fig.cap= "The final pruned tree using the caret package is displayed with the variables CAtBat, CHits, Hits, CRBI, and AtBat having splits."}
 final_caret <- prune(hit_tree$finalModel, cp = 0.016)
 rpart.plot(final_caret)
 ```
@@ -775,7 +775,7 @@ Using 1-SE rule, we chose the tree with three splits, and corresponding tree is 
 Since in this example the model with no splits (root node) makes `r table(heart$AHD)[2]`/`r nrow(heart)` misclassification errors, we need to multiply columns 3 -- 5 by `r nrow(heart)` to absolute errors.^[Computations are done on the absolute error scale, and printed on relative scale.] 
 \end{comment}
 
-```{r t1se, fig.cap="Pruned tree using 1-SE rule for the heart data.", fig.alt = "A tree diagram is shown with an initial split at Thal = Normal. For those with no, the prediction is Yes with 0.75 of the observations taking yes in this bin. 45% of the total observations fall into this bin. For those with Thal = Normal yes, an additional split on Ca < 1 is done. For those with Ca < 1, No is predicted as only 0.11 of the observations take on yes in this bin. This corresponds to 39% of the total observations. For those with Ca >=1, a further split on chest pain is done."}
+```{r t1se, fig.cap= "A tree diagram is shown with an initial split at Thal = Normal. For those with no, the prediction is Yes with 0.75 of the observations taking yes in this bin. 45% of the total observations fall into this bin. For those with Thal = Normal yes, an additional split on Ca < 1 is done. For those with Ca < 1, No is predicted as only 0.11 of the observations take on yes in this bin. This corresponds to 39% of the total observations. For those with Ca >=1, a further split on chest pain is done."}
 cp <- heart_rpart$cptable
 heart_final <- prune(heart_rpart, cp = cp[3,1])
 rpart.plot(heart_final)
@@ -793,7 +793,7 @@ klaR::errormatrix(true = heart$AHD, predicted = pred,
 
 If we use the `cp` value corresponding to the minimum CV error rate, we obtain the following tree:
 
-```{r tmin, fig.cap="Pruned tree using minimum cp for the heart data.", fig.alt = "A tree diagram is shown with different splits as compared to the previous tree fit."}
+```{r tmin, fig.cap = "A tree diagram is shown with different splits as compared to the previous tree fit."}
 heart_final <- prune(heart_rpart, cp = cp[4,1])
 rpart.plot(heart_final)
 ```
@@ -934,7 +934,7 @@ On average, each bagged tree/model uses about two-thirds of the training observa
     + This will yield around $B/3$ predictions for the $i$-th observation.
     + In order to obtain a single prediction for the $i$-th observation, we can average these predicted responses (for regression model) or can take a majority vote (for classification models).
 
-```{r bag, echo=FALSE, fig.cap="Estimated test MSE for different number of aggregated trees.", fig.alt = "A line plot between the number of randomly selected predictors (x) and RMSE of OOB observations (y) is shown. The RMSE starts high, drops down at the number of predictors equal to 3 before slowly increasing as the number of predictors increases."}
+```{r bag, echo=FALSE, fig.cap= "A line plot between the number of randomly selected predictors (x) and RMSE of OOB observations (y) is shown. The RMSE starts high, drops down at the number of predictors equal to 3 before slowly increasing as the number of predictors increases."}
 plot(hit_bagged)
 ```
 
@@ -1027,7 +1027,7 @@ where $X_i$ takes values between $-\pi$ and $\pi$, and $\epsilon_i \sim N(0, 0.2
 
 The figures below shows how gradient boosting proceeds with estimating the true underlying function, $sin(x)$.  
 
-```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap="Demonstration of GBM using simulated data and different number of B. Here a single tree fit is shown.", fig.alt = "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A single pruned decision tree is shown. The tree roughly follows the the sine curve but uses a constant to estimate it over different regions, thus missing at parts where the sine curve is more curvy."}
+```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap= "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A single pruned decision tree is shown. The tree roughly follows the the sine curve but uses a constant to estimate it over different regions, thus missing at parts where the sine curve is more curvy."}
 library(gbm)
 set.seed(1001)
 x <- seq(-pi, pi, len = 501)
@@ -1049,7 +1049,7 @@ lines(x, pp, lwd = 2, col = "red")
 
 - The first plot ("Single tree") shows the estimated function based on a single tree pruned using cost-complexity pruning. 
 
-```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap="Demonstration of GBM using simulated data and different number of B. Here the base model predicting 0 for everything is shown.", fig.alt = "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. The initial estimate for a boosted model is shown. This estimate is 0 everywhere."}
+```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap = "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. The initial estimate for a boosted model is shown. This estimate is 0 everywhere."}
 bg <- c(0, 1, 10, 50, 100, 500, 1000)# seq(1,B, by=99)
 
 b <- bg[1]
@@ -1071,7 +1071,7 @@ lines(x, demo_gbm1$fit, col="red", lwd=2)
 
 - The second plot ($B = 0$) shows the initialization for gradient boosting, that is, $\widehat f(x) = 0$. Thereafter, $B$ indicates the number of trees grown sequentially. The first tree fit in the series is a single decision stump, i.e., a tree with a single split. 
 
-```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap="Demonstration of GBM using simulated data and different number of B. Here a single stump has been added to the model.", fig.alt = "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the second step is shown. Here a single stump as been added and the predictions from the model differ slightly for smaller x than for larger x but the estimates are stil constant over each region."}
+```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap= "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the second step is shown. Here a single stump as been added and the predictions from the model differ slightly for smaller x than for larger x but the estimates are stil constant over each region."}
 b <- bg[2]
 demo_gbm1 <- gbm(
   formula = y ~ .,
@@ -1094,7 +1094,7 @@ lines(x, demo_gbm1$fit, col="red", lwd=2)
     - Initially there are large errors, but each additional decision stump in the sequence makes a small improvement in different areas across the feature space where errors still remain. 
     - We also notice that after some point (e.g., $B = 1000$), the procedure shows signs of overfitting. Thus it is important to  tune the parameter $B$.  
 
-```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap="Demonstration of GBM using simulated data and different number of B. Here we are at step b = 10.", fig.alt = "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the 10th step is shown. The model is resonably flexible in the middle but misses wildly on the outsides."}
+```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap= "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the 10th step is shown. The model is resonably flexible in the middle but misses wildly on the outsides."}
 b <- bg[3]
   demo_gbm1 <- gbm(
     formula = y ~ .,
@@ -1112,7 +1112,7 @@ b <- bg[3]
   lines(x, demo_gbm1$fit, col="red", lwd=2)
 ```
 
-```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap="Demonstration of GBM using simulated data and different number of B. Here we are at step b = 50.", fig.alt = "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the 50th step is shown. The model is resonably flexible and is beginning to reflect the sine curve."}
+```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap= "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the 50th step is shown. The model is resonably flexible and is beginning to reflect the sine curve."}
 b <- bg[4]
   demo_gbm1 <- gbm(
     formula = y ~ .,
@@ -1131,7 +1131,7 @@ b <- bg[4]
 ```
 
 
-```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap="Demonstration of GBM using simulated data and different number of B. Here we are at step b = 100.", fig.alt = "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the 100th step is shown. The model is fits the sine curve well."}
+```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap= "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the 100th step is shown. The model is fits the sine curve well."}
 b <- bg[5]
   demo_gbm1 <- gbm(
     formula = y ~ .,
@@ -1150,7 +1150,7 @@ b <- bg[5]
 ```
 
 
-```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap="Demonstration of GBM using simulated data and different number of B. Here we are at step b = 500.", fig.alt = "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the 500th step is shown. The model follows the sine curve well but is extremely wiggly around it, indicating being overfit."}
+```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap="A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the 500th step is shown. The model follows the sine curve well but is extremely wiggly around it, indicating being overfit."}
 b <- bg[6]
   demo_gbm1 <- gbm(
     formula = y ~ .,
@@ -1169,7 +1169,7 @@ b <- bg[6]
 ```
 
 
-```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap="Demonstration of GBM using simulated data and different number of B. Here we are at step b = 1000.", fig.alt = "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the 1000th step is shown. The model is follows the sine curve but also picks up patterns in the training data that don't mimic the sine curve. This indicates the model is very overfit."}
+```{r, echo=FALSE, fig.margin = FALSE, fig.fulwidth = TRUE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, fig.cap= "A scatter plot between simulated data is shown. The true curve that generated the data is a sine curve and this function is shown in the plot. A boosted model at the 1000th step is shown. The model is follows the sine curve but also picks up patterns in the training data that don't mimic the sine curve. This indicates the model is very overfit."}
 b <- bg[7]
   demo_gbm1 <- gbm(
     formula = y ~ .,
@@ -1240,7 +1240,7 @@ Here we have fit a gradient boosting model with
 print(hit_gbm1)
 ```
 
-```{r, echo=FALSE, fig.cap="CV error vs number of trees in GBM", fig.alt = "A line plot between the number of trees (x) and the CV error is shown. The CV error starts very high and drops quickly around 13 trees and then slowly increases after that."}
+```{r, echo=FALSE, fig.cap= "A line plot between the number of trees (x) and the CV error is shown. The CV error starts very high and drops quickly around 13 trees and then slowly increases after that."}
 plot(hit_gbm1$cv.error,  type = "l", ylab = "CV error")
 ```
 
@@ -1254,7 +1254,7 @@ hit_gbm1$cv.error[best]
 
 We can also use `gbm.perf()` function to plot the CV errors as well as training errors.
 
-```{r, fig.cap="Training (black) and test errors (green) for GBM fit on `Hitters` data.", fig.alt = "A line plot between number of trees (x) and squared error loss (y) is shown. The training error starts high and continues to decrease as the number of trees increases. The CV error is shown and this drops quickly before slowly rising."}
+```{r, fig.cap = "A line plot between number of trees (x) and squared error loss (y) is shown. The training error starts high and continues to decrease as the number of trees increases. The CV error is shown and this drops quickly before slowly rising."}
 gbm.perf(hit_gbm1, method = "cv")
 ```
 
@@ -1372,7 +1372,7 @@ dim(heart)
 ```
 
 
-```{r, fig.cap="Test error estimated by CV for hearts data using adaboost loss.", fig.alt = "A line plot is shown between the number of trees (x) and the adaboost exponential bound (an error rate). The training error starts high and continues to go down as the number of trees increases. The cross validation error starts high, drops down slowly taking a minimum around 750 before slowly increasing."}
+```{r, fig.cap="A line plot is shown between the number of trees (x) and the adaboost exponential bound (an error rate). The training error starts high and continues to go down as the number of trees increases. The cross validation error starts high, drops down slowly taking a minimum around 750 before slowly increasing."}
 set.seed(1001)
 heart_ada <- gbm(AHD ~ ., data = heart,
                  distribution = "adaboost",
@@ -1384,14 +1384,14 @@ heart_ada <- gbm(AHD ~ ., data = heart,
 gbm.perf(heart_ada)
 ```
 
-```{r, fig.cap="Relative incluence of preecitors in reducing the loss function in hearts data using adaboost loss.", fig.alt = ""}
+```{r, fig.cap=""}
 summary(heart_ada) |>
   kable()
 ```
 
 We can also use "bernoulli" loss and stochastic GBM. 
 
-```{r, fig.cap="Test error estimated by CV for hearts data using bernoulli loss.", fig.alt = "A line plot is shown between the number of trees (x) and the bernouilli loss (an error rate). The training error starts high and continues to go down as the number of trees increases. The cross validation error starts high, drops down slowly taking a minimum around 950 before slowly increasing."}
+```{r, fig.cap= "A line plot is shown between the number of trees (x) and the bernouilli loss (an error rate). The training error starts high and continues to go down as the number of trees increases. The cross validation error starts high, drops down slowly taking a minimum around 950 before slowly increasing."}
 set.seed(1001)
 heart_gbm <- gbm(AHD ~ ., data = heart,
                  distribution = "bernoulli",
@@ -1403,7 +1403,7 @@ heart_gbm <- gbm(AHD ~ ., data = heart,
 gbm.perf(heart_gbm)
 ```
 
-```{r, fig.cap="Relative incluence of preecitors in reducing the loss function in hearts data using bernoulli loss."}
+```{r, fig.cap=""}
 summary(heart_gbm) |>
   kable()
 ```
@@ -1450,19 +1450,19 @@ We favor the perturbations that improve the fit to the partial residual.
 
 The following figures illustrates examples of possible perturbations to a tree.
 
-```{r, echo = FALSE, fig.cap = "Original tree", fig.align='center', out.width = "400px", fig.alt = "A regression tree is shown with an initial split at x less than 169. The left branch has an additional split at x less than 114. The right branch of that has an additional split at x less than 140."}
+```{r, echo = FALSE,  fig.align='center', out.width = "400px", fig.cap = "A regression tree is shown with an initial split at x less than 169. The left branch has an additional split at x less than 114. The right branch of that has an additional split at x less than 140."}
 knitr::include_graphics("img/8_12a.jpg")
 ```
 
-```{r, echo = FALSE, fig.cap = "Same shape but different prediction tree", fig.align='center', out.width = "400px", fig.alt = "The same regression tree split as the previous plot is shown. However, the predictions from the tree differ slightly."}
+```{r, echo = FALSE, fig.align='center', out.width = "400px", fig.cap = "The same regression tree split as the previous plot is shown. However, the predictions from the tree differ slightly."}
 knitr::include_graphics("img/8_12b.jpg")
 ```
 
-```{r, echo = FALSE, fig.cap = "Pruned tree", fig.align='center', out.width = "400px", fig.alt = "A regression tree is shown with an initial split at x less than 169. This is the only split for this tree."}
+```{r, echo = FALSE,  fig.align='center', out.width = "400px", fig.cap = "A regression tree is shown with an initial split at x less than 169. This is the only split for this tree."}
 knitr::include_graphics("img/8_12c.jpg")
 ```
 
-```{r, echo = FALSE, fig.cap = "Tree with additional branches", fig.align='center', out.width = "400px", fig.alt = "A regression tree is shown that has the same splits as the first regression tree plotted. However, this tree adds an addition split on one branch."}
+```{r, echo = FALSE, fig.align='center', out.width = "400px", fig.cap = "A regression tree is shown that has the same splits as the first regression tree plotted. However, this tree adds an addition split on one branch."}
 knitr::include_graphics("img/8_12d.jpg")
 ```
 
