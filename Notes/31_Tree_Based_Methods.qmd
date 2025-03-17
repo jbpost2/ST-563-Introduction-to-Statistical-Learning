@@ -68,13 +68,20 @@ Tree based methods are very flexible. They attempt to **split up the predictor s
 
 With our two different types of supervised learning situations we can create either a regression tree or classification tree!
 
-- *Classification* tree if the goal is to classify (predict) group membership  
+\newpage
 
-    + Often use **most prevalent class** in region as the prediction  
-
-- *Regression* tree if the goal is to predict a continuous response
-
-    + Often use **mean of observations** in region as the prediction  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 These models are very easy for people to interpret! For instance, consider the tree below relating a predictor (`speed`) to stopping distance (`dist`).
 
@@ -98,6 +105,7 @@ ggplot(cars, aes(x = speed, y = dist)) +
   geom_segment(x = 23.5, xend = max(cars$speed), y = 92, yend = 92, col = "Orange", size = 2)
 ```
 
+\newpage
 
 Suppose we have two predictors. The same idea can be used here. We can partition the predictor space into regions and have different predictions in each region. 
 
@@ -146,6 +154,8 @@ The bottom left panel of the figure shows a the binary tree we've created.
 - This is the reason we call such methods  *decision tree* methods. 
 
 Such trees can be used for classification problems as well. 
+
+\newpage
 
 The figure below shows a basic (classification) tree and the corresponding terminology used for any tree.   
 
@@ -223,7 +233,7 @@ Again, this is found by taking all the points in the first region, finding the r
 
 Is that the smallest it could be? Likely not! Let's try some other splits and see what SSE they give.
 
-```{r, echo = FALSE, fig.align='center', out.width='400px' fig.cap = "A scatterplot between speed (x) and stopping distance (y) with a potential first regression tree model split and fit.", fig.alt = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The graph displays several potention splits fo the speed (x) variable. The splits are at 7, 12, 15, and 20. The corresponding means for each region are displayed along with the sums of squared errors. The lowest sum of squared error occurs at speed equal to 12."}
+```{r, echo = FALSE, fig.align='center', out.width='400px', fig.cap = "A scatterplot between speed (x) and stopping distance (y) with a potential first regression tree model split and fit.", fig.alt = "A scatter plot between speed (x) and stopping distance (y) with an SLR and regression tree model fit. The data show a reasonably strong positive trend starting at a speed of 3 and distance near 0 to a speed of 25 with distances around 70-100. The graph displays several potention splits fo the speed (x) variable. The splits are at 7, 12, 15, and 20. The corresponding means for each region are displayed along with the sums of squared errors. The lowest sum of squared error occurs at speed equal to 12."}
 #plot and put on   
 g <- g + 
   geom_segment(data = SSE2$info, aes(x = min, xend = split, y = lowmean, yend = lowmean), lwd = 1, color = "Red") +
@@ -328,16 +338,7 @@ We begin with the entire data set, and search every distinct value of every pred
 
 Formally, for the $j$-th predictor and split point $s$, 
 
-- we have two regions: $R_1(j, s) = \{X | X_j \leq s\}$ and $R_2(j, s) = \{X | X_j > s\}$
-- the corresponding sum of squares is 
-$$
-RSS(j, s) = \sum_{i: X_i \in R_1}(Y_i -  \widehat c_1)^2 + \sum_{i: X_i \in R_2}(Y_i -  \widehat c_2)^2.
-$$
-Note that we have indexed the regions by $j$ and $s$ since they depend on the splitting variable $X_j$ and the split point $s$. 
-
-- Now we find the best value of $j$ and $s$ that minimize $RSS(j, s)$. 
-- Then within each of the two regions, we apply the same method and search for the predictor and split point that best reduces RSS.
-- For each splitting variable, the determination of the split point $s$ can be done very quickly making it feasible to scan through all of the inputs and determine the optimal $j$ and $s$ at a particular step of the algorithm.
+\newpage
 
 #### Example Tree Fit
 
@@ -416,11 +417,11 @@ In our example, the `Years` variable was chosen to be the best, and the resultin
 plot(as.party(rpartTree))
 ```
 
-If stop building the tree at this point, all sample with values `Years` less than 4.5 would be predicted to be `r pp[1]` (the average of the salary for these samples) and samples above the splits all have a predicted value of `r pp[2]`.
+If we stop building the tree at this point, all sample with values `Years` less than 4.5 would be predicted to be `r pp[1]` (the average of the salary for these samples) and samples above the splits all have a predicted value of `r pp[2]`.
 
 Next, we split each of the regions into two using the same algorithm as above. The resulting three is shown below.
 
-```{r treed2, echo=FALSE, fig.cap="Splitting the regions further.", fig.width=8, fig.alt = "A tree diagram is shown with a split at years equal to 4.5. For the values with a year less than 4.5 another split at 3.5 is down. Box plots of log salary are shown below each branch with the box plot in the less than 3.5 years node showing smaller values. For values with a year greater than 4.5 another split occurs at hits of 117.5. Box plots of log salary are shown below each branch with the values less than 117.5 being larger than the previously mentioned nodes. Similarly, the box plot for values greater than 117.5 show values slightly larger than the other split."}}
+```{r treed2, echo=FALSE, fig.cap="Splitting the regions further.", fig.width=8, fig.alt = "A tree diagram is shown with a split at years equal to 4.5. For the values with a year less than 4.5 another split at 3.5 is down. Box plots of log salary are shown below each branch with the box plot in the less than 3.5 years node showing smaller values. For values with a year greater than 4.5 another split occurs at hits of 117.5. Box plots of log salary are shown below each branch with the values less than 117.5 being larger than the previously mentioned nodes. Similarly, the box plot for values greater than 117.5 show values slightly larger than the other split."}
 rpartTree <- rpart(Log_Salary ~ Years + Hits, data = Hitters,
                    control = rpart.control(maxdepth = 2))
 #rpartTree2 <- as.party(rpartTree)
@@ -444,17 +445,26 @@ Now the natural question is: how deep/complex should we grow the tree?
 - Growing an overly complex tree will have the risk of overfitting our training data. This might result in poor test performance. 
 - On the other hand, growing a small tree might result in poor prediction. There are two primary approaches to find the "right size" of a regression tree: (1) early stopping, and (2) pruning. 
 
+\newpage
+
 ### Early stopping
 
 Using *early stopping*, we restrict tree growth explicitly using a pre-set criterion. Two of the most common approaches are as follows:
 
-+ restrict the tree depth to a certain level: we stop splitting after a certain depth, say, 5 levels. 
-
-    - This criterion results in shallow trees, resulting in less variance, but more bias.
-
-+ restrict the minimum number of observations allowed in any terminal node: stop splitting intermediate nodes which contain too few data points. 
-
-    - In the extreme case where each leaf contains only one oservation, we are essentially interpolating the training data. This results in overfitting and high variance. So restricting a minimum node size reduces variance. 
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 These two approaches can be applied independently of each other, however, they do interact. Often, we use both of these criteria to build a tree.
 
@@ -477,9 +487,8 @@ is minimized.
     + As $\alpha$ increases, there a tree with many terminal nodes will have larger $RSS(\alpha)$, and so the quantity will tend to be minimized for a smaller subtree.
     
 - It turns out that as we increase $\alpha$ from zero, branches get pruned from the tree in a nested and predictable fashion, so obtaining the whole sequence of subtrees as a function of $\alpha$ is easy!
-- We can select a value of $\alpha$ using a holdout set or cross-validation. 
 
-Similar to our previous discussion of selecting a tuning parameter, we often use the one-standard-error rule on the optimization criteria for identifying the simplest tree. That is, find the smallest tree that is within one standard error of the tree with smallest absolute error. 
+\newpage
 
 ### Fitting Trees in `R`
 
@@ -670,6 +679,9 @@ So far we have only discussed the case where the predictors are continuous. Howe
 
 - For a categorical predictor with more than two levels, a split amounts to assigning some of the qualitative values to one branch and assigning the remaining to the other branch. 
 
+
+\newpage
+
 ## Classification Trees
     
 Classification trees are very similar to regression trees except, of course, our response is a categorical variable. 
@@ -684,22 +696,35 @@ An ideal node would be the one with all observations are from the same class. Th
 
 In a node $m$, representing a region $R_m$, let $\widehat p_{mk}$ be the proportion of training observations in $R_m$ that are from the $k$-th class. We classify the observations in node $m$ to the majority class in node $m$, that is, the value of $k$ that maximizes $\widehat p_{mk}$. Based on this observation, we can look at three different measures of node impurity:
 
-+ Misclassification error: $1 - \max_k \widehat p_{mk}$
-
-+ Gini index: $\sum_{k=1}^K \widehat p_{mk}(1-\widehat p_{mk})$
-
-+ Cross-entropy or deviance: $-\sum_{k=1}^K \widehat p_{mk}log(\widehat p_{mk})$
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 It turns out that classification error is not sufficiently sensitive for tree-growing, and in practice we often prefer one of the other two measures. 
 
-- Gini index is a measure of total variance across the $K$ classes. 
-
-    + Gini index takes on a small value if all of the $\widehat p_{mk}$ are close to zero or one
-    + A small value indicates that a node contains predominantly observations from a single class 
-    
-- Cross-entropy, will take on a value near zero if all of the $\widehat p_{mk}$ are close to zero or one. 
-
-    + Thus, entropy will take on a small value if the $m$-th node is pure. 
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
     
 It turns out that the Gini index and the entropy are quite similar numerically!
 
@@ -851,18 +876,9 @@ In the context of the tree-based methods, we'll discuss bagging, random forests,
 
 One method to obtain many different trees from one data set is to use the bootstrap! Recall, we can do a non-parametric bootstrap by 
 
-- resampling using a sample size of $n$ from the data with replacement
 
-    - we sometimes get the same observation multiple times
-    - observations not included can act as a test set (Out-of-bag observations)
+\newpage
 
-We can then fit a large tree (not pruned) on the bootstrap resample. Then we repeat many times!
-
-Our prediction is then the average prediction (regression) or a majority vote (classification). 
-
-- These trees will have a lot of variance between them but each will have low bias. 
-- By averaging across many trees, we decrease the variance over an individual tree fit  
-  
 **Bagging = Bootstrap Aggregation** is a general method. Applied to trees the algorithm is:
 
 1. Create many bootstrap (re)samples, $b = 1,..., B$
@@ -882,19 +898,13 @@ $$
 \widehat f_{bag}(x) = \frac{1}{B} \sum_{b = 1}^B \widehat f^{*b}(x).
 $$
 
-    + For classification trees, usually use the **majority vote** 
+<ul><ul><li> For classification trees, usually use the **majority vote** </li></ul></ul>
     
     $$\mbox{Use most common prediction made by all bootstrap trees}$$
 
 **Random Forests** are bagged tree where, at each split of each tree, we consider a random subset of predictors rather than the entire set of predictors.
 
-- If a really strong predictor exists, every bootstrap tree will probably use it for the first split (2nd split, etc.)
-- Makes bagged trees predictions more correlated
-- Correlation --> smaller reduction in variance from aggregation
-
-By randomly selecting a subset of predictors, a good predictor or two won't dominate the tree fits  
-
-- Rules of thumb exist for the number of predictors to use but we can just use CV or out-of-bag predictions to choose this number.
+\newpage
 
 ### Bagging and Random Forest Example
 
@@ -960,6 +970,8 @@ plot(varImp(hit_bagged))
 
 - This measure is based upon the mean decrease of accuracy in predictions on the out of bag samples when a given variable is permuted. 
 
+\newpage
+
 ## Boosting
 
 Boosting is another way to improve predictions from a decision tree. 
@@ -1013,11 +1025,32 @@ By fitting small trees to the residuals, we slowly improve $\widehat f$ in areas
 
 Boosting for regression has three tuning parameters:
 
-1. *The number of trees $B$*: Unlike bagging and random forests, boosting can overfit if $B$ is too large, although this overfitting tends to occur slowly if at all. We can use cross-validation to select $B$.
-
-2. *The shrinkage parameter $\lambda$*: This is a small positive number. This controls the rate at which boosting learns. Typical values are $0.01$ or $0.001$ but the right choice can depend on the problem. Very small $\lambda$ can require using a very large value of $B$ in order to achieve good performance.
-
-3. *The number $d$ of splits in each tree*: This controls the complexity of the boosted ensemble. Often $d = 1$ works well, in which case each tree is a stump, consisting of a single split. In this case, the boosted ensemble is fitting an additive model, since each term involves only a single variable. More generally $d$ is the *interaction depth*, and controls the interaction order of the boosted model, since $d$ splits can involve at most $d$ variables.
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 Let us look at a simple example of a regression problem with one predictor. The truth comes from the following model:
 $$
@@ -1313,14 +1346,23 @@ $$
 G(X) = sign\left(\alpha_1G_1(X) + \ldots + \alpha_MG_M(X)\right).
 $$
 
-Here $\alpha_1, \ldots, \alpha_M$ are computed by the boosting algorithm, and weight the contribution of each respective weak classifier. $sign()` takes on -1 for a negative input and 1 for a positive input (0 for a 0 input).
+Here $\alpha_1, \ldots, \alpha_M$ are computed by the boosting algorithm, and weight the contribution of each respective weak classifier. `sign()` takes on -1 for a negative input and 1 for a positive input (0 for a 0 input).
 
 - Their effect is to give higher influence to the more accurate classifiers in the sequence. 
-- The data modifications at each boosting step consist of applying weights $w_1, \ldots ,w_n$ to each of the training observations $(X_i, Y_i), i = 1, \ldots ,n$. 
-- Initially, we take all of the weights to be $w_i = 1/n$. Thus the first step simply trains the classifier on the data in the usual manner. 
-- Then for iteration  $m = 2, \ldots, M$, the algorithm modifies the weights so that the misclassified observation in step $m-1$ have their weights increased whereas the weights are decreased for those that were classified correctly. 
-- The classification algorithm is reapplied to the weighted observations. Thus as we go through more iterations, observations that are difficult to classify correctly receive ever-increasing influence. 
-- Each successive classifier is thereby forced to concentrate on those training observations that are missed by previous ones in the sequence. 
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 The details of the AdaBoost.M1 algorithm often used is:
 
@@ -1350,6 +1392,7 @@ As with the regression setting, when trees are used as the base learner, we have
 - $M$ = the number of iterations
 
 We can also adapt gradient boosting for classification using a general loss function such as the Bernoulli distribution, where we model the odds. 
+
 #### Fitting a Boosted Classification Tree
 
 The primary boosted tree package in R is `gbm`, which implements stochastic gradient boosting. 
@@ -1421,7 +1464,11 @@ Like other ensemble methods discussed so far, Bayesian additive regression trees
 
 - In BART, each tree is constructed in a random manner as in bagging and random forests, and each tree tries to capture signal not yet accounted for by the current model, as in boosting. 
 
-- The main novelty in BART is the way in which new trees are generated.
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
 Let us start with a continuous outcome and regression problem. To start with, let us introduce some notations:
 \begin{eqnarray*}
@@ -1442,11 +1489,17 @@ r_i = Y_i - \sum_{j < k} \widehat f^b_j(X_i) - \sum_{j > k} \widehat f^{b-1}_j(X
 $$
 However, we do not fit a fresh tree to this partial residual. Instead, BART randomly chooses a *perturbation* to the tree from the previous iteration from a set of possible perturbations. There are two components to this perturbation: 
 
-+ We may change the structure of the tree by adding or pruning branches.
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
+&nbsp;  
 
-+ We may change the prediction in each terminal node of the tree.
-
-We favor the perturbations that improve the fit to the partial residual. 
 
 The following figures illustrates examples of possible perturbations to a tree.
 
@@ -1466,11 +1519,6 @@ knitr::include_graphics("img/8_12c.jpg")
 knitr::include_graphics("img/8_12d.jpg")
 ```
 
-The first plot in the figure is the $k$-th tree in iteration $b-1$. The remaining plots are possible perturbations of this tree that can be chosen in iteration $b$ as the $k$-th tree. 
-
-- One possibility is that the new tree has the same structure as the previous tree, but with different predictions at the terminal nodes (second plot). 
-- Another possibility is that the new tree is obtained from pruning the previous tree (third plot). 
-- Yet another option is that the new tree may have more terminal nodes than the old tree (fourth plot). 
 
 After $B$ iterations, we have a collection of prediction models, $\widehat f^b(x)$. Typically, models obtained in the first few iterations tend to not perform well, we typically throw away the first few prediction models. In Bayesian literature, this is known as the burn-in period. 
 
