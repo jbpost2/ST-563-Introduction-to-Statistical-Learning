@@ -50,7 +50,6 @@ SVM produces nonlinear boundaries by constructing a linear boundary in a large, 
 
 People often loosely refer to any of these methods collectively as *support vector machines*.
 
-\newpage
 
 # Maximal Margin Classifiers & Support Vector Classifiers
 
@@ -62,7 +61,7 @@ We know that LDA and logistic regression both estimate linear decision boundarie
 
 Consider a simulated dataset that contains two predictors, $X_1$ and $X_2$, and observations come from one of two classes (blue circles and orange triangles).
 
-```{r svm1, echo=F, fig.height=3.5, fig.width=4.5, fig.margin=TRUE, fig.cap="Scatterplot between two simulated variables x1 and x2 where the data points are colored by our response, the class type. The classes are completely separable by a line between x1 and x2."}
+```{r svm1, echo=F, fig.height=4.5, fig.width=5, fig.margin=TRUE, fig.cap="Scatterplot between two simulated variables x1 and x2 where the data points are colored by our response, the class type. The classes are completely separable by a line between x1 and x2."}
 set.seed(1)
 n <- 10
 div <- 0.5
@@ -86,7 +85,15 @@ plot(all$x1, all$x2, pch=c(19, 17)[all$group],
      xlab = "X1", ylab = "X2")
 ```
 
-\newpage
+The two classes are well separated, and a straight line can be used for classification. This situation is called *linearly separable*. In the two predictor case that means:
+
+There exists $\beta_0, \beta_1, \beta_2$ such that the line
+$$
+\beta_0 + X_1\beta_1 + X_2\beta_2 = 0
+$$
+perfectly separate the two classes. 
+
+Here, this line is not unique!
 
 For SVM, we actually define our binary response by coding it as a -1 or 1 variable. With separable classes, this implies:
 
@@ -103,21 +110,17 @@ $$
 Y_i = sign(\beta_0 + X_{i1}\beta_1 + X_{i2}\beta_2).
 $$
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+- $\beta_0 + X_{i1}\beta_1 + X_{i2}\beta_2$ is called a **hyperplane** thus the name **separating hyperplane**.
+- Note that $Y_i(\beta_0 + X_{i1}\beta_1 + X_{i2}\beta_2) > 0$
+- Once we fit our $\beta$ terms, we can classify a new observation via
+$$\hat{Y} = sign(\hat{\beta}_0 + X_{i1}\hat{\beta}_1 + X_{i2}\hat{\beta}_2)$$
+
 
 ### Fitting the Hyperplane
 
 When the problem is **linearly separable**, there are infinitely many such separating hyperplanes. Two are shown in the plot of our simulated data below.
 
-```{r, echo=FALSE, fig.cap="Simulated two class data with two possible separating hyperplanes (lines) that perfectly separate the data.", fig.height = 3.5, fig.width = 4.5}
+```{r, echo=FALSE, fig.cap="Simulated two class data with two possible separating hyperplanes (lines) that perfectly separate the data.", fig.height = 4.5, fig.width = 5}
 plot(all$x1, all$x2, pch=c(19, 17)[all$group], 
      col = c("steelblue", "darkorange")[all$group], cex=2,
      xlab = "X1", ylab = "X2")
@@ -131,12 +134,7 @@ How to determine the 'optimal' line in this case?
 - Define $M_i =$ distance between the hyperplane and $i$-th training point. 
 - The `margin` is defined as $M = min(M_1,\ldots, M_n)$. 
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+The optimal classification rule is the line that *maximizes the margin* around the separating line.  Such a classifier is called **the maximal margin classifier**. 
 
 Formally, we consider the optimization problem:
 $$
@@ -164,15 +162,12 @@ $$
 \hat{\beta}_0 + X_1\hat{\beta}_1 + X_2\hat{\beta}_2 = \pm 1. 
 $$
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+Define the *optimal* separating hyperplane as $\widehat f(x) = \widehat\beta_0 + x_1 \widehat\beta_1 + x_2\widehat\beta_2$. Thus our classification rule is as follows: 
 
+For a new observation $x = (x_1, x_2)$, 
+$$
+\widehat Y = sign\{\widehat f(x)\}.
+$$
 
 In figure below, the optimal separating line is shown as the solid red line, the closest points to the line are circled, and the separation between the classes is shown using the dashed black lines.
 
@@ -245,24 +240,15 @@ $$
 
 These points are called the **support vectors** for this problem. 
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+- It can be shown that *only the support vectors are enough to define the optimal classification rule fully*. 
+- If we move the support vectors, the optimal separating line also changes. 
+- A movement to any of the other observations would not affect the separating hyperplane, provided that the observation’s movement does not cause it to cross into this margin area. 
+- This property of the maximal margin classifier is important in development of support vector classifier and support vector machine!
 
 ### $p$ Predictors
 
 Everything above generalizes to the case where we have $p$ predictors!
 
-\newpage
 
 ## Support vector classifiers
 
@@ -321,8 +307,8 @@ Here we will not be able to find a line that entirely separates the groups. That
 
 However, we can generalize the ideas to develop a classification rule that *almost* separates the classes. To do so, 
 
-\newpage
-
+- we allow a few points to fall on the wrong side of the margin or separating hyperplane
+- the classifier is called a *support vector classifier* or a *soft-margin classifier*
 - Even in the completely separable case, we still may consider such soft margin classifier for robustness. The graph below shows the drastic change of the maximal margin classifier from the addition of a single observation.
 
 ```{r svm95, echo=FALSE, fig.cap="Two classes of observations are shown in blue and in purple, along with the maximal margin hyperplane (left panel).  An additional blue observation has been added, leading to a dramatic shift in the maximal margin hyperplane shown as a solid line (right panel). The dashed line indicates the maximal margin hyperplane that was obtained in the absence of this additional point."}
@@ -384,10 +370,9 @@ points(x2 ~ x1, data = all[ind,], cex = 3, col = "red")
 
 The support vector classifiers then attempt to maximize the margin such that 
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+$$\sum_i e_i \leq \mbox{L}$$
+
+for a pre-specified constant $L$.
 
 For the two predictor case, we solve the optimization problem:
 $$
@@ -399,7 +384,7 @@ where $L$ is a nonnegative tuning parameter.
 
 - Conceptually, the value $e_i$ in the constraint $Y_i(\beta_0 + X_{i1}\beta_1 +X_{i2}\beta_2) \geq M(1- e_i)$ is the proportional amount by which the quantity $f(X_i) = \beta_0 + X_{i1}\beta_1 +  X_{i2}\beta_2$ is on the wrong side of its margin. 
 
-- By bounding the sum, $e_1 + \ldots + e_n$, we bound the total proportional amount by which $f(X_i)$ falls on the wrong side of their margin. 
+- By bounding the sum $e_1 + \ldots + e_n$, we bound the total proportional amount by which $f(X_i)$ falls on the wrong side of their margin. 
 
 - Misclassifications occur when $e_i > 1$, so bounding $e_1 + \ldots + e_n$ at a value $L$ bounds the total number of training misclassifications at $L$. 
 
@@ -435,7 +420,9 @@ $$
 $$
 respectively.
 
-\newpage
+As with the maximal margin classifier, *the classifier is affected only by the observations that lie on the margin or violates the margin*. 
+
+- Data points that fall directly on the margin, or on the wrong side of the margin for their class, are known as *support vectors*. 
 
 ### Support Vector Classifier Example
 
@@ -481,7 +468,7 @@ sv.wine <- svm(Class ~ Proline + Alcohol,
 
 Now let's plot the support vector classifier.
 
-```{r, echo=FALSE, fig.width=4.5, fig.height=3.5, fig.margin=TRUE, fig.cap="A scatter plots between Alcohol (x) and Proline (y) is shown. The points separate reasonably well with most of one class in the bottom left of the graph and most of the other class in the top right. There is some overlap of points in the middle region. The Support vector classifier is shown. This line has a negative slope and splits the points well. The margin around the line is shown and all points within the margin are highlighted as they are the support vectors. Three of of the first class are misclassified and two of the second class."}
+```{r, echo=FALSE, fig.width=5, fig.height=4.5, fig.margin=TRUE, fig.cap="A scatter plots between Alcohol (x) and Proline (y) is shown. The points separate reasonably well with most of one class in the bottom left of the graph and most of the other class in the top right. There is some overlap of points in the middle region. The Support vector classifier is shown. This line has a negative slope and splits the points well. The margin around the line is shown and all points within the margin are highlighted as they are the support vectors. Three of of the first class are misclassified and two of the second class."}
 nbp <- 200
 PredA <- seq(min(wine_twoclass$Alcohol), 
              max(wine_twoclass$Alcohol), 
@@ -558,7 +545,7 @@ sv_caret <- train(Class ~ Proline + Alcohol,
 
 We can plot the accuracy as a function of the `cost` parameter. 
 
-```{r, echo=FALSE, fig.cap="Results from repeated CV using support vector classifier on two-class wines data. A line chart showing cost (x) and accuracy (y) is shown. The accuracy starts off lower and then jumps to a higher value quickly. The accuracy then drops off for larger values of cost.", fig.width=4.5, fig.height=3.5}
+```{r, echo=FALSE, fig.cap="Results from repeated CV using support vector classifier on two-class wines data. A line chart showing cost (x) and accuracy (y) is shown. The accuracy starts off lower and then jumps to a higher value quickly. The accuracy then drops off for larger values of cost.", fig.width=6}
 plot(sv_caret)
 ```
 
@@ -605,22 +592,17 @@ What do we do when our response isn't binary? We have two options:
 
 Here we compute all pair-wise classifiers. 
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+- That is, compute all $C^K_2 = K(K-1)/2$ classification rules. 
+- Given a test observation, we classify it using *each* of the $C^K_2$ classifiers, and record the number of times that the test observation is assigned to each of the $K$ classes. 
+- The final classification is performed taking a *majority vote*.
 
 ### one-versus-all
 
 Alternatively, we can compare class $k$ with the remaining classes pooled together. 
 
-\newpage
+- That is, class $k$ vs. not class $k$. 
+- Let $\widehat\beta_{0k}, \ldots, \widehat\beta_{pk}$ denote the parameters that result from fitting an SVM comparing the $k$-th class (coded as $+1$) to the others (coded as $-1$). 
+- Given a test observation, $x$, we assign the observation to the class for which $\widehat\beta_{0k} + x_1\widehat\beta_{1k} + \ldots + x_p\widehat\beta_{pk}$ is largest, as this amounts to a high level of confidence that the test observation belongs to the $k$th class rather than to any of the other classes.
 
 ### Example
 
@@ -647,7 +629,7 @@ sv_caret <- train(as.factor(Class) ~ Proline + Alcohol,
 
 Now we can plot the accuracy as a function of cost.
 
-```{r, echo=FALSE, fig.cap="CV results for three class wines data. A line plot is shown with cost (x) and accuracy (y). The accuracy starts low and jumps up quickly. It then drops a bit and levels off.", fig.height = 3.5, fig.width=4.5}
+```{r, echo=FALSE, fig.cap="CV results for three class wines data. A line plot is shown with cost (x) and accuracy (y). The accuracy starts low and jumps up quickly. It then drops a bit and levels off."}
 plot(sv_caret)
 ```
 
@@ -664,7 +646,7 @@ sv.wine <- svm(Class ~ Proline + Alcohol,
 
 Now we can plot our SVM with three classes.
 
-```{r, echo=FALSE, fig.width=4.5, fig.height=3.5, fig.margin=TRUE, fig.cap="A scatterplot between alcohol (x) and proline (y) is shown with points displaying the three different classes. One class mostly falls in the bottom left of the graph, another in the bottom right, and the other in the top right. The SVM is plotted and shows lines that roughly separate these three classes. Many points close to the decision boundary are highlighted and represent the support vectors."}
+```{r, echo=FALSE, fig.width=6, fig.height=6, fig.margin=TRUE, fig.cap="A scatterplot between alcohol (x) and proline (y) is shown with points displaying the three different classes. One class mostly falls in the bottom left of the graph, another in the bottom right, and the other in the top right. The SVM is plotted and shows lines that roughly separate these three classes. Many points close to the decision boundary are highlighted and represent the support vectors."}
 nbp <- 200
 PredA <- seq(min(wines$Alcohol), 
              max(wines$Alcohol), 
@@ -687,8 +669,6 @@ points(wines$Alcohol[vec],
        pch = 21, cex = 2)
 ```
 
-\newpage
-
 # Support vector machines
 
 The support vector classifier described so far finds linear boundaries in the input feature space. Often linear effects of the covariates are not enough for a classification problem. 
@@ -702,9 +682,9 @@ Thus we might want to incorporate nonlinear terms (e.g., square or cubic terms).
 - In general, we can incorporate other nonlinear transformations $h_1(X), \ldots, h_M(X)$ as features! 
 
     + This makes the procedure more flexible by enlarging the feature space using basis expansions such as polynomials or splines.  
-    + Linear boundaries in the enlarged space tend to achieve better training-class separation, and translate to nonlinear boundaries in the original space.  
-    + Once the basis functions $h_m(x), m = 1, \ldots, ,M$ are selected, the procedure is the same as before.  
-    + We fit the support vector classifier using input features $h_1(X_i), h_2(X_i), \ldots , h_M(X_i)$, $i = 1, \ldots, N$, and produce the (nonlinear) function  
+    + Linear boundaries in the enlarged space tend to achieve better training-class separation, and translate to nonlinear boundaries in the original space. 
+    + Once the basis functions $h_m(x), m = 1, \ldots, ,M$ are selected, the procedure is the same as before.
+    + We fit the support vector classifier using input features $h_1(X_i), h_2(X_i), \ldots , h_M(X_i)$, $i = 1, \ldots, N$, and produce the (nonlinear) function 
 $$
 \widehat f(x) = \widehat \beta_0  + h_1(x)\widehat \beta_1 + \ldots + h_M(x)\widehat \beta_M.
 $$ 
@@ -725,7 +705,7 @@ sv.wine <- svm(Class ~ ns(Proline, df=4) + ns(Alcohol, df=4),
 
 The decision boundaries are quadratic, as shown below.
 
-```{r svmquad, echo=FALSE, fig.width=3.5, fig.height=4.5, fig.margin=TRUE, fig.cap="Classification of wine data using support vector classifier with natural cubic splines. The decision boundaries here are non-linear."}
+```{r svmquad, echo=FALSE, fig.width=6, fig.height=6, fig.margin=TRUE, fig.cap="Classification of wine data using support vector classifier with natural cubic splines. The decision boundaries here are non-linear."}
 nbp <- 100
 PredA <- seq(min(wines$Alcohol), 
              max(wines$Alcohol), 
@@ -758,7 +738,7 @@ The core idea is that even though the two classes are not separable in the origi
 
 Consider the simulated data in the figure below.
 
-```{r, echo=FALSE, fig.height=3.5, fig.width=4.5, warning=FALSE, message=FALSE, fig.cap="Simulated example with a non-linear relationship. A scatterplot is shown between two variables. All points in the middle of the plots are from one class. Points along the outer parts of the graph come from the other class. These classes are completely separable using a circle. "}
+```{r, echo=FALSE, fig.height=4.5, fig.width=5, warning=FALSE, message=FALSE, fig.cap="Simulated example with a non-linear relationship. A scatterplot is shown between two variables. All points in the middle of the plots are from one class. Points along the outer parts of the graph come from the other class. These classes are completely separable using a circle. "}
 n <- 300
 df <- data.frame(X1 = 4*runif(n)-2,
                  X2 = 4*runif(n)-2)
@@ -771,21 +751,20 @@ plot(df$X1, df$X2, col = colors, pch = 19,
      xlab = "X1", ylab = "X2")
 ```
 
-&nbsp;  
-&nbsp;  
-&nbsp;  
-&nbsp;  
+If we consider this data on a transformed scale, we can see that they are linearly separable in that space.
 
-```{r, echo=FALSE, fig.height=3.5, fig.width=4.5, warning=FALSE, message=FALSE, fig.cap="Simulated example of transformed and enlarged feature space. THe x-axis is given by X1 squared and the y-axis is given by X2 squared. The points are linearly separable in this space."}
+```{r, echo=FALSE, fig.height=4.5, fig.width=5, warning=FALSE, message=FALSE, fig.cap="Simulated example of transformed and enlarged feature space. THe x-axis is given by X1 squared and the y-axis is given by X2 squared. The points are linearly separable in this space."}
 plot(df$X1^2, df$X2^2, col = colors, pch = 19,
      xlab = "X1^2", ylab = "X2^2")
 ```
 
-\newpage
+- We see that there is a linear combination of the form $aX_1^2 + bX_2^2 + c = 0$ that separates the two classes. 
+
+- By including basis functions that allow for this relationship, we can achieve highly accurate predictions.
 
 Consider another simulated example given below. 
 
-```{r, echo=FALSE, fig.height=3.5, fig.width=4.5, warning=FALSE, message=FALSE, fig.cap="A scatterplot of simulated data between x1 and x2 is shown. Two lines would perfectly separate the data by class with all of one class falling between the lines and the other class outside of the lines."}
+```{r, echo=FALSE, fig.height=4.5, fig.width=5, warning=FALSE, message=FALSE, fig.cap="A scatterplot of simulated data between x1 and x2 is shown. Two lines would perfectly separate the data by class with all of one class falling between the lines and the other class outside of the lines."}
 df <- data.frame(X1 = 4*runif(n)-2,
                  X2 = 4*runif(n)-2)
 df$Z = df$X1^2 + 2*df$X2^2 + 2*df$X1*df$X2
@@ -799,7 +778,7 @@ plot(df$X1, df$X2, col = colors, pch = 19,
 
 We could consider a similar transformed space of $X_1^2$ and $X_2^2$.
 
-```{r echo=FALSE, fig.height=3.5, fig.width=4.5, warning=FALSE, message=FALSE, fig.cap="A scatterplot of simulated data is shown between x1 squared and x2 squared. The data are nearly separable in this case with some overlap."}
+```{r echo=FALSE, fig.height=4.5, fig.width=5, warning=FALSE, message=FALSE, fig.cap="A scatterplot of simulated data is shown between x1 squared and x2 squared. The data are nearly separable in this case with some overlap."}
 plot(df$X1^2, df$X2^2, col = colors, pch = 19,
      xlab = "X1^2", ylab = "X2^2")
 ```
@@ -817,8 +796,6 @@ scatterplot3d(df$X1^2, df$X2^2, df$X1*df$X2, pch = 16, color=colors, grid=TRUE, 
 - We see that there is a linear combination of the form $aX_1^2 + bX_2^2 + cX_1X2 + d = 0$ that separates the two classes. 
 
 - In general, we can include other nonlinear transformations $h_1(X), \ldots, h_M(X)$ as features in support vector classifiers (we then call them support vector machines)!
-
-\newpage
 
 ## Kernel Functions
 
@@ -875,7 +852,7 @@ $$
 
 As an example, the plot below shows three classification rules corresponding to linear, quadratic and radial kernels based on a simulated data set. 
 
-```{r svmgauss, echo=F, fig.height=4, fig.width=5, fig.margin=TRUE, fig.cap="A scatterplot of simulated two-class data is shown. A linear boundary (blue dashed), a quadratic boundary (black dash-dotted), and a radial-basis based boundary (red solid) classification rules are shown. We see the linear boundary is the simplest, the quadratic more flexible, and the radial much more flexible."}
+```{r svmgauss, echo=F, fig.height=6, fig.width=6, fig.margin=TRUE, fig.cap="A scatterplot of simulated two-class data is shown. A linear boundary (blue dashed), a quadratic boundary (black dash-dotted), and a radial-basis based boundary (red solid) classification rules are shown. We see the linear boundary is the simplest, the quadratic more flexible, and the radial much more flexible."}
 library(kernlab)
 set.seed(1)
 n <- 10
@@ -938,8 +915,6 @@ $$
 - Here, $M = 6$.
 - We can define (not unique) $h_1(X) = 1, h_2(X) = \sqrt{2}X_1, h_3(X) = \sqrt{2}X_2, h_4(X) = X_1^2, h_5(X) = X_2^2, h_6(X) = \sqrt{2}X_1X_2$
 - Then we have  $K(X,X') = \langle h(X), h(X') \rangle$. 
-\newpage
-
 ## Another SVM Example
 
 Let us now revisit the wines data. The figure below shows the decision boundaries using the radial basis kernel SVM. 
@@ -1074,8 +1049,6 @@ cbind(beta_sparse, beta_hat) |>
 
 - Notice that the LASSO penalty is setting some coefficients to 0.
 
-\newpage
-
 # SVM Regression
 
 SVM can be applied to regression problems with quantitative response as well. 
@@ -1110,8 +1083,6 @@ where $\widehat\alpha_i^*$ and $\widehat\alpha_i$ are constants.
 - As was the case in the support vector classification, the solution depends on the input values only through the inner products $\langle X_i, X_{i'} \rangle$.  
 
 - Thus we can generalize the methods to richer spaces by defining an appropriate inner product and corresponding kernel function.
-
-\newpage
 
 ## SVM Regression in R
 
