@@ -1,0 +1,12 @@
+base
+methods
+datasets
+utils
+grDevices
+graphics
+stats
+tufte
+ggplot2
+gridExtra
+ISLR2
+knitr
