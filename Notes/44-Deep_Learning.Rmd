@@ -48,40 +48,29 @@ options(htmltools.dir.version = FALSE)
 
 # Introduction
 
-Deep learning is one of the most active area in machine learning and artificial intelligence communities. It is a specific subfield of machine learning that is based learning successive layers of increasingly meaningful representations of the data. The "deep" in deep learning represents the idea of successive layers of representations of the data -- it does not refer to any kind of deeper understanding of the data achieved by the approach.  Modern deep learning models often involve many (tens or even hundreds) successive layers of representations. These layers are trained learned automatically from the training data. Other approaches to machine learning tend to focus on learning only one or two layers of representations of the data and hence they are sometimes called *shallow learning*.
+Deep learning is one of the most active areas in machine learning and artificial intelligence communities. It is a specific subfield of machine learning that is based learning successive layers of increasingly meaningful representations of the data. The "deep" in deep learning represents the idea of successive layers of representations of the data -- it does not refer to any kind of deeper understanding of the data achieved by the approach.  Modern deep learning models often involve many (tens or even hundreds) successive layers of representations. These layers are trained learned automatically from the training data. Other approaches to machine learning tend to focus on learning only one or two layers of representations of the data and hence they are sometimes called *shallow learning*.
 
-```{r slnn, fig.cap="Structure of a single layer neural network.", fig.margin = TRUE, fig.fullwidth = FALSE, echo=FALSE}
+```{r slnn, fig.cap="Structure of a single layer neural network. An input layer with four predictors, X1, X2, X3, and X4, is shown. These four predictors are mapped to a hidden layer with five nodes, A1, A2, A3, A4, and A5. The hidden layer is then mapped to the output layer, f(X).", fig.margin = TRUE, fig.fullwidth = FALSE, echo=FALSE}
 knitr::include_graphics("img/SLNN.jpg")
 ```
 
 The cornerstone of deep learning is the *neural network*. Specifically, the layered representations are modeled using neural networks. The term neural network has evolved to encompass a large class of models and learning methods. Essentially, they are *nonlinear statistical models*. The simplest form of a neural network, sometimes called the *single hidden layer back-propagation network* or *single layer perceptron* is a two-stage regression or classification model. Modern neural networks, however, have more than one hidden layer, and often many units per layer. In theory a single hidden layer with a large number of units has the ability to approximate most functions. However, the learning task of discovering a good solution is made much easier with multiple layers each of modest size. We discuss both these types of networks in the following sections.
 
 
-
-
 # Single Layer Neural Networks
 
-A single layer neural network is a two-stage regression or classification model, typically represented by a network diagram Figure \ref{fig:slnn}. Here we only show one output variable $Y$ (as often the case for usual regression problems), but in general $Y$ can be a vector of output variables, $Y_1, \ldots, Y_J$.  For example, in a multiclass classification problem, the output $Y_j$ can be coded as dummy variable for the $j$-th class. 
+A single layer neural network is a two-stage regression or classification model, typically represented by a network diagram. Here we only show one output variable $Y$ (as often the case for usual regression problems), but in general $Y$ can be a vector of output variables, $Y_1, \ldots, Y_J$.  For example, in a multiclass classification problem, the output $Y_j$ can be coded as dummy variable for the $j$-th class. 
 
-Formally, suppose we have input variables $X = (X_1, \ldots, X_p)$. The neural network builds a nonlinear function $f(X)$ to predict the response $Y$.  The concept is similar to the models we have discussed for far (nonlinear regression models such as splines, SVM, trees etc.); neural networks however use a particular structure to build such nonlinear models. For example, Figure \ref{fig:slnn} shows a feed-forward neural network for modeling one quantitative response $Y$ using $p=4$ predictors. The arrows indicate that each of the inputs from the input layer feeds into each of the $K$ hidden units in the hidden layer. In this example, we have $K=5$ hidden units, denoted by $A_1, \ldots, A_5$, also called *activations*.  The activations are computed as functions of the input features:
+Formally, suppose we have input variables $X = (X_1, \ldots, X_p)$. The neural network builds a nonlinear function $f(X)$ to predict the response $Y$.  The concept is similar to the models we have discussed for far (nonlinear regression models such as splines, SVM, trees etc.); neural networks however use a particular structure to build such nonlinear models. For example, the previous image shows a feed-forward neural network for modeling one quantitative response $Y$ using $p=4$ predictors. The arrows indicate that each of the inputs from the input layer feeds into each of the $K$ hidden units in the hidden layer. In this example, we have $K=5$ hidden units, denoted by $A_1, \ldots, A_5$, also called *activations*.  The activations are computed as functions of the input features:
 $$
 A_k  = h_k(X) = g(w_{k0} + \sum_{j = 1}^p w_{kj}X_j),
 $$
-where $g(z)$ is a nonlinear *activation function* that is specified in advance, and $w_{k0}, \ldots, w_{kp}$ are parameters to be estimated from the data. We can think of each $A_k$ as a different transformation $h_k(X)$ of the original features.^[This concept is much like the basis functions.] These $K$ activations
+where $g(z)$ is a nonlinear *activation function* that is specified in advance, and $w_{k0}, \ldots, w_{kp}$ are parameters to be estimated from the data. We can think of each $A_k$ as a different transformation $h_k(X)$ of the original features. (This concept is much like the basis functions.) These $K$ activations
 from the hidden layer then feed into the output layer using the form 
 $$
 f(X) = \beta_0 + \sum_{k=1}^K \beta_k A_k = \beta_0 + \sum_{k=1}^K \beta_k h_k(X),
 $$
-where the coefficients $\beta_0, \ldots, \beta_K$ are parameters to be estimated from the data. This is the final form the neural network shown in Figure \ref{fig:slnn}. Note that the hidden layer units are not observed directly, but are learned during the training of the network. The output layer is a linear model that uses these activations $A_k$ as inputs, resulting in a function $f(\X)$.
-
-```{r act, echo=FALSE, fig.cap="The sigmoid (blue) and ReLU (orange) activations."}
-x <- seq(-3, 3, len=51)
-s <- 1/(1 + exp(-x))
-r <- x * I(x > 0)
-d <- cbind(s, r)
-matplot(x, d, type = "l", lwd=2, col = c("blue", "orange"), lty=1,
-        xlab = "z", ylab = "g(z)")
-```
+where the coefficients $\beta_0, \ldots, \beta_K$ are parameters to be estimated from the data. This is the final form the neural network shown in the previous image. Note that the hidden layer units are not observed directly, but are learned during the training of the network. The output layer is a linear model that uses these activations $A_k$ as inputs, resulting in a function $f(X)$.
 
 There are a few choices for the activation function such as *sigmoid*
 $$
@@ -91,26 +80,19 @@ or rectified linear unit (ReLU)
 $$
 g(z) = z I(z > 0).
 $$
-In early days, the sigmoid function, which is the same function used in logistic regression to convert a linear function into probabilities between zero and one, was favored as activation function. The preferred choice in modern neural networks is the ReLU function, which can be computed and stored more efficiently than a sigmoid activation. Figure \ref{fig:act} shows the two activations. Sometimes Gaussian radial basis functions are used, producing what is known as a *radial basis function network*. There are many other activation functions such as *softmax* (used in classification problems), exponential, hyperbolic tangent, and so on.
 
-
-```{r exrelu, echo=FALSE, fig.cap="Example of of f(X) when X = (X1, X2) and using ReLU activation.", cache=TRUE}
-relu <- function(t){
-  return(t * I(t > 0))
-}
-x1 <- seq(-3,3,len=501)
-x2 <- x1
-dat <- expand.grid(X1 = x1, X2 = x2)
-
-h1 <- relu(dat$X1 + dat$X2)
-h2 <- relu(dat$X1 - dat$X2)
-dat$f <- h1 - h2
-#contour(x1,x2, matrix(f, 501,501, byrow = TRUE))
-#image(x1,x2,matrix(f, 501,501))
-ggplot(dat) + geom_contour_filled(aes(X1, X2, z = f))
+```{r act, echo=FALSE, fig.cap="The sigmoid (blue) and ReLU (orange) activations. The sigmoid function starts near 0 and increases towards 1 in an 'S' shape. The ReLU function is 0 for negative values and then linear from 0 on."}
+x <- seq(-3, 3, len=51)
+s <- 1/(1 + exp(-x))
+r <- x * I(x > 0)
+d <- cbind(s, r)
+matplot(x, d, type = "l", lwd=2, col = c("blue", "orange"), lty=1,
+        xlab = "z", ylab = "g(z)")
 ```
 
-The nonlinearity in the activation function is essential to capture nonlinear effects of the predictors. If $g(z)$ is linear then the activations $A_k$ will also be linear, and thus the model $f(X)$ would be a simple linear model in the predictors. Moreover, having a nonlinear activation function allows the model to capture complex interaction effects of the predictors. Figure \ref{fig:exrelu} shows as example of $f(X)$, with $X = (X_1, X_2)$, modeled using the ReLU activation.  
+In early days, the sigmoid function, which is the same function used in logistic regression to convert a linear function into probabilities between zero and one, was favored as activation function. The preferred choice in modern neural networks is the ReLU function, which can be computed and stored more efficiently than a sigmoid activation. Sometimes Gaussian radial basis functions are used, producing what is known as a *radial basis function network*. There are many other activation functions such as *softmax* (used in classification problems), exponential, hyperbolic tangent, and so on.
+
+The nonlinearity in the activation function is essential to capture nonlinear effects of the predictors. If $g(z)$ is linear then the activations $A_k$ will also be linear, and thus the model $f(X)$ would be a simple linear model in the predictors. Moreover, having a nonlinear activation function allows the model to capture complex interaction effects of the predictors. 
 
 # Fitting a neural netwrok
 
@@ -118,8 +100,7 @@ To fit a neural network to a data set, we need estimate the unknown parameters $
 $$
 \sum_{i=1}^n (Y_i - f(X_i))^2 
 $$
-with respect to $w_{kj}$ and $\beta_k$, $j = 0, \ldots, p; k = 1,\ldots, K$. A challenge of this optimization is that the loss above is a nonconvex function of the parameters and hence there are multiple solutions (i.e., both *local* and *global* minimum exist). Figure \ref{fig:ncv} shows an one-dimensional example of such a nonconvex function. This problem is further compounded for multi-layer networks.   
-
+with respect to $w_{kj}$ and $\beta_k$, $j = 0, \ldots, p; k = 1,\ldots, K$. A challenge of this optimization is that the loss above is a nonconvex function of the parameters and hence there are multiple solutions (i.e., both *local* and *global* minimum exist). The image below shows a one-dimensional example of such a nonconvex function. This problem is further compounded for multi-layer networks.   
 
 ```{r ncv, echo=FALSE, fig.cap="Illustration of gradient descent for one-dimensional problem. The objective function is not convex, and has two minima, one at -0.46 (local), the other at 1.02 (global). Starting at some randomly chosen value, each step moves downhill - against the gradient - until it cannot go down any further. Here gradient descent reached the global minimum in 7 steps.",}
 
@@ -135,7 +116,7 @@ or ridge.
 
 ## Gradient descent and backpropagation
 
-\noindent The idea of gradient descent is very simple. We Start with a guess for all the parameters in the model (typically randomly chosen). Then we find a small change in the parameter values such that it reduces the objective. Then we iterate this process until the objective function fails to decrease. Figure \ref{fig:ncv} gives an example of the gradient  descent for a one-dimensional problem. Here $R(\cdot)$ denotes the objective, and $\theta$ denotes the parameter. We start from $\theta^0$ and gradually reach the global minimum at $\theta^7$. However, depending on the starting point, we might end up in a local minimum. In general, we can hope to end up at a good local minimum. The direction to move so as to decrease the objective is determined by a process known as *backpropagation* in the neural network literature. We will not go into mathematical details here. Interested readers should consult the textbook (Chapter 10.7) or Chapter 11.4 of *Elements of Statistical Learning*. 
+\noindent The idea of gradient descent is very simple. We Start with a guess for all the parameters in the model (typically randomly chosen). Then we find a small change in the parameter values such that it reduces the objective. Then we iterate this process until the objective function fails to decrease. The figure above gives an example of the gradient  descent for a one-dimensional problem. Here $R(\cdot)$ denotes the objective, and $\theta$ denotes the parameter. We start from $\theta^0$ and gradually reach the global minimum at $\theta^7$. However, depending on the starting point, we might end up in a local minimum. In general, we can hope to end up at a good local minimum. The direction to move so as to decrease the objective is determined by a process known as *backpropagation* in the neural network literature. We will not go into mathematical details here. Interested readers should consult the textbook (Chapter 10.7) or Chapter 11.4 of *Elements of Statistical Learning*. 
 
 ## Stochastic Gradient Descent
 
