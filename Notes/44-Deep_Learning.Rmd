@@ -156,20 +156,9 @@ ytest <- y[ind]
 xtrain <- x[-ind, ]
 ytrain <- y[-ind]
 ```
-\noindent Notice that we have used `%>%` (pipe) operator here. We can simply understand this operator as "then". Specifically, `x %>% f()` would read as "take `x`, and then apply `f()`". Thus `x %>% f()` is equivalent to `f(x)`. This notation is particularly useful when we chain multiple functions, as we will do when building (adding layers) a neural network. For example, instead of writing
+\noindent Notice that we have used `%>%` (pipe) operator here which is similar to the base R pipe `|>`.
 
-```{r, eval=FALSE}
-h(g(f(x)))
-```
-\noindent it is much easier to write/read
-```{r, eval=FALSE}
-x %>% 
-  f() %>%
-  g() %>%
-  h()
-```
-
-Now let us specify the network structure, as shown in the code chunk below. Here we start with `keras_model_sequential()` to specify that the network is a stack of layers. The next command `layer_dense()` specifies the first hidden layer (with 64 hidden units with ReLU activation)^[See `?activation_relu` for available activation functions in the `keras` package.]. The input_shape argument specifies the dimension of the predictors. Finally, we have the output layer with only one unit that computes $f(\X)$. Notice that we do not need to specify the input layer -- we just need to  use the `input_shape` argument in the first layer. Also the output layer has no activation function, indicating that the model provides a single quantitative output, as is. Optionally, we can use the command `layer_dropout()`, commented out in the code below, to specify the parameters for dropout learning. Specifically, a randomly chosen 40\% of the 64 activations from the previous layer are set to zero during each iteration of the stochastic gradient descent algorithm. This step may protect against overfitting. 
+Now let us specify the network structure, as shown in the code chunk below. Here we start with `keras_model_sequential()` to specify that the network is a stack of layers. The next command `layer_dense()` specifies the first hidden layer (with 64 hidden units with ReLU activation). See `?activation_relu` for available activation functions in the `keras` package. The `input_shape` argument specifies the dimension of the predictors. Finally, we have the output layer with only one unit that computes $f(X)$. Notice that we do not need to specify the input layer -- we just need to  use the `input_shape` argument in the first layer. Also the output layer has no activation function, indicating that the model provides a single quantitative output, as is. Optionally, we can use the command `layer_dropout()`, commented out in the code below, to specify the parameters for dropout learning. Specifically, a randomly chosen 40\% of the 64 activations from the previous layer are set to zero during each iteration of the stochastic gradient descent algorithm. This step may protect against overfitting. 
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 network <- load_model_hdf5("Ch08_saved_nn_models/hitters_single.h5")
@@ -187,9 +176,9 @@ network <- keras_model_sequential() %>%
 network
 ```
 
-The network above is just the structure -- it does not have access to the actual data (x and y) yet. We see that there are $1,409$ parameters. The output layer has 65 parameters since we have 64 activation units and one intercept.^[Recall $f(X) = \beta_0 + \sum_{k=1}^K \beta_k A_k$. Here $K=64$.] The hidden layer has 1,344 parameters because each activation has $p+1$ parameters. Here $p=20$. Thus we have, for 64 activations, $64 * 21 = 1344$ parameters. 
+The network above is just the structure -- it does not have access to the actual data (x and y) yet. We see that there are $1,409$ parameters. The output layer has 65 parameters since we have 64 activation units and one intercept. (Recall $f(X) = \beta_0 + \sum_{k=1}^K \beta_k A_k$. Here $K=64$.) The hidden layer has 1,344 parameters because each activation has $p+1$ parameters. Here $p=20$. Thus we have, for 64 activations, $64 * 21 = 1344$ parameters. 
 
-Next, we need to compile the network. In this step, we need to specify a *loss function* to measure its performance on the training data, *an optimizer* through which the network will update itself, and *metrics* to monitor during training and testing. Here we have used the squared error loss (mse), with the "RMSprop" (Root Mean Squared Propagation)^[An adaptive gradient-based optimization technique.] optimizer, and mean absolute error as our metric. 
+Next, we need to compile the network. In this step, we need to specify a *loss function* to measure its performance on the training data, *an optimizer* through which the network will update itself, and *metrics* to monitor during training and testing. Here we have used the squared error loss (mse), with the "RMSprop" (Root Mean Squared Propagation - An adaptive gradient-based optimization technique) optimizer, and mean absolute error as our metric. 
 
 
 ```{r, warning=FALSE, message=FALSE, eval=FALSE}
@@ -208,7 +197,7 @@ history <- network %>% fit(xtrain, ytrain,
                            validation_data = list(xtest, ytest))
 ```
 
-```{r nnhist, fig.cap="Training abd test set metrics over epochs.", message=FALSE, warning=FALSE, echo=FALSE}
+```{r nnhist, fig.cap="Training and test set metrics over epochs. The loss for the training and validation sets acts very similalry, starting high and dropping down near 0 after about 50 epochs. The validation error is slightly higher until this time but then acts very similarly to the training error. THe mean absolute error for the training and test sets both start high and decrease. The training error is lower than that of the validation error throught most of the process, including as the epochs grow to 200 - the largest value on the plot.", message=FALSE, warning=FALSE, echo=FALSE}
 plot(history, smooth = FALSE)#, theme_bw = TRUE)
 ```
 
