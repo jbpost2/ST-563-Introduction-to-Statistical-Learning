@@ -1,0 +1,783 @@
+---
+title: "ST563Project1"
+author: "Matt Bray"
+format: html
+editor: visual
+code-overflow: wrap
+---
+
+```{r}{r setup, include=FALSE}
+#keep quiet on the warnings thrown, only warnings in this file were for library loads
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+Let's load necessary libraries before we begin:
+
+```{r}
+library(tidyverse)
+library(caret)
+library(rstatix)
+library(kableExtra)
+library(randomForest)
+warnings=FALSE
+```
+
+```{r}
+#shorten name of the dataset for ease of use throughout text
+dataset <- "Taiwanese Bankruptcy Prediction"
+#read in dataset
+data <- read.csv("./bankruptcy.csv")
+#create varirable describing length of dataset (nrow()).
+l <- nrow(data)
+#define number of response variables
+r <- 1
+#create variable to describe number of feature variables
+w <- length(names(data))-1
+```
+
+# Modeling of the "Taiwanese Bankruptcy Prediction" dataset
+
+## Introduction
+
+### Evaluating multiple models to determine the importance of the features to their ability to predict bankruptcy.
+
+The `{r} dataset` dataset was downloaded from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/572/taiwanese+bankruptcy+prediction). There are `{r} l` observations and `{r} w` feature variables. There is `{r} r` binary response variable(s), `"Bankrupt."`. The response variable takes on the values of `0` or `1` and respectively correspond to not going bankrupt and going bankrupt. The feature variables consist of many common business metrics.
+
+Due to the number of variables, we'll rename them for ease of use in this program. We will also evaluate for collinearity since many of the variables appear to be related based on my basic understanding of the terminology. I will choose a subset of the feature variables to evaluate for this project.
+
+The goal of this project is to see if we can predict whether or not a company will go bankrupt or not based on the data contained in this dataset. In order to reach this goal, we will evaluate and tune multiple model families to see which model can predict the best, then at the end we will model the entire dataset. Our ability to model and predict bankruptcy is important to investors to be able to understand how their investments may perform based on common business metrics. An investor may be able to recoup some of their investment from a poorly performing investment, but bankruptcy may shield the investment from the ability of the investor to recoup any capitol and result in a large and maximal loss for the investor [1](https://www.uscourts.gov/court-programs/bankruptcy).
+
+Being able to understand how the different metrics related to bankruptcy status can also help investors, boards, and management make changes to the specific metric that could prevent bankruptcy in the future.
+
+One caveat to point out is that the Taiwanese GAAP [2](https://www.china-briefing.com/news/china-gaap-vs-u-s-gaap-and-ifrs/) (generally accepted accounting principles) may be different than those in the US and understanding these differences are beyond the scope of this project. This means the model determined as "best" from this `{r} dataset` dataset may not predict in a similar fashion with data obtained in the United States. Further analyses on US based companies would likely be necessary to provide better prediction in the United States.
+
+### Data Cleaning and Organization
+
+Before analyzing the data in the models, we need to make some transformations to make the variables easier to manage and we need to reduce the number of variables in total.
+
+First, let's see what the data structure is:
+
+```{r}
+#check data structure
+str(data)
+```
+
+There are three integer variables (1 is the response, 2 are flag values). The rest of the varaiables are numeric.
+
+Next, we need to check for missing values:
+
+```{r}
+#sum columns values of na
+colSums(is.na(data))
+```
+
+There is no missing data. This matches the description of the dataset from the source.
+
+These variable names are long and difficult to read. Next, let's rename the variables for ease of use further downstream.
+
+```{r}
+#move names out to csv for easier human readable format and to create new vector of names
+d <- as.data.frame(names(data))
+write_csv(d, "names.csv")
+```
+
+Since the output is difficult to read, I moved the variables to a csv file and opened in excel to look through the named variables and decide on what to call them. I've mapped these new names to the existing variables below using the Tidyverse. I've also coerced the integer variables to factors.
+
+```{r}
+#use rename() to rename variables
+#create list of variables to coerce to fctr
+factors <- c("bankrupt", "liabAstsFlag", "netIncFlag")
+
+#rename the variables
+data1 <- data |>
+  rename(
+    "bankrupt" =	"Bankrupt.",
+    "roaC" =	"ROA.C..before.interest.and.depreciation.before.interest",
+    "roaA" =	"ROA.A..before.interest.and...after.tax",
+    "roaB" =	"ROA.B..before.interest.and.depreciation.after.tax",
+    "opGrsMargin" =	"Operating.Gross.Margin",
+    "realSlsGrsMargin" =	"Realized.Sales.Gross.Margin",
+    "opPrftRate" =	"Operating.Profit.Rate",
+    "pTaxNetInt" =	"Pre.tax.net.Interest.Rate",
+    "aTaxNetInt" =	"After.tax.net.Interest.Rate",
+    "nonIndRevenue" =	"Non.industry.income.and.expenditure.revenue",
+    "contIntATax" =	"Continuous.interest.rate..after.tax.",
+    "opExpRate" =	"Operating.Expense.Rate",
+    "rndExpRate" =	"Research.and.development.expense.rate",
+    "cashFlRate" =	"Cash.flow.rate",
+    "intBearDbtInt" =	"Interest.bearing.debt.interest.rate",
+    "taxRateA" =	"Tax.rate..A.",
+    "nvpsB" =	"Net.Value.Per.Share..B.",
+    "nvpsA" =	"Net.Value.Per.Share..A.",
+    "nvpsC" =	"Net.Value.Per.Share..C.",
+    "pEPSl4S" =	"Persistent.EPS.in.the.Last.Four.Seasons",
+    "cfps" =	"Cash.Flow.Per.Share",
+    "rpsYuan" =	"Revenue.Per.Share..Yuan...",
+    "opPrftps" =	"Operating.Profit.Per.Share..Yuan...",
+    "psNetPftbTax" =	"Per.Share.Net.profit.before.tax..Yuan...",
+    "realSlsGrsPrftgRate" =	"Realized.Sales.Gross.Profit.Growth.Rate",
+    "OpPrftgRate" =	"Operating.Profit.Growth.Rate",
+    "aTaxNetPrftgRate" =	"After.tax.Net.Profit.Growth.Rate",
+    "regNetPrftgRate" =	"Regular.Net.Profit.Growth.Rate",
+    "contNetPrftgRate" =	"Continuous.Net.Profit.Growth.Rate",
+    "totAstgRate" =	"Total.Asset.Growth.Rate",
+    "netValgRate" =	"Net.Value.Growth.Rate",
+    "totAstRetGRRatio" =	"Total.Asset.Return.Growth.Rate.Ratio",
+    "cashReinvest" =	"Cash.Reinvestment..",
+    "curRatio" =	"Current.Ratio",
+    "quickRatio" =	"Quick.Ratio",
+    "intExpRatio" =	"Interest.Expense.Ratio",
+    "totDetTotNetWrth" =	"Total.debt.Total.net.worth",
+    "detRatio" =	"Debt.ratio..",
+    "netWrtAst" =	"Net.worth.Assets",
+    "ltFundSuitRatioA" =	"Long.term.fund.suitability.ratio..A.",
+    "borDepend" =	"Borrowing.dependency",
+    "contLiabNetWorth" =	"Contingent.liabilities.Net.worth",
+    "opPrftPaidCap" =	"Operating.profit.Paid.in.capital",
+    "netPrftBTaxPaidCap" =	"Net.profit.before.tax.Paid.in.capital",
+    "invtryAcctRecvNValue" =	"Inventory.and.accounts.receivable.Net.value",
+    "totAstTurnover" =	"Total.Asset.Turnover",
+    "acctRecTurnover" =	"Accounts.Receivable.Turnover",
+    "avgColctDays" =	"Average.Collection.Days",
+    "invtryTurnoverRateX" =	"Inventory.Turnover.Rate..times.",
+    "fixAstsTurnoverFreq" =	"Fixed.Assets.Turnover.Frequency",
+    "netWrtTurnoverRateX" =	"Net.Worth.Turnover.Rate..times.",
+    "revPerPerson" =	"Revenue.per.person",
+    "opPrftPerson" =	"Operating.profit.per.person",
+    "allRatePerson" =	"Allocation.rate.per.person",
+    "wrkCapTotAsts" =	"Working.Capital.to.Total.Assets",
+    "qckAstsTotAsts" =	"Quick.Assets.Total.Assets",
+    "curAstsTotAsts" =	"Current.Assets.Total.Assets",
+    "cashTotAsts" =	"Cash.Total.Assets",
+    "qckAstsCurLiab" =	"Quick.Assets.Current.Liability",
+    "cashCurLiab" =	"Cash.Current.Liability",
+    "curLiabToAsts" =	"Current.Liability.to.Assets",
+    "opFundToLiab" =	"Operating.Funds.to.Liability",
+    "invWrkCap" =	"Inventory.Working.Capital",
+    "invCurLiab" =	"Inventory.Current.Liability",
+    "curLiabLiab" =	"Current.Liabilities.Liability",
+    "wrkCapEq" =	"Working.Capital.Equity",
+    "curLiabEq" =	"Current.Liabilities.Equity",
+    "ltLiabToCurAsts" =	"Long.term.Liability.to.Current.Assets",
+    "retEarnToTotAsts" =	"Retained.Earnings.to.Total.Assets",
+    "totIncTotExp" =	"Total.income.Total.expense",
+    "totExpAsts" =	"Total.expense.Assets",
+    "curAstTurnoverRate" =	"Current.Asset.Turnover.Rate",
+    "qckAstTurnoverRate" =	"Quick.Asset.Turnover.Rate",
+    "wrkCapTurnoverRate" =	"Working.capitcal.Turnover.Rate",
+    "cashTurnoverRate" =	"Cash.Turnover.Rate",
+    "cashFlwToSales" =	"Cash.Flow.to.Sales",
+    "fixAstsToLiab" =	"Fixed.Assets.to.Assets",
+    "curLiabtToLiab" =	"Current.Liability.to.Liability",
+    "curLiabToEq" =	"Current.Liability.to.Equity",
+    "EqToltLiab" =	"Equity.to.Long.term.Liability",
+    "cashFlwtToTotAsts" =	"Cash.Flow.to.Total.Assets",
+    "cashFlwToLiab" =	"Cash.Flow.to.Liability",
+    "CFOtoAsts" =	"CFO.to.Assets",
+    "cashFlwToEq" =	"Cash.Flow.to.Equity",
+    "curLiabToCurAsts" =	"Current.Liability.to.Current.Assets",
+    "liabAstsFlag" =	"Liability.Assets.Flag",
+    "netIncToTotAsts" =	"Net.Income.to.Total.Assets",
+    "totAstsToGNPPrice" =	"Total.assets.to.GNP.price",
+    "noCredInt" =	"No.credit.Interval",
+    "grsPrftToSales" =	"Gross.Profit.to.Sales",
+    "netIncToStkhldrEq" =	"Net.Income.to.Stockholder.s.Equity",
+    "liabToEq" =	"Liability.to.Equity",
+    "DFL" =	"Degree.of.Financial.Leverage..DFL.",
+    "intCovRatioIntExpToEBIT" =	"Interest.Coverage.Ratio..Interest.expense.to.EBIT.",
+    "netIncFlag" =	"Net.Income.Flag",
+    "eqToLiab" =	"Equity.to.Liability"
+  ) |>
+  mutate_at(factors, factor)
+```
+
+```{r}
+#I used this code chunk to check the output from above, but it is large and messy and hard to read.  I've silenced this code for publication.
+#str(data1)
+```
+
+Now, let's check to see if the factor variables make sense:
+
+```{r}
+#check for unique values in the flag variables
+ua <- unique(data1$liabAstsFlag)
+ub <- unique(data1$netIncFlag)
+
+uab <- rbind(ua, ub)
+uab
+```
+
+A value of 1 in all rows of netIncFlag does not add any value, we'll remove this from the table.
+
+```{r}
+data2 <- data1 |>
+  select(-"netIncFlag")
+names(data2)
+```
+
+During initial evaluation of potential dataset to use for this project, I briefly tried to model the `{r} dataset` dataset using a logistic regression model and it did not converge. We'll reproduce that here:
+
+```{r}
+#quick test fit using all variables with logistic regression model
+logitMod <- glm(bankrupt ~ ., data = data2, family=binomial())
+```
+
+A warning is thrown here, but i have suppressed it for sake of document readability.  It is the same warning I got in my original evaluation of the datasets, "algoritm did not converge". This may be due to collinearity between the myriad variables. We can evaluate correlation of the variables below.
+
+```{r}
+#create data frame of numeric values without the factors for evaluation of correlation
+numData <- data2 |>
+  select(where(is.numeric))
+fullCorr <- (cor(numData))
+longCorr <- cor_gather(fullCorr)
+#sort and filter correlation 
+longCorr1 <- longCorr |>
+  arrange(desc(cor)) |>
+  filter(cor < 1 & cor > 0.7)
+  
+longCorr1
+```
+
+I've tabled correlation for values less than 1.0, which would be self correlation (diagonal values), and arbitrarily set correlation to be greater than 0.7 for visualization. This will create a range of correlation values where we can at least evalute the variables and see if it is clear that they may be a linear combination of a correlated variable. Correlation between some variables that contain the same terms (eg. Liability, Gross Margin), seem to be strongly correlated. It makes sense that these could possibly be linear combinations of each other.
+
+Below is a visual demonstration of Principal Components Analysis output. The numeric data are centered and scaled, and each feature's contribution to overall variations in the dataset are determined. The proportion of the variability explained can be used to reduce the dimensionality. We will use this concept in the kNN model training.
+
+```{r}
+#evaluate principal components
+pca <- prcomp(numData, center=TRUE, scale.=TRUE)
+```
+
+Plot the Proportion of Variance Explained by Principal Components
+
+```{r}
+#square the sd and sum the vars to generate variance proportion attributable to each feature variable
+pcaData <- data.frame(
+  Component = 1:length(pca$sdev),
+  Variance = pca$sdev^2/sum(pca$sdev^2)
+)
+#plot scree plot
+ggplot(pcaData, aes(x=Component, y=Variance)) +
+  geom_bar(stat = "identity", fill="red") +
+  geom_line() +
+  xlab("Principle Components") +
+  ylab("Proportion of Variance Explained") +
+  ggtitle("PCA Scree Plot")
+```
+
+This plot shows the proportion of the variability explained by the components \~70 and above are visually imperceptible.
+
+### Creation of Training and Test Splits
+
+First we'll create a training and test split with 70% of the data in the training dataset and 30% in the test dataset.
+
+```{r}
+#set seed for reproducibility and create 70/30 split
+set.seed(10)
+train_index <- createDataPartition(data2$bankrupt, p=0.7, list=FALSE)
+bankrupt_train <- data2[train_index, ]
+bankrupt_test <- data2[-train_index, ]
+head(bankrupt_train)
+```
+
+### k-Nearest Neighbors
+
+Let's try KNN first to see if that model will work with this many variables. The k-Nearest Neighbors (kNN) model is a non-parametric model that uses the tuning parameter k to evaluate each k-nearest values. In the case of classification tasks (which is what we are doing here), for each value of k, the majority of the k-nearest values determines the class (bankrupt or not). For example, with k=1, each observation determines the class of itself. If k=3, then if 2 of the observations are class=0 and 1 observation is class=1, then the majority rule is that that combination of predictors will be classified as class=0. This model does not perform variable selection, and we have included Principle Components Analysis (PCA) as a preprocessing step in the model training below, which does perform variable shrinkage. This is necessary due to the highly correlated nature of this dataset.
+
+For the purposes of using PCA, we will center and scale the data. This is not strictly necessary if we are using kNN modeling without PCA.
+
+We will tune the optimal value of the tuning parameter (k) based on the training accuracy.
+
+```{r}
+#set seed for cv fold generation
+set.seed(10)
+#create grid for evaluating k
+kgrid <- expand.grid(k=seq(1,50, by=1))
+#create knn model with 10 fold cv
+knnMod <- train(bankrupt ~ .,
+              data = bankrupt_train,
+              method = "knn",
+              tuneGrid = kgrid,
+              preProcess = c("center", "scale", "pca"),
+              trControl = trainControl(method = "CV",
+                                      number = 10,
+                                      ))
+knnMod$bestTune
+
+```
+
+This looks like the best training accuracy is for k=`{r} knnMod$bestTune`.
+
+Let's show this visually:
+
+```{r}
+#plot training accuracy by tuning parameter
+plot(knnMod)
+```
+
+We'll also calculate the NIR (no information rate), which is just the proportion of the observations that fall in the most prevalent category. The model above should perform better than the NIR, or it is of no value.
+
+```{r}
+#create table of class proportions in training dataset for calculation of NIR.
+trainClassProp <- table(bankrupt_train$bankrupt)
+trainClassProp
+#dim(trainClassProp)
+```
+
+The most prevalent class is non-bankrupt company (this should be true in the training and test sets, since we split the data to have balanced proporations of the dependent variable, `bankrupt`.)
+
+```{r}
+#training NIR
+NIRknnTrain <- (trainClassProp[1]/nrow(bankrupt_train))
+NIRknnTrain
+```
+
+The NIR for the kNN model is `{r} NIRknnTrain`. The accuracy of the best tuned kNN model is `{r} knnMod$results[10,2]`. This is not a large improvement in training accuracy. We'll see later if the test accuracy changes.
+
+We'll predict with the best kNN model on the entire training dataset.
+
+```{r}
+#use predict() to evaluate model on training dataset
+knnTrain <- predict(knnMod, newdata = bankrupt_train)
+postResample(knnTrain, obs = bankrupt_train$bankrupt)
+knnConf <-confusionMatrix(knnTrain, bankrupt_train$bankrupt)
+knnConf
+```
+
+The training accuracy of the tuned model is not significantly different than the NIR at the alpha=0.05 confidence level.
+
+### Regularized Logistic Regression Model (Elastic Net)
+
+The next model we will evaluate will be the Elastic Net model, using a logic link function since the dependent variable is a binary classifier and takes on the values `0` or `1`. The elastic net combines both the L1 and L2 penalties. The L1 penalty is the absolute value of the sum of the coefficient estimates, and the L2 penalty is the sum of the squared coefficient estimates. This is a parametric model that estimates the parameters that minimizes the logistic regression model subject to both the L1 and L2 penatly. There are also two tuning parameters, alpha and lambda. This is a combination of both LASSO and Ridge regression and deals with highly correlated data better than either alone. This is why I picked Elastic Net here, since we have shown above that there is a lot of correlation between predictors in the `{r} dataset` dataset.
+
+This model performs variable selection and can be used for inference, as there are estimated coefficients for which confidence intervals can be calculated. We will need to standardize the predictors for this model
+
+We'll start by building a tuning grid for both all combinations of Alpha and Lambda that we want to evaluate:
+
+```{r}
+#create tuning grid for Elastic Net
+alpha <- seq(from = 0, to = 1, by = 0.05)
+lambda <- seq(from = 0.005, to = 0.1, by = 0.005)
+netTuneGrid <- expand.grid(alpha, lambda)
+names(netTuneGrid) <- c("alpha", "lambda")
+head(netTuneGrid)
+```
+
+Next, we'll perform 10-fold cross validation on the training data using the caret workflow and glmnet() model family.
+
+```{r}
+set.seed(10)
+#train elastic net model
+netMod <- train(bankrupt ~ ., data = bankrupt_train,
+                 method = "glmnet",
+                 family = "binomial",
+                 preProcess = c("center", "scale"),
+                 tuneGrid = netTuneGrid,
+                 trControl = trainControl(method = "cv", 
+                                          number = 10))
+plot(netMod)
+```
+
+```{r}
+#show the best tuning parameters
+netMod$bestTune
+```
+
+```{r}
+#use predict() to evaluate model on training dataset
+netTrain <- predict(netMod, newdata = bankrupt_train)
+postResample(netTrain, obs = bankrupt_train$bankrupt)
+netConf <-confusionMatrix(netTrain, bankrupt_train$bankrupt)
+netConf
+netMod$bestTune
+```
+
+The best Elastic Net model on the training data based on accuracy is the model with alpha = `{r} netMod$bestTune[1]` and lambda = `{r} netMod$bestTune[2]`. The accuracy of this model is not significantly higher than the NIR. This model also takes quite a bit of time to train, ~10 minutes.
+
+### General Additive Model Family
+
+The general additive model can be either a parametric or non-parametric model that is the linear combination of basis funtions. Below, we will use smoothing splines. The smooting splines subject the model loss function minimization to a regularization penalty, lambda. Lambda and degrees of freedom are the tuning parameters for smoothing spline models. The smoothing spline model is non-parametric, and cannot be used to perform inference on the predictors. The model performs shrinkage of the predictors, but does not select variables. Because of collinearity concerns, however, I did decide to use Principal Components Analysis prior to training the model.
+
+I believe collinearity is causing a problem with the original training dataset. I was unable to fit the general additive model with all variables, even using the smoothing splines as a regularization technique. Let's check the correlation in the training dataset.
+
+```{r}
+#create data frame of numeric values without the factors for evaluation of correlation
+numDataTrain <- bankrupt_train |>
+  select(where(is.numeric))
+fullCorrTrain <- (cor(numDataTrain))
+longCorrTrain <- cor_gather(fullCorrTrain)
+#sort and filter correlation 
+longCorrTrain <- longCorrTrain |>
+  arrange(desc(cor)) |>
+  filter(cor < 1 & cor > 0.7)
+  
+longCorrTrain
+```
+
+Some of the variables have correlation of 1.0. We need to deal with these, since I cannot train the model using all of the predictors in the training dataset *(errors not shown)*. We'll use PCA in the pre-processing, which also necessitates centering and scaling the data.
+
+```{r}
+#set seed for reproducibility
+set.seed(10)
+#train smooting splines (gamSpline() family) using 10 fold cv.  
+#model takes ~40 minutes to train
+gamMod <- train(bankrupt ~ ., data = bankrupt_train,
+                 method = "gamSpline",
+                 family = "binomial",
+                 preProcess = c("center", "scale","pca"),
+                 trControl = trainControl(method = "cv", 
+                                          number = 10),
+                 tuneGrid = data.frame(df = c(2,3,4,5,6,7))
+)
+plot(gamMod)
+```
+
+```{r}
+#get best tuning parameter
+gamMod$bestTune
+```
+
+```{r}
+#generate and display confusion matrix for training metrics
+gamTrain <- predict(gamMod, newdata = bankrupt_train)
+postResample(gamTrain, obs = bankrupt_train$bankrupt)
+gamConf <-confusionMatrix(gamTrain, bankrupt_train$bankrupt)
+gamConf
+```
+
+The training accuracy of this model is significantly different than the NIR. The model that has the highest training accuracy has `{r} gamMod$bestTune` degrees of freedom and kappa = `{r} gamConf$overall[2]`.
+
+### Single Classification Tree Model
+
+The classification tree is a model that splits the data using recursive binary splitting. This technique evaluates every possible split in the data, and selects the split point where the RSS is minimized. This is repeated down each branch of the tree until a certain stopping point is reached or each branch reaches a terminal node. Leaving a fully grown tree will result in overfitting the data.
+
+The classification tree does not perform variable selection and cannot be used to perform inference, although variable importance is supplied and has a roughly similar interpretation in that variables are ranked in their relative contribution to the models predictive ability.
+
+The classification tree is a non-parametric model and therefore cannot be used to perform inference. There is one tuning parameter, alpha, which is the complexity parameter. This complexity paramater may be used to *prune* the tree to find the "best" model. We do not have to pre-process the predictors for this model.
+
+```{r}
+#train smooting splines (gamSpline() family) using 10 fold cv.
+set.seed(10)
+#train tree model using 10 fold cv
+treeMod <- train(bankrupt ~ ., data = bankrupt_train,
+                 method = "rpart",
+                 trControl = trainControl(method = "cv", 
+                                          number = 10))
+
+plot(treeMod)
+```
+
+```{r}
+#get best tuning parameter
+treeMod$bestTune
+```
+
+```{r}
+#predict on the training dataset and calculate accuracy, and plot confusion matrix
+treeTrain <- predict(treeMod, newdata = bankrupt_train)
+postResample(treeTrain, obs = bankrupt_train$bankrupt)
+treeConf <-confusionMatrix(treeTrain, bankrupt_train$bankrupt)
+treeConf
+```
+
+```{r}
+#plot variable importance
+plot(varImp(treeMod))
+```
+
+Visualizing 93 predictors is challenging to impossible in this graph. In fact, the importance is diplayed as 0 below an importance of 6.97:
+
+```{r}
+#display importance numbers in a dataframe.
+varImp(treeMod)
+```
+
+I'll remove the importance variables that are 0 for more interpretability.
+
+```{r}
+#plot most important variables for visualization
+a <- varImp(treeMod)
+a[[1]] <- a[[1]] |>
+  filter(Overall > 5)
+plot(a)
+
+
+```
+
+The tree classification model predicts more accurately that the NIR at the alpha=0.05 confidence level with training accuracy of . It also trains relatively quickly compared to the GAM/Smoothing Spline model.
+
+### Ensemble Tree Method
+
+The ensemble tree models combine different techniques to arrive at more stable predictions on unseen data by using bootstrapping to randomly sample from the dataset, applying the model, then combining the models into an aggregate model. We'll use the **Random Forest** model here to help account for any possibility that a strong predictor will commonly be the first split. The Random Forest model will randomly select a number of pre-defined predictors (p) for evaluating each split. When p=P, where P is the number of predictors in the full model, this will be the Bagged Tree model. This strategy will allow us to evaluate "two" models at once.
+
+The ensemble tree models are extensions of the classification tree model used above. This model is non-parametric. The tuning parameter in the model below is the number of predictors to randomly select at each split (`mtry`). This model, like the classification tree, cannot be used for inference, but there is still the importance that can be interpreted in a similar fashion. The importance provides information as to which variables are most important for prediction, but does not perform variable selection. The data can be used as-is and do not need to be standardized.
+
+```{r}
+#set seed for reproducibility
+set.seed(10)
+#train rendom forest model with 1:nrow random predictors at each node
+forestGrid <- expand.grid(.mtry=c(1:(ncol(bankrupt_train)-1)))
+#model takes ~30 minutes to train
+rfMod <- train(bankrupt ~ ., data = bankrupt_train,
+                 method = "rf",
+                 metric = "Accuracy",
+                 tuneGrid = forestGrid, 
+                 trControl = trainControl(method = "oob", 
+                                          number = 1000))
+
+#plot accuracy
+plot(rfMod)
+```
+
+```{r}
+rfMod$bestTune
+```
+
+```{r}
+#predict on the training dataset and calculate accuracy, and plot confusion matrix
+rfTrain <- predict(rfMod, newdata = bankrupt_train)
+postResample(rfTrain, obs = bankrupt_train$bankrupt)
+rfConf <-confusionMatrix(rfTrain, bankrupt_train$bankrupt)
+rfConf
+```
+
+This is unexpected to me...accuracy of 1. It will be intersting to see how this model works with the test dataset. Let's see if importance makes any sense...
+
+```{r}
+plot(varImp(rfMod))
+```
+
+This is a nice smooth curve of the relative importance of the variables. I'll filter for Importance \<16 so that the most important variables are clear.
+
+```{r}
+#shorten the importance plot to include only the most important for the fr model
+rfImpShort <- varImp(rfMod)
+rfImpShort[[1]] <- rfImpShort[[1]] |>
+  filter(Overall > 16)
+plot(rfImpShort)
+```
+
+Some of the same features are present in the most important variable chart from Random Forest and from the Single Classification Tree.
+
+### Support Vector Machines
+
+Support verctor machines can be both parametric and non-parametric. We will be using a kernal based method (radial basis) in which we will use cross-validation to tune the tuning parameter `c`, or cost and sigma.
+
+```{r}
+#C <- exp(seq(-5,-1,len=10))
+#gamma <- seq(from = 4, to = 7, by = 1)
+#svTuneGrid <- expand.grid(C, sigma)
+#names(svTuneGrid) <- c("C", "sigma")
+#svTuneGrid
+```
+
+```{r}
+#set seed for reproducibility
+#set.seed(10)
+#create tuning grig
+#svmGrid <- expand.grid(C = exp(seq(-5,1,len=10)))
+#train model
+#svMod <- train(bankrupt ~ ., data = bankrupt_train,
+#                 method = "svmRadialSigma",
+#                 tuneGrid = svTuneGrid, 
+#                 trControl = trainControl(method = "cv", 
+#                                          number = 10))
+
+#plot(svMod)
+```
+
+```{r}
+#svMod$bestTune
+```
+
+```{r}
+#predict and display training confusion matrix with tuned model
+#svTrain <- predict(svMod, newdata = bankrupt_train)
+#(svTrain, obs = bankrupt_train$bankrupt)
+#svConf <-confusionMatrix(svTrain, bankrupt_train$bankrupt)
+#svConf
+```
+
+It looks like the training accuracy of this model is no better than the NIR. I've commented out the radial SVM model above because it takes a very long time to train and doesn't offer any additional insight for the tuning grid specified searching over sigma.
+
+I've recoded the same radial basis support vector machine model without searching through sigma in the tuning grid and get no better accuracy than the NIR.
+
+```{r}
+svTuneGrid2 <- (seq(from=-5,to=-1,by=1))
+svTuneGrid2 <- expand.grid(svTuneGrid2)
+names(svTuneGrid2) <- c("C")
+svTuneGrid2 <- svTuneGrid2 |>
+  mutate(C=exp(C))
+#svTuneGrid2
+```
+
+```{r}
+#set seed for reproducibility
+set.seed(10)
+#create tuning grig
+#svmGrid <- expand.grid(C = exp(seq(-5,1,len=10)))
+#train model
+svMod2 <- train(bankrupt ~ ., data = bankrupt_train,
+                 method = "svmRadialCost",
+                 tuneGrid = svTuneGrid2, 
+                 trControl = trainControl(method = "cv", 
+                                          number = 10))
+
+plot(svMod2)
+```
+
+```{r}
+svMod2$bestTune
+```
+
+```{r}
+#predict and display training confusion matrix with tuned model
+svTrain2 <- predict(svMod2, newdata = bankrupt_train)
+postResample(svTrain2, obs = bankrupt_train$bankrupt)
+svConf2 <-confusionMatrix(svTrain2, bankrupt_train$bankrupt)
+svConf2
+```
+
+The radial SVM seems to not perform very well based on training cross validation accuracy. I decided to evaluate the radial SVM since it should fit non-linear data well. There may be a different SVM model that fits better but this would take significant time and computing power to sort out.
+
+## Predicting on the Test Set
+
+So far, we've partitioned the data into a training and test set, performed cross validation and tuning on the training dataset, and refit the best models for each family with the optimal tuning parameters (where appropriate) onto the full training dataset. Now, we need to see how each of the tuned models performs on unseen data. We will use `predict()` on the test dataset for each model and compare accuracy.
+
+```{r}
+knnTest <- predict(knnMod, newdata=bankrupt_test)
+netTest <- predict(netMod, newdata=bankrupt_test)
+gamTest <- predict(gamMod, newdata=bankrupt_test)
+treeTest <- predict(treeMod, newdata=bankrupt_test)
+rfTest <- predict(rfMod, newdata=bankrupt_test)
+svTest <- predict(svMod2, newdata=bankrupt_test)
+```
+
+Now, let's check the test prediction accuracy
+
+### kNN Test Prediction Accuracy/Confusion Matrix
+
+```{r}
+#confusion matrix for test precdiction accuracy
+postResample(knnTest, obs = bankrupt_test$bankrupt)
+knnTestConf <-confusionMatrix(knnTest, bankrupt_test$bankrupt)
+knnTestConf
+```
+
+### Elastic Net Test Prediction Accuracy/Confusion Matrix
+
+```{r}
+#confusion matrix for test precdiction accuracy
+postResample(netTest, obs = bankrupt_test$bankrupt)
+netTestConf <-confusionMatrix(netTest, bankrupt_test$bankrupt)
+netTestConf
+```
+
+### GAM/Smoothing Splines Test Prediction Accuracy/Confusion Matrix
+
+```{r}
+#confusion matrix for test precdiction accuracy
+postResample(gamTest, obs = bankrupt_test$bankrupt)
+gamTestConf <-confusionMatrix(gamTest, bankrupt_test$bankrupt)
+gamTestConf
+```
+
+### Single Classification Tree Test Prediction Accuracy/Confusion Matrix
+
+```{r}
+#confusion matrix for test precdiction accuracy
+postResample(treeTest, obs = bankrupt_test$bankrupt)
+treeTestConf <-confusionMatrix(treeTest, bankrupt_test$bankrupt)
+treeTestConf
+```
+
+### Random Forest Single Classification Tree Test Prediction Accuracy/Confusion Matrix
+
+```{r}
+#confusion matrix for test precdiction accuracy
+postResample(rfTest, obs = bankrupt_test$bankrupt)
+rfTestConf <-confusionMatrix(rfTest, bankrupt_test$bankrupt)
+rfTestConf
+```
+
+### Support Vector Machine Test Prediction Accuracy/Confusion Matrix
+
+```{r}
+#confusion matrix for test precdiction accuracy
+postResample(svTest, obs = bankrupt_test$bankrupt)
+svTestConf <-confusionMatrix(svTest, bankrupt_test$bankrupt)
+svTestConf
+```
+
+None of the models are significantly different from the NIR at the alpha=0.05 confidence level. In the interest of picking a "best" model, I would pick the Random Forest model as it has the highest absolute accuracy.
+
+```{r}
+#extrac test accuracies for tabling.
+kA <- knnTestConf[[3]][1]
+netA <- netTestConf[[3]][1]
+gA <- gamTestConf[[3]][1]
+tA <- treeTestConf[[3]][1]
+rfA <- rfTestConf[[3]][1]
+svA <- svTestConf[[3]][1]
+
+testAcc <- c(kA, netA, gA, tA, rfA, svA)
+nameAcc <- c("kNN", "Elastic Net", "Smoothing Splines", "Single Tree", "Random Forest", "Support Vector Machine")
+
+#create table of accuracy values
+accTbl <- as_tibble(rbind(nameAcc, testAcc))
+accTbl
+```
+
+## Full Data Set Fit
+
+Lastly, we'll fit the "best" model, the Random Forest model on the full dataset.
+
+```{r}
+#set seed for reproducibility
+set.seed(10)
+#extract m from the best model
+m <- rfMod$bestTune[[1]]
+rfFull <- randomForest(bankrupt ~ ., data=data2,
+                       importance = TRUE,
+                       type = "classification",
+                       mtry=49)
+
+rfFull$confusion
+```
+
+We'll also calculate the NIR for the full model.
+
+```{r}
+#create table of class proportions in training dataset for calculation of NIR.
+fullClassProp <- table(data2$bankrupt)
+fullClassProp
+#dim(trainClassProp)
+```
+
+The most prevalent class is non-bankrupt company (this should be true in the training and test sets, since we split the data to have balanced proporations of the dependent variable, `bankrupt`.)
+
+```{r}
+#full NIR
+NIR <- (fullClassProp[1]/nrow(data2))
+NIR
+```
+
+Now let's calculate the full model accuracy to compare to the NIR:
+
+```{r}
+correct <- rfFull$confusion[1,1]+rfFull$confusion[2,2]
+fullModAccuracy <- correct/nrow(data2)
+fullModAccuracy
+```
+
+SO the full model still appears to be slightly better than the NIR by absolute difference. Regardless, the model could potentially predict risk of defaul/bankruptcy using business metrics where the bankruptcy event has not occured. For example, if a venture capital fund was trying to invest in 30 businesses, a model that could predict risk of bankruptcy at 97% would lead to \~1 company defaulting out of the 30 investments. This would be a way to understand the risk when \~ 30% of venture capitol investments fail and investors lose all of their capital [3](https://www.hbs.edu/news/Pages/item.aspx?num=214).  If this model could be applied to US based businesses and these data are available, it could be part of a comprehensive risk evaluation during the investment period.
+
+The importance of this model is not reported in percentage, so I'll standardize the importance to be a percentage of the total importance for plotting.
+```{r}
+#display importance
+varImpPlot(rfFull, sort =TRUE, n.var=10)
+
+```
+### Summary
+Now that we have a visual of the top 10 most important variables for this Random Forest prediction model, we could investigate these variables further to see exactly what they are and how they may be able to be controlled within a business or how investments could risked based on what an investor can find during the due diligence period.  It is interesting that the top three important variables for both metrics are the same. It would be very interesting to see how this model performs on US based companies and would need to be explored further.
+
+While the models we explored may not be different than the no imformation rate, it could still be useful, as you would not necessarily know the bankrupt status of a company when you are evaluating them and would be looking to the future.  This should be investigated for the `{r} dataset` dataset as well to see if it can be determined how the data were collected and if the data were collected before or after bankruptcy filing.

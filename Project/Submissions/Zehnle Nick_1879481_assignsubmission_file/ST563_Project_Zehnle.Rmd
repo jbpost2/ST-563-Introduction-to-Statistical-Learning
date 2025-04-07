@@ -1,0 +1,258 @@
+---
+title: "ST563 Project - Fama-French Classification"
+author: "Nick Zehnle"
+date: "2025-04-02"
+output: html_document
+---
+
+## Data and Project Aims
+
+In this project, the five Fama-French factors are retrieved plus the momentum and short-term reversal factors. The returns of six portfolios constructed on size and value are considered, although only the small-cap, high-value portfolio is of interest. A separate document including Python code displays how this data is retrieved and formatted from the Kenneth French website. The data is daily which takes us to the aims of the project.
+
+Research on Fama-French suggests that small-cap, high-value portfolios have a greater tendency to generate positive significant alpha on monthly intervals – that is, a statistically significant monthly excess return over the market. Furthermore, significant alpha becomes especially difficult to find in daily intervals. This project classifies the daily returns of the small-cap, high-value portfolio relative to the market into three classes: negative, near-zero (inconsequential), and positive. The aim is to correctly infer whether the portfolio will underperform or outperform the market on a day given the aforementioned factors. This could allow for better daily rebalancing of long-term, factor-based strategies with the recent surge of ETFs.
+
+Below the data is uploaded and the necessary libraries are listed. It is ensured that the class column is of the factor data type and that there are no faulty or missing values by summarizing the columns.
+
+```{r}
+
+library(tidyverse)
+library(caret)
+library(klaR)
+library(e1071)
+
+data <- read.csv("FamaFrenchCategorical.csv", row.names = "Date")
+data$SMALL_HiBM_Class <- as.factor(data$SMALL_HiBM_Class)
+head(data)
+summary(data)
+
+```
+
+## Train-Test Split
+
+Note that we are analyzing time series data such that we want the training set to generalize to a future test set when economic conditions may differ. Thus, the first 70% of the data is placed in the training set and the last 30% is placed in the test set.
+
+```{r}
+train_size <- floor(0.7 * nrow(data))
+train_data <- data[1:train_size, ]
+test_data <- data[(train_size + 1):nrow(data), ]
+
+dim(train_data)
+dim(test_data)
+```
+
+## K Nearest-Neighbors (KNN) Classifier
+
+KNN is a non-parametric model and hence does not allow for inference with respect to the predictors. It works by selecting the K nearest data points in terms of predictor values and classifies based on the proportion of those data points' classes. The hyper parameter, K, should be tuned using a method such as cross-validation (CV). Here, repeated CV is employed with five folds and five repeats and accuracy is the metric maximized. This reduces variability between selected folds in typical CV. The training set does not need to be standardized prior to fitting the KNN model and no variable selection occurs.
+
+```{r}
+
+set.seed(13)
+
+kgrid = expand.grid(k=c(1:100))
+
+knn_fit <- train(
+    SMALL_HiBM_Class ~ .,
+    data = train_data,
+    method = "knn",
+    tuneGrid = kgrid, 
+    trControl = trainControl(method = "repeatedcv",
+                             number = 5,
+                             repeats = 5),
+    metric = 'Accuracy'
+    )
+
+knn_fit$bestTune$k
+
+best_knn <- train(
+    SMALL_HiBM_Class ~ .,
+    data = train_data,
+    method = "knn",
+    tuneGrid = knn_fit$bestTune, 
+    trControl = trainControl(method = "none")
+    )
+
+knn_preds <- predict(best_knn, test_data)
+confusionMatrix(test_data$SMALL_HiBM_Class, knn_preds) 
+
+```
+
+## Logistic Elastic Net Regression
+
+A logistic regression is a parametric model that can be used for inference. The estimated coefficients represent the expected change in log odds with respect to a unit change in the predictors, ceteris paribus. Since this is also an elastic net regression within the logistic function there are two hyperparameters to tune – alpha and lambda. Note that when alpha is zero we have a ridge regression and when alpha is one we have a LASSO regression. In other words, alpha is the mixing parameter between the two penalties. Lambda is the shrinkage parameter where a value of zero represents no shrinkage and as lambda increases, shrinkage increases. Furthermore, a LASSO regression can perform variable selection such that an elastic net regression can perform variable selection as well in this model. A five-fold CV is utilized to tune alpha and lambda based on the accuracy metric. The training set does not need to be standardized prior to fitting the logistic elastic net regression model.
+
+```{r}
+
+set.seed(13)
+
+tune_grid <- expand.grid(alpha=seq(.01,1,.02),
+                         lambda=10^seq(-3,3,length=50))
+
+logistic_fit <- train(
+    SMALL_HiBM_Class ~ .,
+    data = train_data,
+    method = "glmnet",
+    family = 'multinomial',
+    tuneGrid = tune_grid, 
+    trControl = trainControl(method = "cv", number = 5),
+    metric = 'Accuracy'
+    )
+
+head(logistic_fit$results[, c("alpha", "lambda",
+                              "Accuracy")]) 
+logistic_fit$finalModel$tuneValue
+
+coef(logistic_fit$finalModel,
+     s = logistic_fit$bestTune$lambda)
+
+logistic_preds <- predict(logistic_fit, test_data)
+confusionMatrix(test_data$SMALL_HiBM_Class, logistic_preds)
+
+```
+
+## Linear Discriminant Analysis (LDA)
+
+LDA is a parametric model with a discriminant function that can be used for inference. It assumes a normal distribution for each predictor with equivalent variance across all classes. This produces a linear decision boundary. There are no hyperparameters to tune, no variable selection occurs, and the training set does not need to be standardized prior to fitting an LDA model.
+
+```{r}
+
+lda <- lda(SMALL_HiBM_Class ~ ., data = train_data)
+lda$means
+lda$scaling
+lda_preds <- predict(lda, test_data)
+lda_class <- lda_preds$class
+confusionMatrix(test_data$SMALL_HiBM_Class, lda_class)
+
+```
+
+## Quadratic Discriminant Analysis (QDA)
+
+QDA is a parametric model with a discriminant function that cannot directly be used for inference. It assumes a normal distribution for each predictor, but unlike LDA, it does not assume the variance is equivalent across all classes. In other words, the covariance matrix is allowed to vary between classes. This produces a quadratic decision boundary. There are no hyperparameters to tune, no variable selection occurs, and the training set does not need to be standardized prior to fitting an QDA model.
+
+```{r}
+
+qda <- qda(SMALL_HiBM_Class ~ ., data = train_data)
+qda$means 
+qda$scaling
+qda_preds <- predict(qda, test_data)
+qda_class <- qda_preds$class
+confusionMatrix(test_data$SMALL_HiBM_Class, qda_class)
+
+```
+
+## Support Vector Machine (SVM)
+
+SVM is a non-parametric model and hence cannot be used for inference. The hyperparameter, cost, should be tuned and is done so here with respect to accuracy using a five-fold repeated CV with five repeats. The cost parameter controls the trade-off between bias and variance. For instance, a value such as 20 represents higher variance (complexity) and a value near zero represents higher bias (simplicity). SVM does not perform variable selection and typically requires the predictors to be standardized prior to fitting. However, since we are dealing with Fama-French factors, the predictors are already of similar scale and a constant unit. Standardization in this case actually worsens model performance so it is left out.
+
+```{r}
+
+set.seed(13)
+
+tune_grid <- expand.grid(cost = exp(seq(-5,3,len=30)))
+
+svm_fit <- train(SMALL_HiBM_Class ~ .,
+                 data = train_data,
+                 method = "svmLinear2",
+                 tuneGrid = tune_grid,
+                 trControl = trainControl(
+                    method = "repeatedcv",
+                    number = 5, repeats = 5),
+                 metric = 'Accuracy')
+
+svm_fit$bestTune$cost
+
+best_svm <- svm(SMALL_HiBM_Class ~ .,
+                data = train_data,
+                type = "C-classification", 
+                kernel = "linear", 
+                cost = svm_fit$bestTune$cost)
+
+svm_preds <- predict(best_svm, test_data)
+confusionMatrix(test_data$SMALL_HiBM_Class, svm_preds)
+
+```
+
+## Random Forest
+
+Random Forest is a tree ensemble method that is non-parametric and therefore cannot be used for inference. The hyperparameter, mtry, is tuned here with respect to accuracy using a five-fold repeated CV with five repeats. The mtry parameter controls the trade-off between bias and variance, similar to the cost parameter in SVM, but represents the number of predictors randomly selected at each split. Random Forest does not perform variable selection and does not require the standardization of predictors prior to fitting.
+
+```{r}
+
+set.seed(13)
+
+tune_grid <- expand.grid(mtry = 1:(ncol(train_data)-1)) 
+
+rf_fit <- train(SMALL_HiBM_Class ~ .,
+                data = train_data, 
+                method = "rf", 
+                trControl = trainControl(
+                  method = "repeatedcv",
+                  number = 5, repeats = 5),  
+                tuneGrid = tune_grid,
+                metric = 'Accuracy',
+                importance = TRUE) 
+
+rf_fit$bestTune$mtry
+
+best_rf <- train(SMALL_HiBM_Class ~ ., 
+                 data = train_data, 
+                 method = "rf", 
+                 trControl = trainControl(
+                   method = "none"),  
+                 tuneGrid = rf_fit$bestTune,       
+                 importance = TRUE)
+
+best_rf$finalModel$importance
+
+rf_preds <- predict(best_rf, test_data)
+confusionMatrix(test_data$SMALL_HiBM_Class, rf_preds)
+
+```
+
+## Results
+
+The logistic elastic net regression model is chosen due to its interpretability and superior accuracy. SVM performs essentially the same regarding the confusion matrix; however, due to its non-parametric nature it cannot be used for inference which is a significant drawback. It is also noteworthy that each model constructed in this project performed above expectations and further applications may be pursued. A continuation could be to implement an ARIMA model to forecast the subsequent day's factor returns for predictive rebalancing signals using the same methodology in this project.
+
+Below the logistic elastic net regression is fit to the entire dataset and discussed.
+
+```{r}
+
+set.seed(13)
+
+tune_grid <- expand.grid(alpha=seq(.01,1,.02),
+                         lambda=10^seq(-3,3,length=50))
+
+logistic_final <- train(
+    SMALL_HiBM_Class ~ .,
+    data = data,
+    method = "glmnet",
+    family = 'multinomial',
+    tuneGrid = tune_grid, 
+    trControl = trainControl(method = "cv", number = 10),
+    metric = 'Accuracy'
+    )
+
+head(logistic_final$results[, c("alpha", "lambda",
+                              "Accuracy")]) 
+logistic_final$finalModel$tuneValue
+
+coef(logistic_final$finalModel,
+     s = logistic_final$bestTune$lambda)
+
+final_ests <- predict(logistic_final, data)
+confusionMatrix(data$SMALL_HiBM_Class, final_ests)
+
+```
+
+### Performance and Interpretation
+
+The model has an accuracy of 91.57%, a no-information rate of 42.13%, and a kappa of 0.8717. Note that kappa is a measure of agreement between predicted and actual values ranging between [-1, 1] where 1 is perfect agreement. Furthermore, the specificity (or true negative rate) results indicate that the model excels at correctly classifying instances that do not belong to a given class. The sensitivity (or true positive rate) results indicate that the model performs well at correctly classifying instances that do belong to a given class. That said, there is a dip to 0.8755 in the sensitivity for Class 1 which can be seen in the confusion matrix by the misclassification of Class 1 as Class 0 occurring 30 times and the misclassification of Class 1 as Class 2 occurring 36 times. This may be attributed to irreducible error in the boundary decsion with the predictors chosen.
+
+Now, moving onto interpretation, variable selection is performed in the model noting that only Mkt has a non-zero expected effect on the log odds of Class 1. Recall that the classes in this project are labelled in the following manner as portfolio returns minus market returns: Class 0 is negative, Class 1 is near-zero, and Class 2 is positive. Also, notice that the data is in the form of percentages multiplied by 100 such that 5 represents 5%.
+
+In Class 0, all predictors besides RMW have a non-zero expected effect on the log odds. For the sake of brevity, only the coefficient of SMB will be interpreted without loss of generalization for Class 0. It indicates that an increase of 1% in SMB is expected to result in a change of roughly -6.07 in the log odds of Class 0, ceteris paribus. Thus, in the context of this project, when small-cap stocks outperform large-cap stocks at the margin by an additional 1%, the log odds of the small-cap, high-value portfolio's relative return to the market going negative (past -0.5%) are anticipated to decrease dramatically.
+
+In Class 1, as aforementioned, only Mkt has a non-zero expected effect on the log odds. An increase of 1% in the returns of the market is expected to change the log odds of Class 1 by approximately -0.02. In other words, a slight decrease is anticipated in the log odds of the portfolio's return being within plus or minus 0.5% of the market when there is a 1% increase in the market. An interesting note to add here is the model is hinting at discrepancies between -0.5% and 0.5% being primarily due to noise.
+
+In Class 2, all predictors besides Mom and Mkt have a non-zero expected effect on the log odds. Again, for the sake of brevity, only the coefficient of HML will be interpreted this time without loss of generalization. It suggests an increase of 1% in HML is to result in a change of approximately 3.36 in the log odds of Class 2, ceteris paribus. Ergo, the portfolio's relative returns to the market being above 0.5% are expected to increase dramatically when high-value stocks outperform low-value stocks at the margin by an additional 1%.
+
+Lastly, the logistic elastic net regression model was tuned to obtain an alpha of 0.51 and a lambda of roughly 0.002 such that the model essentially applies an even split of the L1 and L2 penalties with a fairly small shrinkage parameter.

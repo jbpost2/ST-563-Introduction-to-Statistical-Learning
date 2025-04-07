@@ -1,0 +1,322 @@
+---
+title: "ST563 Project"
+author: "Chris Goodwin"
+format: html
+editor: visual
+---
+
+## Load Needed Packages
+
+```{r, message=FALSE, warning=FALSE}
+library('dplyr')
+library('tidyr')
+library('knitr')
+library('caret')
+library('class')
+library('car')
+library('kknn')
+library('glmnet')
+library('VGAM')
+library('rpart')
+library('rpart.plot')
+library('e1071')
+```
+
+## Introduction
+
+This report analyzes data on anxiety and depression, sourced from Kaggle:
+
+<https://www.kaggle.com/datasets/ak0212/anxiety-and-depression-mental-health-factors>.
+
+The data set contains information on various mental health factors, including demographics, lifestyle habits, and mental health conditions.
+
+### Goal
+
+The goal of this project is to develop predictive models to analyze factors associated with anxiety and depression. Specifically, I want to see how well we do at predicting someones level of Anxiety (response) based on their age, hours of sleep, and hours of physical activity using different models.
+
+### Read in Data (Locally)
+
+```{r, warning=FALSE}
+# Read the .csv file into a dataframe.
+data <- read.csv("/Users/christophergoodwin/Documents/NCSU Graduate School/ST 563 (601) Statistical Learning/Project/Data.csv")
+
+# Display the first few rows.
+head(data)
+```
+
+### Exploratory Data Analysis, Cleaning, and Transformations
+
+```{r, warning=FALSE}
+# Ensure all ordinal integers are explicitly typed as ordinal.
+ordinal<-c("Anxiety_Score")
+
+# Convert the ordinal variable to ordered factors. 
+data[ordinal] <- lapply(data[ordinal], function(x) factor(x, ordered = TRUE))
+
+# Check the variables and their types.
+str(data)
+
+# Check for missing values.
+colSums(is.na(data))
+
+# Summary of the data.
+summary(data)
+```
+
+### Split the Data into a Training and Test Set
+
+I will use a 70/30 split for the project to allow more unseen data for testing.
+
+```{r, warning=FALSE}
+# Set seed for reproducible results:
+set.seed(1234567) 
+
+# Sample from the row indices to include in the test set:
+n<-nrow(data)
+index<-sample(x = 1:n,
+              size = round(0.7*n),
+              replace = FALSE)
+
+# Test and training sets:
+train<-data[index,]
+test<-data[-index,]
+
+# Data dimensions:
+dim(train)
+dim(test)
+```
+
+## kNN Modeling
+
+The k-Nearest Neighbors (kNN) model is a non-parametric method that does not make strong assumptions about the data’s distribution. It has a key tuning parameter, k, which determines the number of nearest neighbors considered for classification or regression. kNN is not suitable for inference, as it does not provide parameter estimates or significance testing. Additionally, it does not perform variable selection. However, standardizing the predictors is often necessary, especially when using distance-based metrics, to ensure that all features contribute equally to the model.
+
+```{r, warning=FALSE}
+# K values for tuning
+kgrid <- expand.grid(k = seq(1,51, by=2))
+
+# 5-fold CV, repeated, tuning
+tr <- trainControl(method = "repeatedcv",
+                   number = 5,
+                   repeats = 50)
+# Train the classifier
+fit <- train(Anxiety_Score~Age+Sleep_Hours+Physical_Activity_Hrs,
+             data = train,
+             method = "knn",
+             tuneGrid = kgrid,
+             trControl = tr)
+
+plot(fit)
+
+# Refit the model with best k
+tuned_knn_class<-train(Anxiety_Score~Age+Sleep_Hours+Physical_Activity_Hrs,
+                       data = train,
+                       method = 'knn',
+                       tuneGrid = expand.grid(k=fit$bestTune$k),
+                       trControl = trainControl(method = 'none'))
+
+# Perform Prediction on Test Set
+pred_class<-predict(tuned_knn_class,
+                    newdata = test)
+
+# Confusion Matrix to Evaluate the Classifier. See the final dataframe for a summary of the accuracies for all models. 
+kNN_cm<-confusionMatrix(test$Anxiety_Score, pred_class)
+kNN_cm
+```
+
+## Logistic Regression
+
+Logistic regression is a parametric model that assumes a specific functional form between predictors and the probability of an outcome. Unlike kNN, logistic regression can be used for inference, as it provides interpretable coefficients, confidence intervals, and significance tests for each predictor. The model does not inherently perform variable selection, but L1 regularization can shrink some coefficients to zero, effectively selecting features. Standardizing predictors is not strictly required, but it is recommended when using regularization to ensure that all features contribute equally to the penalty term.
+
+```{r, warning=FALSE}
+# Fit the multinomial logistic regression using glmnet. This only works for numeric features. 
+logit_cv<-cv.glmnet(x=as.matrix(train|>
+                                  dplyr::select(Age, Sleep_Hours, Physical_Activity_Hrs)),
+                    y=train$Anxiety_Score,
+                    family = "multinomial")
+
+# Plot the cross-validation results to see the lambda selection.
+plot(logit_cv)
+
+# Refit the model using the best lambda.
+final_model<-glmnet(x=as.matrix(train|>
+                                  dplyr::select(Age, Sleep_Hours, Physical_Activity_Hrs)),
+                    y=train$Anxiety_Score,
+                    family = "multinomial", lambda = logit_cv$lambda.min)
+
+# Make predictions on the test set
+pred_probs <- predict(final_model, s = logit_cv$lambda.min, newx = as.matrix(test|>
+                                  dplyr::select(Age, Sleep_Hours, Physical_Activity_Hrs)), type = "response")
+
+# Convert the predicted probabilities into predicted class labels
+pred_class <- apply(pred_probs, 1, function(x) colnames(pred_probs)[which.max(x)])
+
+# Print the confusion matrix. See the final dataframe for a summary of the accuracies for all models. 
+lr_cm<-confusionMatrix(factor(pred_class), factor(test$Anxiety_Score))
+lr_cm
+```
+
+## Smoothing Spline
+
+A smoothing spline is a non-parametric model that fits a smooth curve to the data. It doesn't assume a specific parametric form for the relationship between predictors and response. It has lambda or degrees of freedom as its tuning parameter, which when tuned, balances bias and variance. Smoothing splines are not ideal for inference. They are good at prediction but do not provide confidence intervals for the function as a linear model would. A smoothing spline doesn't provide variable selection. Standardizing predictors ensures each predictor contributes equally to the model.
+
+```{r, warning=FALSE}
+# Define the range of df values to test
+df_values<-seq(1, 10, by = 1) 
+
+# Set up k-fold cross-validation
+cv_control<-trainControl(method = "cv", number = 5)
+
+# Create a function to train and evaluate models with different df values
+evaluate_df<-function(df) {
+  model<-vglm(Anxiety_Score~s(Physical_Activity_Hrs, df = df)+
+                                  s(Age, df = df)+
+                                  s(Sleep_Hours, df = df), 
+                family = multinomial(), 
+                data = train)
+  
+  # Get predictions on the validation set (via CV)
+  pred_probs<-predict(model, newdata = test, type = "response")
+  pred_class<-apply(pred_probs, 1, function(x) colnames(pred_probs)[which.max(x)])
+  
+  # Calculate accuracy
+  accuracy<-mean(pred_class == test$Anxiety_Score)
+  
+  return(data.frame(df = df, Accuracy = accuracy))
+}
+
+# Apply the function to each df value and store results
+cv_results<-bind_rows(lapply(df_values, evaluate_df))
+
+# Find the best df value
+best_df<-cv_results %>% arrange(desc(Accuracy)) %>% slice(1) %>% pull(df)
+
+# Train the final model using the optimal df
+final_model<-vglm(Anxiety_Score~s(Physical_Activity_Hrs, df = best_df)+
+                                    s(Age, df = best_df)+
+                                    s(Sleep_Hours, df = best_df), 
+                    family = multinomial(), 
+                    data = train)
+
+# Predict on test set
+final_pred_probs<-predict(final_model, newdata = test, type = "response")
+final_pred_class<-apply(final_pred_probs, 1, function(x) colnames(final_pred_probs)[which.max(x)])
+
+# Evaluate final model performance. See the final dataframe for a summary of the accuracies for all models.
+ss_cm<-confusionMatrix(factor(final_pred_class), factor(test$Anxiety_Score))
+ss_cm
+```
+
+## Single Tree Model
+
+A single tree model is non-parametric as it does not assume a specific form or distribution of the data. It has tuning parameters, like $\alpha$, the complexity parameter which controls the size of the tree. The model cannot be used for inference. It has built in variable selection, based on the algorithm. Predictors do not need to be standardized.
+
+```{r, warning=FALSE}
+# Create the classification tree using 5-fold cv to determine the rpart complexity parameter.
+fitTree<-rpart(Anxiety_Score~Age+Sleep_Hours+Physical_Activity_Hrs, data = train, method = 'class', xval = 5)
+
+# Prune the tree to the optimal cp
+optimal_cp <- fitTree$cptable[which.min(fitTree$cptable[,"xerror"]),"CP"]
+pruned_tree <- prune(fitTree, cp = optimal_cp)
+
+# Plot the pruned tree
+rpart.plot(pruned_tree, box.palette = NULL, legend.x = NA)
+
+# Make predictions on the test data
+pred_class <- predict(pruned_tree, newdata = test, type = "class")
+
+# Generate the confusion matrix. See the final dataframe for a summary of the accuracies for all models.
+stm_cm<-confusionMatrix(pred_class, test$Anxiety_Score)
+stm_cm
+```
+
+## Ensemble Tree Methods
+
+Like single tree models, ensemble trees are similarly non-parametric. They can have several tuning parameters (e.g., mtry for bagging). Ensemble models do perform variable selection and standardization is not necessary.
+
+```{r, warning=FALSE}
+# Create the bagged model.
+anxiety_bagged<-train(Anxiety_Score~Age+Sleep_Hours+Physical_Activity_Hrs,
+                      method = 'rf',
+                      data = train,
+                      tuneGrid = data.frame(mtry = 1:3),
+                      trControl = trainControl(method = 'oob', number = 3000))
+
+# Make predictions on the test data
+pred_class <- predict(anxiety_bagged, newdata = test)
+
+# Generate the confusion matrix. See the final dataframe for a summary of the accuracies for all models.
+etm_cm<-confusionMatrix(pred_class, test$Anxiety_Score)
+etm_cm
+```
+
+## Support Vector Machines
+
+Support vector machines are non-parametric as they do not assume a functional form to the data. It does have hyperparameters to tune (e.g., cost, kernel type). SVM models are primarily used for prediction, not inference. They do not perform variable selection and svm is sensitive to scaling so standardization is usually required.
+
+```{r, warning=FALSE}
+# Setup repeated cv option.
+tr<-trainControl(method = 'repeatedcv',
+                 number = 5,
+                 repeats = 10)
+
+# Tunig grid.
+tune_grid<-expand.grid(cost = exp(seq(-5,3, len=30)))
+
+# Train the model.
+sv_caret<-train(Anxiety_Score~Age+Sleep_Hours+Physical_Activity_Hrs,
+                data = train,
+                method = 'svmLinear2',
+                tuneGrid = tune_grid,
+                trControl = tr)
+
+# Final Model (svm() automatically scales by default)
+anxiety_sv_final<-svm(Anxiety_Score~Age+Sleep_Hours+Physical_Activity_Hrs,
+                data = train,
+                type = 'C-classification',
+                kernel = 'linear',
+                cost = sv_caret$bestTune$cost)
+
+# Make predictions on the test data
+pred_class <- predict(anxiety_sv_final, newdata = test)
+
+# Generate the confusion matrix. See the final dataframe for a summary of the accuracies for all models.
+svm_cm<-confusionMatrix(pred_class, test$Anxiety_Score)
+svm_cm
+```
+
+## Combine all Results into a Dataframe
+
+```{r, warning=FALSE}
+accuracy_df<-data.frame(
+  kNN_cm$overall['Accuracy'],
+  lr_cm$overall['Accuracy'],
+  ss_cm$overall['Accuracy'],
+  stm_cm$overall['Accuracy'],
+  etm_cm$overall['Accuracy'],
+  svm_cm$overall['Accuracy']
+)
+
+# Rename columns
+colnames(accuracy_df) <- c("kNN", "LR", "SS", "S.Tree", "E.Tree", "SVM")
+
+# Print the dataframe
+accuracy_df
+```
+
+None of the models demonstrated particularly high accuracy, and I don’t have a strong preference among them since they were all relatively simple. However, each model has its strengths and weaknesses. Logistic regression provides interpretability, while kNN captures local patterns but struggles with high-dimensional data. Smoothing splines offer flexibility but may overfit, and tree-based methods provide clear decision boundaries, with ensemble trees improving stability. Support vector machines perform well in complex spaces but require careful tuning. Given the trade-offs, my preference would ultimately depend on the specific context and goals of the analysis rather than any one model standing out in this case.
+
+## Refit the Best Model to the Entire Data set
+
+```{r, warning=FALSE}
+# Predict on the overal data set.
+final_pred_probs<-predict(final_model, newdata = data, type = "response")
+final_pred_class<-apply(final_pred_probs, 1, function(x) colnames(final_pred_probs)[which.max(x)])
+
+# Evaluate final model performance
+final_cm<-confusionMatrix(factor(final_pred_class), factor(data$Anxiety_Score))
+
+# Show the accuracy value
+final_cm$overall['Accuracy']
+```
+
+The accuracy has improved somewhat using all of the data.

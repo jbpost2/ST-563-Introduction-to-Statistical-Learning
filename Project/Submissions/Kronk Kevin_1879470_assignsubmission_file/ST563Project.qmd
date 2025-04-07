@@ -1,0 +1,638 @@
+---
+title: "ST563Project"
+format: pdf
+editor: visual
+---
+
+## ST 563 Project
+
+Kevin Kronk
+
+Goal:
+
+The purpose of this project is to create a report where you read in data, fit models using concepts from the class, and choose between several different models.
+
+To Do:
+
+Create a document that goes through your process of reading the data, any basic cleaning / transformations, splitting the data, and fitting and choosing a final model.
+
+## Read in the Data
+
+-   Give a brief introduction to the data and the source of the data.
+
+-   State your goal for the project (modeling something). Be specific on why you want to model the variable.
+
+-   Read the data in via a URL (or locally but then you must submit the data with your submission)
+
+Online Shoppers Purchasing Intention Dataset - UCI Machine Learning Repository. <https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset>
+
+This data set represents information about an individuals online session and whether or not the session ended with shopping. It is from the UC Irvine Machine Learning Repository and can be used under the Creative Commons Attribution 4.0 International license that allows it to be shared and adapted for any purpose. The creators of the data set are C. Sakar and Yomi Kastro. An additional note is that the data set was made so that each session belongs to a different user in a 1 year period to avoid any tendency to a specific campaign, special day, user profile, or period.
+
+The goal is to be able to predict whether or not a user ended their internet session with shopping based on many features about their session. We want the model not only with the highest accuracy, but also ideally the highest sensitivity. So the model that has the highest true positive predictions out of the total number of positive values, in this case that the person did shop. One of the reasons to model this variable is to figure out which features are important for determining if a user shopped. Therefore, a model that is interpretable may be best. Additionally, theoretically a company could use this data to determine which users are more likely to purchase during their session. Perhaps they could show more ads to those users, or in some way try to direct those users to places they can purchase goods.
+
+```{r}
+# Import libraries
+
+suppressWarnings(library(tidyverse))
+suppressWarnings(library(caret))
+suppressWarnings(library(gam))
+suppressWarnings(library(gbm))
+suppressWarnings(library(knitr))
+suppressWarnings(library(splines))
+suppressWarnings(library(glmnet))
+suppressWarnings(library(tree))
+suppressWarnings(library(rpart))
+suppressWarnings(library(rpart.plot))
+suppressWarnings(library(e1071))
+```
+
+```{r}
+# Read in the data from a csv file
+
+shoppers <- read_csv('online_shoppers_intention.csv', show_col_types=FALSE)
+
+head(shoppers)
+```
+
+## Data Cleaning & Transformations
+
+Go through a brief process where you make sure that each variable is read in correctly (correct data type), check for missing values, check for valid data values (perhaps by summarizing each column and seeing if you have reasonable values), removing observations where needed (give an explanation as to why), and doing any data transformations you deem necessary.
+
+```{r}
+# Get the rows and columns of the data frame
+dim(shoppers)
+```
+
+There are 12330 observations, 17 features, and 1 response variable, as was described on the data set webpage.
+
+```{r}
+# Get the class type of each feature
+data.frame(t(sapply(shoppers, class)))
+```
+
+Numeric Features: Administrative, Administrative_Duration, Informational, Informational_Duration, ProductRelated, ProductRelated_Duration, BounceRates, ExitRates, PageValues, SpecialDay, OperatingSystem, Browser, Region, TrafficType
+
+Character Features: Month, VisitorType
+
+Logical Features: Weekend, Revenue
+
+Extra Information
+
+-   Administrative, Administrative_Duration, Informational, Informational_Duration, ProductRelated, ProductRelated_Duration all represent the different types of pages visited in that session and the total time spent in each.
+
+-   BounceRate refers to the percentage of visitors who enter the site from that page and then leave without triggering any other requests to the analytics server during that session.
+
+-   ExitRate is calculated as for all pageviews to the page, the percentage that were the last in the session.
+
+-   PageValues represents the average value for a web page that a user visited before completing an e-commerce transaction.
+
+-   SpecialDay indicates the closeness of the site visiting time to a specific special day in which the sessions are more likely to be finalized with transaction.
+
+Revenue - Binary TRUE or FALSE. This is the response variable that tracks whether or not an internet session ended with shopping. Therefore this is a binary classification supervised learning problem.
+
+```{r}
+# Check for missing values
+data.frame(t(colSums(is.na(shoppers))))
+```
+
+As we can see there are no missing values from the data set.
+
+Now we can summarize each column to see if the values look reasonable.
+
+```{r}
+# Summarize the numeric features
+num_features <- c("Administrative", "Administrative_Duration", "Informational",
+                  "Informational_Duration", "ProductRelated", 
+                  "ProductRelated_Duration", "BounceRates", "ExitRates", 
+                  "PageValues", "SpecialDay", "OperatingSystems", "Browser",
+                  "Region", "TrafficType")
+
+num_summary <- data.frame(t(sapply(shoppers[num_features], summary)))
+num_summary
+```
+
+There's nothing that immediately pops out as being wrong. Many of the features have 0 values for up to 50% or even 75% of the data set. I'm not sure if this would cause any issues, but for those features, it makes sense that many of the values would be 0. For instance, Informational tracks how many informational websites a user visited. It's entirely plausible that a user didn't visit any informational websites during their session. The scales of different features are very different though, so for models that are sensitive, scaling will need to be done.
+
+```{r}
+# Summarize the character features
+char_features <- c("Month", "VisitorType")
+
+char_summary <- data.frame(t(sapply(shoppers[char_features], summary)))
+char_summary
+```
+
+```{r}
+# Look at the unique character values for each of these features
+unique(shoppers$Month)
+table(shoppers$Month)
+
+unique(shoppers$VisitorType)
+table(shoppers$VisitorType)
+```
+
+Both of these features will need to be transformed in a way to convert them to numeric. Month could be converted to sin and cos transformations to capture the cyclical nature, but in numeric form. In that case December would be closest to January and November. VisitorType can be turned into two dummy variables for new visitor and returning visitor, where the baseline (both features being 0) is the other type of visitor.
+
+```{r}
+# Summarize the binary features
+bin_features <- c("Weekend", "Revenue")
+
+bin_summary <- data.frame(t(sapply(shoppers[bin_features], summary)))
+bin_summary
+```
+
+Both of these features will be converted to 0 for False and 1 for True.
+
+```{r}
+# Convert Month column to numeric
+shoppers_df <- shoppers %>%
+                mutate(MonthNum = recode(Month,
+                  Jan = 1,
+                  Feb = 2,
+                  Mar = 3,
+                  Apr = 4,
+                  May = 5,
+                  June = 6,
+                  Jul = 7,
+                  Aug = 8,
+                  Sep = 9,
+                  Oct = 10,
+                  Nov = 11,
+                  Dec = 12))
+```
+
+```{r}
+summary(shoppers_df$MonthNum)
+```
+
+```{r}
+# Then create sin and cos versions of the Month feature
+shoppers_df['MonthSin'] <- sin(shoppers_df['MonthNum'] * (2*pi/12))
+shoppers_df['MonthCos'] <- cos(shoppers_df['MonthNum'] * (2*pi/12))
+```
+
+```{r}
+# Create dummy variables, in this case the baseline class is other
+shoppers_df$VisitorNew <- ifelse(shoppers_df$VisitorType == 'New_Visitor', 
+                                 1, 0)
+shoppers_df$VisitorReturn <- ifelse(shoppers_df$VisitorType ==
+                                    'Returning_Visitor',
+                                    1, 0)
+```
+
+```{r}
+# Remove extra features
+shoppers_df <- within(shoppers_df, rm("VisitorType", "Month", "MonthNum"))
+```
+
+```{r}
+# Convert binary features to 0 and 1
+shoppers_df$Weekend <- ifelse(shoppers_df$Weekend == TRUE, 1, 0)
+shoppers_df$Revenue <- ifelse(shoppers_df$Revenue == TRUE, 1, 0)
+```
+
+```{r}
+head(shoppers_df)
+```
+
+```{r}
+# Look at the response variable
+table(shoppers_df$Revenue)
+
+# Get the proportion
+table(shoppers_df$Revenue)/length(shoppers_df$Revenue)
+```
+
+## Split the Data into a Train and Test Set
+
+Use whatever reasonable proportion you'd like.
+
+The response is relatively imbalanced, which will require using stratified train and test splits. It turns out that according to the createDataPartition documentation, when splitting the data, the random sampling is done within the levels of the response, when the response is a factor. This attempts to balance the class distributions within the splits, so we are doing stratified sampling.
+
+```{r}
+# Set seed for repeatability
+set.seed(123)
+
+# Partition the data to get 80% in the training set
+train_index <- createDataPartition(shoppers_df$Revenue,
+                                   p=0.8, list=FALSE)
+
+# Create Train and Test Set
+shoppers_train <- shoppers_df[train_index,]
+shoppers_test <- shoppers_df[-train_index,]
+```
+
+```{r}
+# Dimensions of the train and test set
+dim(shoppers_train)
+dim(shoppers_test)
+
+# Count and proportion of each response class in the train set
+table(shoppers_train$Revenue)
+table(shoppers_train$Revenue)/length(shoppers_train$Revenue)
+
+# Count and proportion of each response class in the test set
+table(shoppers_test$Revenue)
+table(shoppers_test$Revenue)/length(shoppers_test$Revenue)
+```
+
+```{r}
+# Create scaled train and test set for the models that need it
+shoppers_train_s <- scale(shoppers_train[,-16],
+                          center = TRUE,
+                          scale = TRUE)
+
+shoppers_test_s <- scale(shoppers_test[,-16],
+                         center = attr(shoppers_train_s, "scaled:center"),
+                         scale = attr(shoppers_train_s, "scaled:scale"))
+
+shoppers_train_s <- data.frame(shoppers_train_s)
+shoppers_test_s <- data.frame(shoppers_test_s)
+```
+
+```{r}
+# Add Revenue back to the scaled datasets
+shoppers_train_s['Revenue'] <- shoppers_train$Revenue
+shoppers_test_s['Revenue'] <- shoppers_test$Revenue
+head(shoppers_train_s)
+```
+
+## Training Models
+
+In the course so far, some of the models we've looked at are:
+
+1.  kNN
+2.  (Regularized) Linear Regression & Logistic Regression Models
+3.  GAMs (using piece-wise polynomial regression, local regression, or splines)
+4.  Single tree models
+5.  Ensemble tree models
+6.  Support vector machines
+
+You'll fit one model from each of these model types.
+
+### kNN
+
+The k-nearest neighbors algorithm is non-parametric because it is not estimating parameters that define some model, but rather directly predicting the response based on the average response of the k-nearest neighbors. The one tuning parameter is k, the number of nearest neighbors to average. The lower k, the more flexible the model is, the higher it is, the more bias the model will have. Other than reporting the probability that a new data point belongs to one class or the other, we can not use kNN for inference. This model does not perform any variable selection. kNN is sensitive to the scale of the features, since it needs to calculate a distance value to determine the nearest neighbors. Large features could affect this process, so predictors need to be standardized.
+
+It's important to remember that our training set has roughly 0.845 false values for the response. This means the no information rate, if a classifier were to only predict false, would be 0.845, and the accuracy would be 84.5%.
+
+```{r}
+# Set seed for repeatability
+set.seed(100)
+
+# K values for tuning
+knn_grid <- expand.grid(k = c(1:50))
+
+# Performing 5-fold CV, repeated 5 times
+knn_cv <- trainControl(method = "repeatedcv",
+                   number = 5,
+                   repeats = 5)
+
+# Training the knn classifier on training data
+knn_fit <- train(as.factor(Revenue) ~ .,
+                 data = shoppers_train_s,
+                 method = 'knn',
+                 tuneGrid = knn_grid,
+                 trControl = knn_cv)
+
+summary(knn_fit)
+```
+
+```{r}
+plot(knn_fit)
+```
+
+```{r}
+# Getting the results of the best K model
+k_opt <- knn_fit$bestTune$k
+knn_fit$results[k_opt,]
+```
+
+```{r}
+# Refitting the model to the full training set
+knn_best <- train(as.factor(Revenue) ~ .,
+                  data = shoppers_train_s,
+                  method = 'knn',
+                  tuneGrid = expand.grid(k = knn_fit$bestTune$k),
+                  trControl = trainControl(method = 'none'))
+
+summary(knn_best)
+```
+
+```{r}
+# Test on the test set
+knn_pred <- predict(knn_best, newdata=shoppers_test_s)
+
+# Compare predicted vs actual values to get performance metrics
+confusionMatrix(knn_pred, as.factor(shoppers_test_s$Revenue),
+                positive="1")
+```
+
+The kNN had an accuracy of 0.8759, which is above the no information rate, but more importantly a sensitivity of only 0.32713. So only about a third of the time that Revenue was true did it correctly predict it. Added to the fact that kNN doesn't allow us to perform inference means that it is likely a poor choice for this particular problem.
+
+### Regularized Logistic Regression
+
+Lasso regression is one form of regularized logistic regression where the regularization term allows for the model to shrink some coefficients to zero. This means it can effectively perform feature selection. This model is a parametric model, using the typical linear combination of the predictors and their coefficients. This is applied to the logistic regression version of the model so that it can predict the probability of y = 1. In glmnet alpha =1 makes it so the elastic net equation reduces down to just the lasso regression. The tuning parameter is lambda which controls how large of an impact the regularization term has. The higher lambda, the more the model will shrink coefficients. This model can be used for inference as we get the coefficients of each predictor and we can get their standard errors, calculate p-values, and perform hypothesis testing and confidence intervals. Variable selection is done when the model shrinks certain coefficients all the way down to 0, so they no longer have an impact on the model. The predictors do need to be standardized and glmnet automatically does this before estimating the regression coefficients.
+
+```{r}
+# Set seed for repeatability
+set.seed(200)
+
+# Train the glmnet, performing cv to tune the lambda value
+logit_cv <- cv.glmnet(x = as.matrix(shoppers_train[-16]),
+                      y = shoppers_train$Revenue,
+                      family = binomial(),
+                      alpha = 1)
+```
+
+```{r}
+plot(logit_cv)
+```
+
+```{r}
+# Get the 1se lambda value
+logit_cv$lambda.1se
+```
+
+```{r}
+# Retrain the model using the 1se lambda, which is a larger lambda within 1
+# standard error of the best lambda value, so the model coefficients are further
+# shrunk down
+logit_best <- glmnet(x = as.matrix(shoppers_train[,-16]),
+                  y = shoppers_train$Revenue,
+                  family = binomial(),
+                  alpha = 1,
+                  lambda = logit_cv$lambda.1se)
+
+# Estimated coefs, many have been shrunk to 0
+coef(logit_best)
+```
+
+```{r}
+# Test on the test set
+logit_pred <- predict(logit_best, newx=as.matrix(shoppers_test[-16]),
+                      s = logit_cv$lambda.1se, type='response')
+
+# Predict 1 if probability is over 0.5, 0 otherwise
+logit_pred <- ifelse(logit_pred > 0.5, 1, 0)
+
+# Compare predicted vs actual values to get performance metrics
+confusionMatrix(as.factor(logit_pred), as.factor(shoppers_test$Revenue),
+                positive="1")
+```
+
+Lasso logistic regression had an accuracy of 0.8727 and a sensitivity of 0.28191. So in this case it performed worse than knn. We don't have a lot of features, so it's possible that shrinking the feature space down is not only unnecessary but hurt performance. Therefore, this model is not a good choice for this task.
+
+### Smoothing Spline GAM
+
+Smoothing splines train a model by using the maximal number of knots, while having a regularization term control the complexity of the model. The smoothing spline itself is non-parametric because it doesn't have a specific parametric form. It's effectively interpolating the data and then using a regularization term to smooth out the model fit. However, creating a generalized additive model (gam) with a smoothing spline on each feature means the model is parametric. The tuning parameter is lambda which controls the weight of the regularization term that smooths the model. A small lambda means the model is just interpolating the data, and a large lambda becomes linear regression with a straight line. This is found during computation due to smoothing splines allowing for an easy calculation of leave–one-out-cross-validation. Another tuning parameter could also be the df for each smoothing spline, which is a measure of the flexibility of the smoothing spline. The model can be used for inference like an anova for parametric and nonparametric effects for each smoothing spline feature. The model does not inherently perform variable selection, however the hypothesis testing for each feature tells us which were found to be significant or not, which could aid in manually performing variable selection. While I'm not sure if smoothing splines require standardizing the features, it certainly can't hurt.
+
+```{r}
+# Set seed for repeatability
+set.seed(300)
+
+# GAM model with smoothing splines on features, each 4th degree
+ss_fit <- gam(as.factor(Revenue) ~ s(Administrative, df = 4) + 
+                s(Administrative_Duration, df = 4) +
+                s(Informational, df = 4) +
+                s(Informational_Duration, df = 4) +
+                s(ProductRelated, df = 4) +
+                s(ProductRelated_Duration, df = 4) +
+                s(BounceRates, df = 4) +
+                s(ExitRates, df = 4) +
+                s(PageValues, df = 4) +
+                s(SpecialDay, df = 4) +
+                s(OperatingSystems, df = 4) +
+                s(Browser, df = 4) +
+                s(Region, df = 4) +
+                s(TrafficType, df = 4) +
+                Weekend +
+                s(MonthSin, df = 4) +
+                s(MonthCos, df = 4) +
+                VisitorNew +
+                VisitorReturn,
+              data = shoppers_train_s,
+              family = binomial())
+
+summary(ss_fit)
+```
+
+```{r}
+plot(ss_fit, se=TRUE)
+```
+
+```{r}
+# Test on the test set
+ss_pred <- predict(ss_fit, newdata=shoppers_test_s[-20],
+                   type='response')
+
+# Predicts 1 if probability is greater than 0.5, 0 otherwise
+ss_pred <- ifelse(ss_pred > 0.5, 1, 0)
+
+# Compare predicted vs actual values to get performance metrics
+confusionMatrix(as.factor(ss_pred), as.factor(shoppers_test_s$Revenue),
+                positive="1")
+```
+
+The smoothing spline gam had an accuracy of 0.8836 and a sensitivity of 0.47340, by far beating out the previous two methods. It also has the benefit of being able to perform inference to understand the significance of each feature. It's possible with more feature selection and tuning, in particular the df of each smoothing spline, the model would perform even better.
+
+### Single Tree Model
+
+A decision tree model is non-parametric because it doesn't assume any parametric form for the predictors. The decision tree has the complexity parameter (cp), where a cp of 0 includes the 'full' tree as a possibility, and a cp of 1 results in a tree with no splits. So it can be thought of as how 'complex' we want the tree to be. Decision trees don't allow for formal inference like hypothesis testing and confidence intervals, however it does give a measure of feature importance. The model does perform variable selection because only the feature splits that provided a better model end up being included. So some of the features end up not being used at all, or at least very little. Predictors do not need to be standardized with a decision tree because the tree is based off of splits in the data at different predictors. It doesn't matter what scale those splits are decided on.
+
+```{r}
+# Set the seed for repeatability
+set.seed(400)
+
+# Train the decision tree using cv to tune cp
+st_fit <- train(as.factor(Revenue) ~ .,
+                data = shoppers_train,
+                method = 'rpart',
+                tuneLength = 70,
+                trControl = trainControl(method = 'cv',
+                                         number = 10))
+
+# Get the best performing cp value
+st_fit$bestTune
+```
+
+```{r}
+# Plots the cp vs model accuracy
+plot(st_fit)
+```
+
+```{r}
+# Retrain the model using the best cp on the full training set
+st_fit2 <- train(as.factor(Revenue) ~ .,
+                 data = shoppers_train,
+                 method = 'rpart',
+                 tuneGrid = expand.grid(cp = st_fit$bestTune$cp))
+```
+
+```{r}
+# Perform pruning to find the best subset tree, helps reduce overfitting
+st_best <- prune(st_fit2$finalModel, cp = st_fit$bestTune$cp)
+
+# Get the tree with the decisions made at each split
+rpart.plot(st_best)
+```
+
+```{r}
+# Plot the variable importances
+plot(varImp(st_fit2))
+```
+
+```{r}
+# Predict on the test set data
+tree_pred <- predict(st_best, newdata = shoppers_test,
+                          type = "class")
+
+# Compare predicted vs actual values to get performance metrics 
+confusionMatrix(as.factor(tree_pred), as.factor(shoppers_test$Revenue),
+                positive = '1')
+```
+
+The decision tree had an accuracy of 0.8921 and a sensitivity of 0.5771. Thus far this is the best performing model. While the accuracy was basically the same, the model was better able to correctly predict that a user would shop. While the model doesn't offer the full inference abilities, the feature importances could still be used to learn more about which features were useful in this prediction problem.
+
+### Ensemble Tree Model
+
+Like the decision tree the gradient boosting machines (gbm) model is also a non-parametric model. It combines many simple trees together that cast a weighted vote and learn over time to improve predictions. There are many different tuning parameters in a gbm model. Shrinkage is the learning rate lambda of the model. The interaction depth is the number of splits performed on any given tree. The number of trees is how many trees are in the total ensemble. The minobsinnode is the minimum number of observations in a node in order for the model to continue splitting. Like decision trees, ensemble tree models don't perform traditional inference, but do provide feature importances. The model performs variable selection by some features providing so little benefit to the model that they end up not being used. Finally, the predictors do not need to be standarized in a tree based model.
+
+```{r}
+# Set seed for repeatability
+set.seed(500)
+
+# Grid for the tuning parameters
+gr <- expand.grid(shrinkage = c(0.3, 0.1, 0.05, 0.01, 0.005),
+                  interaction.depth = c(1, 2, 3),
+                  n.trees = seq(100, 3000, by=100),
+                  n.minobsinnode = 10)
+
+# Train a gbm model using cv with the tuning grid
+boost_fit <- train(as.factor(Revenue) ~ .,
+                   data = shoppers_train,
+                   method = 'gbm',
+                   trControl = trainControl(method = 'cv',
+                                            number = 5),
+                   tuneGrid = gr,
+                   verbose = FALSE)
+
+# Plot the cv results
+plot(boost_fit)
+```
+
+```{r}
+# Get the best tuning parameter values
+boost_fit$bestTune
+```
+
+```{r}
+# Retrain with the best tuning parameters on the full training set
+boost_best <- train(as.factor(Revenue) ~ .,
+                    data = shoppers_train,
+                    method = 'gbm',
+                    trControl = trainControl('none'),
+                    tuneGrid = expand.grid(shrinkage =boost_fit$bestTune$shrinkage,
+                                           interaction.depth =
+                                             boost_fit$bestTune$interaction.depth,
+                                           n.trees = boost_fit$bestTune$n.trees,
+                                           n.minobsinnode = 
+                                             boost_fit$bestTune$n.minobsinnode),
+                    verbose = FALSE)
+```
+
+```{r}
+# Plot the variable importances
+plot(varImp(boost_best))
+```
+
+```{r}
+# Predict on the test set
+boost_pred <- predict(boost_best, newdata = shoppers_test)
+
+# Compare predicted vs actual values to get performance metrics 
+confusionMatrix(as.factor(boost_pred), as.factor(shoppers_test$Revenue),
+                positive = '1')
+```
+
+The gbm model had an accuracy of 0.8933 and a sensitivity of 0.58511. This is the best performance on this data set. It's also possible with more tuning and feature selection the model could have performed better. This model is only slightly better than the decision tree one. One benefit the decision tree has over the ensemble is the ability to see the final tree that the data was split on. That may or may not be an important enough factor in choosing a slightly worse model. The variable importances can also be used to get a better sense of which ones contributed most to the model. In this case, PageValues is by far the most important feature.
+
+### Support Vector Machines
+
+The svm model is non-parametric, using support vectors to define a margin that minimizes the number of violations. The tuning parameter is cost. When cost is small the margin will be wide and there will be more support vectors. When cost is large the margin will be narrow and there will be few support vectors. Different kernels could be used with the svm which could also count as a tuning parameter. The model can not be used for inference, and doesn't perform any variable selection. It is technically not needed to standardize for svm, but it doesn't hurt to standardize the predictors and may improve model performance.
+
+```{r}
+# Set seed for repeatability
+set.seed(600)
+
+# Perform repeatedcv with 5-folds, 3 times each
+tr <- trainControl(method = 'repeatedcv',
+                   number = 5, repeats = 3)
+
+# Values to test for tuning parameter cost
+tune_grid_sv <- expand.grid(cost = exp(seq(-3, 0, len=10)))
+
+# Train the svm
+sv_fit <- train(as.factor(Revenue) ~ .,
+                data = shoppers_train_s,
+                method = 'svmLinear2',
+                tuneGrid = tune_grid_sv,
+                trControl = tr)
+
+summary(sv_fit)
+```
+
+```{r}
+# Plot the cost tuning parameter vs model accuracy
+plot(sv_fit)
+```
+
+```{r}
+# Show the best cost value
+sv_fit$bestTune
+```
+
+```{r}
+# Retrain the model on the full training set with the best cost
+sv_best <- svm(as.factor(Revenue) ~ .,
+               data = shoppers_train_s,
+               type = 'C-classification',
+               kernel = 'linear',
+               cost = sv_fit$bestTune$cost)
+```
+
+```{r}
+# Predict on the test set
+svm_pred <- predict(sv_best, newdata = shoppers_test_s)
+
+# Compare predicted vs actual values to get performance metrics 
+confusionMatrix(as.factor(svm_pred), as.factor(shoppers_test_s$Revenue),
+                positive = '1')
+```
+
+The svm had an accuracy of 0.8771 and a sensitivity of 0.36170. This is worse than some of the other models. Additionally, svm doesn't perform variable selection or inference, so other models would be a better fit for this problem.
+
+## Testing Models
+
+Fit your overall best model on the entire data set.
+
+```{r}
+# Retrain best gbm model on the entire data set
+boost_final <- train(as.factor(Revenue) ~ .,
+                     data = shoppers_df,
+                     method = 'gbm',
+                     trControl = trainControl('none'),
+                     tuneGrid = expand.grid(shrinkage=boost_fit$bestTune$shrinkage,
+                                            interaction.depth =
+                                              boost_fit$bestTune$interaction.depth,
+                                            n.trees = boost_fit$bestTune$n.trees,
+                                            n.minobsinnode = 
+                                              boost_fit$bestTune$n.minobsinnode),
+                    verbose = FALSE)
+```
+
+```{r}
+# Plot the variable importances
+plot(varImp(boost_final))
+```
+
+While the gbm model performed the best overall on accuracy and sensitivity in the training and test set, it is difficult to interpret the model. The only sort of inference that can be done is based on the variable importance measures. This is the measure of how much each variable contributed to the model's ability to make accurate predictions. It's clear that PageValues was by far the most important feature. It's a feature that is tracked directly before the user purchases something, so it makes sense that it would be especially useful in predicting if a user will shop. The features Browser and SpecialDay had no importance which means they were not used by the model. You would think SpecialDay would matter for when a user might purchase something, but the variable was tracked across many days before and after the actual special day, so that may have affected it's ability to discern. It also seems that being a Weekend and the number of OperatingSystems used weren't important features. Informational and it's duration didn't contribute much as well, so perhaps people going online to learn something don't tend to make purchases. Of course most of this is just speculation. All the feature importances really tells us is what features were important in the model making accurate predictions.

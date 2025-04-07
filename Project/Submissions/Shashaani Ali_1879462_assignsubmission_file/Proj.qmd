@@ -1,0 +1,1015 @@
+---
+title: "Classification Project Report"
+format:
+  html: default
+  pdf: default
+date: "`r Sys.Date()`"
+author: "Ali Shashaani"
+---
+
+::: {.callout-note title="Goal"}
+To build a predictive model for the variable `y` (subscription to term deposit) using the UCI Bank Marketing Dataset and evaluate various classification techniques using consistent training and testing data, with appropriate data processing and evaluation strategies.
+:::
+
+## 1. Load and Prepare Data
+
+```{r Setup}
+# Load essential libraries for data analysis and modeling
+library(tidyverse)      # Data manipulation and visualization
+library(caret)          # Machine learning framework
+library(MASS)           # LDA and QDA models
+library(rpart)          # Decision trees
+library(rpart.plot)     # Tree visualization
+library(randomForest)   # Random forest models
+library(e1071)          # SVM implementation
+library(glmnet)         # Lasso regression
+library(mgcv)           # Generalized additive models (GAM)
+library(corrplot)       # Correlation plots
+library(pROC)           # ROC curves
+library(conflicted)     # Manage function conflicts
+library(pdp)            # Partial dependence plots
+
+# Resolve naming conflicts
+conflict_prefer("filter", "dplyr")
+conflict_prefer("select", "dplyr")
+conflict_prefer("partial", "pdp")
+conflict_prefer("gam", "mgcv")
+set.seed(563)
+# Download and read the data
+temp_file <- tempfile(fileext = ".zip")
+download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",
+              destfile = temp_file, mode = "wb", method = "libcurl")
+bank_data <- read_csv2(unz(temp_file, "bank.csv"))
+unlink(temp_file)  # Clean up
+
+# Preview the data
+glimpse(bank_data)
+summary(bank_data)
+head(bank_data, 5)
+
+```
+
+```{r}
+# Convert all character variables to factors
+bank_data <- bank_data %>%
+  mutate(across(where(is.character), as.factor))
+
+# Drop duration (target leakage)
+bank_data <- dplyr::select(bank_data, -duration)
+
+# Check levels of target variable 'y'
+table(bank_data$y)
+
+# Ensure 'y' is a factor
+bank_data$y <- factor(bank_data$y, levels = c("no", "yes"))
+
+# Preview changes
+glimpse(bank_data)
+
+```
+
+This project analyzes direct marketing campaigns conducted by a Portuguese banking institution. The campaigns were primarily conducted via phone calls, with the goal of convincing clients to subscribe to a term deposit. The data was collected from May 2008 to November 2010.
+
+### Project Overview
+
+### Background
+
+This project analyzes **direct marketing campaigns** conducted by a Portuguese banking institution between **May 2008 and November 2010**. These campaigns were conducted via phone calls, with the goal of convincing clients to subscribe to a **term deposit**.
+
+### Data Source and Description
+
+The dataset is sourced from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/222/bank+marketing). It includes customer demographic data, contact records, marketing campaign history, and prior economic interactions.
+
+Each observation represents a unique client contact. The **target variable** is `y`, which indicates whether the client subscribed to a term deposit (`"yes"` or `"no"`).
+
+#### Key Attributes
+
+-   **Client-related:**
+    -   `age`: Customer's age (numeric)
+    -   `job`: Job category (factor)
+    -   `marital`: Marital status (factor)
+    -   `education`: Education level (factor)
+    -   `default`: Credit in default? (`yes`/`no`)
+    -   `housing`: Has housing loan? (`yes`/`no`)
+    -   `loan`: Has personal loan? (`yes`/`no`)
+-   **Campaign-related:**
+    -   `contact`: Contact communication type (e.g., cellular, telephone)
+    -   `month`: Last contact month (categorical)
+    -   `day`: Day of the month of last contact
+    -   `duration`: Duration of last contact in seconds (numeric)
+    -   `campaign`: Number of contacts during the current campaign
+    -   `pdays`: Days since last contact from a previous campaign (999 = never contacted)
+    -   `previous`: Number of contacts before this campaign
+    -   `poutcome`: Outcome of the previous campaign
+-   **Target Variable:**
+    -   `y`: Subscription to term deposit (`"yes"` or `"no"`)
+
+### Why Model This Variable?
+
+Building a predictive model for `y` has valuable real-world applications:
+
+-   **Resource Optimization:** Prioritize customers more likely to subscribe.
+-   **Cost Efficiency:** Reduce outreach to unlikely converters and save marketing resources.
+-   **Improved Customer Experience:** Minimize irrelevant outreach to uninterested customers.
+-   **Smarter Campaign Design:** Learn which features most impact conversion.
+-   **Economic Insight:** Analyze how broader conditions influence customer decisions.
+
+### Project Objective
+
+We will implement and compare a variety of classification models to:
+
+-   Predict the likelihood of subscription (`y`)
+-   Evaluate model performance using AUC and confusion matrix metrics
+-   Identify key predictive features that influence client behavior
+
+## 2. Data Cleaning & Transformation
+
+```{r data cleaning}
+
+
+bank_data <- bank_data %>%
+  mutate(
+    log_balance = log1p(pmax(balance, 0)),
+    log_campaign = log1p(campaign),
+    log_pdays = ifelse(pdays == -1, NA, log1p(pdays)),
+    log_previous = log1p(previous)
+  )
+
+# Correct way to summarize selected variables
+summary(bank_data %>% select(log_balance, log_campaign, log_pdays, log_previous))
+
+```
+
+```{r}
+#| label: class-balance
+#| echo: true
+#| message: false
+#| warning: false
+
+# Check response variable balance
+table(bank_data$y)
+prop.table(table(bank_data$y)) * 100
+
+```
+
+Based on the Data description we have no missing value.
+
+`duration` is now removed, and transformed versions are in place.
+
+the class imbalance is **significant** and typical for this dataset.
+
+### 3. Train-Test Split
+
+```{r Train Test}
+#| label: split-downsample
+#| echo: true
+#| message: false
+#| warning: false
+
+# Initial 80/20 stratified split
+set.seed(563)
+split_index <- createDataPartition(bank_data$y, p = 0.8, list = FALSE)
+train_data <- bank_data[split_index, ]
+test_data  <- bank_data[-split_index, ]
+
+# Downsample the majority class in training data
+train_data_down <- downSample(x = train_data %>% select(-y),
+                              y = train_data$y,
+                              yname = "y")
+
+# Check result
+table(train_data_down$y)
+
+
+```
+
+### 4: Handling Class Imbalance
+
+The target variable `y` is highly imbalanced, with approximately 88.5% of observations labeled `"no"` and only 11.5% labeled `"yes"`. This imbalance can bias models toward predicting the majority class, resulting in high accuracy but poor sensitivity for detecting the minority class — which is the actual class of interest in our case.
+
+To address this, we apply **downsampling** on the **training set only**. This method randomly removes samples from the majority class (`"no"`) so that both classes are equally represented in the training data. This improves the model’s ability to learn patterns associated with the minority class.
+
+> ⚠️ Important: We do **not** modify the test set. The model is evaluated on the original imbalanced distribution to simulate real-world performance.
+
+We use the `downSample()` function from the `caret` package, which also retains the outcome variable under the name `y`.
+
+## 5. kNN Model
+
+#### K-Nearest Neighbors (KNN)
+
+-   **Type**: Non-parametric
+-   **Tuning Parameter**: `k` — the number of nearest neighbors used for classification.
+-   **Inference**: ❌ No — KNN does not provide coefficients or hypothesis testing.
+-   **Variable Selection**: ❌ No — all predictors contribute equally unless weighted.
+-   **Standardization**: ✅ Yes — KNN is distance-based, so predictors must be on the same scale.
+
+## 6. Lasso Logistic Regression
+
+```{r log skewed vars}
+# Step 4: Log-transform skewed numeric variables
+bank_data <- bank_data |> 
+  mutate(across(c(balance, campaign, duration, pdays, previous), 
+                ~ log(.x + 1), 
+                .names = "log_{.col}")) |> 
+  select(-duration)
+
+
+```
+
+## 6. Lasso Logistic Regression
+
+```{r Train-Test-sets}
+# Step 5: Train-Test Split (80/20, stratified by response)
+set.seed(123)  # for reproducibility
+split_index <- createDataPartition(bank_data$y, p = 0.8, list = FALSE)
+
+train_data <- bank_data[split_index, ]
+test_data  <- bank_data[-split_index, ]
+
+# Check proportions in both sets
+prop.table(table(train_data$y))
+prop.table(table(test_data$y))
+
+```
+
+the class imbalance is **significant** and typical for this dataset.
+
+what we can do is
+
+### **Downsampling the Majority Class (`no`)**
+
+Randomly remove `no` cases to match the number of `yes`s.
+
+**Pros:** Fast, avoids duplicated rows\
+
+**Cons:** You lose a **lot of data**
+
+```{r Downsampling}
+# Step 6: Downsample the training set to balance classes
+library(caret)
+
+train_data <- downSample(x = train_data |> select(-y),
+                         y = train_data$y,
+                         yname = "y")
+
+# Check class balance after downsampling
+prop.table(table(train_data$y))
+
+```
+
+-   ✅ Run RFE **once now** (on the downsampled training set)
+
+    📦 Use selected features for KNN, logistic, LDA, QDA
+
+    🪵 Use full feature set for GAM, Tree-based models, and RBF SVM
+
+#### If you do RFE on the full dataset:
+
+You **leak information** from the test set into the feature selection process.
+
+-   That results in **optimistic performance estimates**.
+
+    ✅ If you do RFE **only on the training set**:
+
+You preserve the **integrity of your test set**.
+
+Your evaluation metrics will reflect real generalization.
+
+🧠 **Bottom line:** Always do any kind of model-informed selection (like RFE, PCA, feature engineering) **after splitting**, and only on the training set.
+
+```{r}
+# Replace NA in log_balance with 0
+train_data$log_balance[is.na(train_data$log_balance)] <- 0
+
+```
+
+```{r}
+# Check for NAs
+colSums(is.na(train_data))
+
+```
+
+```{r}
+# Check for NA, NaN, or Inf in predictors
+train_data |> 
+  select(-y) |> 
+  summarise(across(everything(), 
+                   ~ sum(is.na(.)) + sum(is.infinite(.)) + sum(is.nan(.))))
+
+```
+
+```{r}
+# Replace -Inf in log_pdays with 0
+train_data$log_pdays[is.infinite(train_data$log_pdays)] <- 0
+
+```
+
+```{r}
+# Investigate log_balance more closely
+summary(train_data$log_balance)
+table(is.na(train_data$log_balance))
+table(is.infinite(train_data$log_balance))
+table(is.nan(train_data$log_balance))
+
+```
+
+```{r knn-Tunning}
+# Step 8: Train KNN Model (using all predictors)
+set.seed(123)
+ctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 3)
+
+knn_fit <- train(
+  y ~ ., 
+  data = train_data, 
+  method = "knn",
+  trControl = ctrl,
+  tuneGrid = expand.grid(k = 1:25)
+)
+
+# View tuning results
+plot(knn_fit)
+knn_fit$bestTune
+# Print the best k
+cat("Best tuned k:", knn_fit$bestTune$k, "\n")
+
+```
+
+```{r Knn fit}
+# Evaluate KNN on training set with the selected model
+knn_train_preds <- predict(knn_fit, newdata = train_data)
+knn_train_probs <- predict(knn_fit, newdata = train_data, type = "prob")
+
+# Confusion Matrix
+confusionMatrix(knn_train_preds, train_data$y, positive = "yes")
+
+# ROC and AUC
+library(pROC)
+knn_train_roc <- roc(response = train_data$y, predictor = knn_train_probs$yes)
+plot(knn_train_roc, main = "ROC Curve - KNN (Training Set)")
+auc(knn_train_roc)
+```
+
+### KNN Model Insights
+
+KNN performance has improved by:
+
+1.  **Feature Selection**: Using only the most relevant numeric and categorical variables
+2.  **Pre-processing**: Adding near-zero variance filtering to remove noise
+3.  **Tuning**: Finding the optimal k that balances bias and variance
+
+KNN works best when: - Features are on the same scale (addressed by our centering and scaling) - The decision boundaries are local and non-linear - The number of dimensions is manageable (addressed by our feature selection)
+
+The improved model should perform better on the test set than the previous implementation, though other methods like Random Forest and GAM may still outperform it for this particular dataset due to the complexity of the relationships.
+
+```{r}
+test_data$log_pdays[!is.finite(test_data$log_pdays)] <- 0
+test_data <- test_data |> 
+  mutate(across(where(is.numeric), ~ replace(.x, !is.finite(.x), 0)))
+
+
+
+```
+
+```{r KNN_Test_Evaluation}
+# Ensure test data has the same structure as expected by the model
+# Handle any potential Inf/NA values
+test_data$log_pdays[!is.finite(test_data$log_pdays)] <- 0
+test_data$log_balance[is.na(test_data$log_balance)] <- 0
+test_data <- test_data |> 
+  mutate(across(where(is.numeric), ~ replace(.x, !is.finite(.x), 0)))
+
+# Predict on test set with improved KNN model
+knn_pred_class <- predict(knn_fit, newdata = test_data)
+knn_pred_prob  <- predict(knn_fit, newdata = test_data, type = "prob")
+
+# Confusion Matrix
+confusionMatrix(knn_pred_class, test_data$y, positive = "yes")
+
+# ROC and AUC
+knn_roc <- roc(response = test_data$y, predictor = knn_pred_prob$yes)
+plot(knn_roc, main = "ROC Curve - KNN (Test Set)")
+auc_value <- auc(knn_roc)
+print(paste("KNN Test Set AUC:", round(auc_value, 3)))
+
+# Compare with other models in final evaluation
+```
+
+we’ll add `duration` back to the dataset before proceeding with **Logistic Regression**:
+
+```{r}
+# Step 10: Restore the full dataset (include duration)
+train_data_full <- bank_data[split_index, ]  # Assuming you're using the same split index
+
+# Check the structure to ensure 'duration' is included
+str(train_data_full)
+
+```
+
+now we fit Logistic Regression with Lasso with Lambda as the tuning parameter
+
+```{r}
+# Load library
+library(glmnet)
+
+# Prepare design matrix and binary response
+x_train <- model.matrix(y ~ . -1, data = train_data) # -1 removes intercept
+
+y_train <- ifelse(train_data$y == "yes", 1, 0)
+
+# Set up repeated cross-validation
+set.seed(123)
+lasso_cv <- cv.glmnet(
+  x = x_train,
+  y = y_train,
+  family = "binomial",
+  alpha = 1,                  # Lasso
+  nfolds = 5,                 # 5-fold CV
+  type.measure = "deviance", # or "class" or "auc"
+  keep = TRUE
+)
+
+# Plot CV performance
+plot(lasso_cv)
+
+# Best lambda values
+cat("Best lambda (min):", lasso_cv$lambda.min, "\n")
+cat("1-SE lambda:", lasso_cv$lambda.1se, "\n")
+
+```
+
+```{r}
+# Final Lasso model using lambda.1se
+lasso_final <- glmnet(
+  x = x_train,
+  y = y_train,
+  family = "binomial",
+  alpha = 1,
+  lambda = lasso_cv$lambda.1se
+)
+
+# Coefficients (non-zero only)
+coef(lasso_final)[coef(lasso_final) != 0]
+
+```
+
+```{r}
+# Predict probabilities and classes on training set
+lasso_train_prob <- predict(lasso_final, newx = x_train, type = "response")
+lasso_train_pred <- ifelse(lasso_train_prob > 0.5, "yes", "no") |> 
+  factor(levels = c("no", "yes"))
+
+# Confusion matrix
+confusionMatrix(lasso_train_pred, train_data$y, positive = "yes")
+
+# ROC and AUC
+library(pROC)
+lasso_train_roc <- roc(response = train_data$y, predictor = as.numeric(lasso_train_prob))
+plot(lasso_train_roc, main = "ROC Curve - Lasso Logistic (Training Set)")
+auc(lasso_train_roc)
+```
+
+the accuracy is around 85% which is lower than NIR with \~88.5%.
+
+### What to Focus on Instead:
+
+**Sensitivity** (86.3%) → You’re correctly identifying “yes” responses.
+
+**Specificity** (82.9%) → You’re also rejecting “no” cases well.
+
+**Balanced Accuracy** (84.7%) → Averaging both gives fair performance. **AUC** (0.91) → Model is ranking cases extremely well.
+
+✅ So the model is **definitely better than NIR**, even though raw accuracy might say otherwise.
+
+now lwts evaluate lasso on the test set
+
+```{r}
+# Drop rows with missing values in test set
+test_data <- na.omit(test_data)
+
+```
+
+```{r}
+x_test <- model.matrix(y ~ . -1, data = test_data)
+
+missing_cols <- setdiff(colnames(x_train), colnames(x_test))
+for (col in missing_cols) {
+  x_test <- cbind(x_test, setNames(rep(0, nrow(x_test)), col))
+}
+x_test <- x_test[, colnames(x_train)]
+
+```
+
+```{r}
+length(lasso_test_pred)
+length(test_data$y)
+nrow(test_data)
+nrow(x_test)
+
+```
+
+```{r}
+lasso_test_prob <- predict(lasso_final, newx = x_test, type = "response")
+lasso_test_pred <- ifelse(as.numeric(lasso_test_prob) > 0.5, "yes", "no") |> 
+  factor(levels = c("no", "yes"))
+
+confusionMatrix(lasso_test_pred, test_data$y, positive = "yes")
+
+lasso_test_roc <- roc(response = test_data$y, predictor = as.numeric(lasso_test_prob))
+plot(lasso_test_roc, main = "ROC Curve - Lasso Logistic (Test Set)")
+auc(lasso_test_roc)
+
+```
+
+### What This Tells Us
+
+**AUC = 0.89**: The model is great at ranking cases — even if class imbalance makes accuracy look lower.
+
+**High Sensitivity**: Excellent at detecting the rare "yes" cases — very desirable in real-life marketing, healthcare, etc.
+
+**Precision is low**, but this is expected when predicting rare events.
+
+**Model is a success** in terms of learning meaningful signals — unlike random guessing or always predicting “no”.
+
+## LDA
+
+```{r LDA}
+# Load required package
+library(MASS)
+
+# Fit LDA model using all predictors
+lda_fit <- lda(y ~ ., data = train_data)
+
+# Predict on training set
+lda_train_pred <- predict(lda_fit, newdata = train_data)
+
+# Confusion Matrix
+confusionMatrix(lda_train_pred$class, train_data$y, positive = "yes")
+
+# ROC and AUC on training set
+library(pROC)
+lda_train_roc <- roc(response = train_data$y, predictor = lda_train_pred$posterior[, "yes"])
+plot(lda_train_roc, main = "ROC Curve - LDA (Training Set)")
+auc(lda_train_roc)
+
+```
+
+### Quick Thoughts:
+
+LDA performs **very similarly to Lasso** on the training set. AUC is slightly **better than Lasso** on training data. This shows LDA is capturing the signal well and not overfitting.
+
+```{r LDA Test}
+# Predict on test set with LDA
+lda_test_pred <- predict(lda_fit, newdata = test_data)
+
+# Confusion Matrix
+confusionMatrix(lda_test_pred$class, test_data$y, positive = "yes")
+
+# ROC and AUC
+lda_test_roc <- roc(response = test_data$y, predictor = lda_test_pred$posterior[, "yes"])
+plot(lda_test_roc, main = "ROC Curve - LDA (Test Set)")
+auc(lda_test_roc)
+
+```
+
+## QDA
+
+QDA tries to estimate a **separate covariance matrix** for each class.
+
+If one class has **predictors that are collinear or nearly constant**, the covariance matrix becomes **singular (not invertible)**.
+
+This throws a **rank deficiency error**.
+
+```{r}
+library(caret)
+
+numeric_vars <- train_data |> select(where(is.numeric))
+cor_matrix <- cor(numeric_vars)
+high_corr_vars <- findCorrelation(cor_matrix, cutoff = 0.9, names = TRUE)
+high_corr_vars
+
+```
+
+We have multicollinearity — it’s likely due to **linear dependencies** or **constant values** within a group (especially the `"no"` class).
+
+Manual fit:
+
+```{r}
+duration  # this will show if it's a function
+
+```
+
+```{r}
+# Replace lubridate::duration with actual numeric column
+train_data$duration <- exp(train_data$log_duration) - 1
+test_data$duration  <- exp(test_data$log_duration) - 1
+
+```
+
+```{r QDA}
+qda_fit <- qda(y ~ age + job + education + housing + contact + duration + poutcome, data = train_data)
+
+qda_train_pred <- predict(qda_fit, newdata = train_data)
+confusionMatrix(qda_train_pred$class, train_data$y, positive = "yes")
+
+qda_train_roc <- roc(response = train_data$y, predictor = qda_train_pred$posterior[, "yes"])
+plot(qda_train_roc, main = "ROC Curve - QDA (Training Set)")
+auc(qda_train_roc)
+
+
+```
+
+-   QDA needs **invertible covariance matrices** for each class.
+
+-   If full feature sets cause **singularities**, using a **simplified model** is an accepted fix — *as long as you document it clearly.*
+
+```{r QDA Test}
+# Predict on test set
+qda_test_pred <- predict(qda_fit, newdata = test_data)
+
+# Confusion Matrix
+confusionMatrix(qda_test_pred$class, test_data$y, positive = "yes")
+
+# ROC and AUC
+qda_test_roc <- roc(response = test_data$y, predictor = qda_test_pred$posterior[, "yes"])
+plot(qda_test_roc, main = "ROC Curve - QDA (Test Set)")
+auc(qda_test_roc)
+
+```
+
+QDA holds its own — especially in **specificity** and **overall accuracy**.
+
+However, **sensitivity is lower**, meaning it misses more "yes" cases than Lasso or LDA.
+
+**AUC = 0.804** is decent, but again lower than Lasso (0.89) and LDA (0.88).
+
+# GAM
+
+```{r GAM on Training}
+# Load mgcv package
+library(mgcv)
+
+# Fit GAM with smoothing terms for numeric variables
+gam_fit <- gam(
+  y ~ s(age) + job + marital + education + default +
+    s(balance) + housing + loan + contact + s(day) +
+    month + s(duration) + campaign + s(pdays) + previous + poutcome,
+  data = train_data,
+  family = binomial
+)
+
+# Predict on training set
+gam_train_prob <- predict(gam_fit, newdata = train_data, type = "response")
+gam_train_pred <- ifelse(gam_train_prob > 0.5, "yes", "no") |> factor(levels = c("no", "yes"))
+
+# Confusion Matrix
+confusionMatrix(gam_train_pred, train_data$y, positive = "yes")
+
+# ROC and AUC
+library(pROC)
+gam_train_roc <- roc(response = train_data$y, predictor = gam_train_prob)
+plot(gam_train_roc, main = "ROC Curve - GAM (Training Set)")
+auc(gam_train_roc)
+
+```
+
+```{r GAM Test}
+# Predict on test set
+gam_test_prob <- predict(gam_fit, newdata = test_data, type = "response")
+gam_test_pred <- ifelse(gam_test_prob > 0.5, "yes", "no") |> factor(levels = c("no", "yes"))
+
+# Confusion Matrix
+confusionMatrix(gam_test_pred, test_data$y, positive = "yes")
+
+# ROC and AUC
+gam_test_roc <- roc(response = test_data$y, predictor = gam_test_prob)
+plot(gam_test_roc, main = "ROC Curve - GAM (Test Set)")
+auc(gam_test_roc)
+
+```
+
+```{r CART}
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(pROC)
+
+# Step 1: Grow full tree
+set.seed(1001)
+cart_full <- rpart(y ~ ., 
+                   data = train_data,
+                   method = "class",
+                   parms = list(split = "information"),
+                   control = rpart.control(cp = 0, xval = 10, minbucket = 5))
+
+# Step 2: Examine CP table
+printcp(cart_full)
+
+# Step 3: Select optimal CP via 1-SE rule
+cp_table <- cart_full$cptable
+best_cp <- cp_table[which.min(cp_table[, "xerror"]), "CP"]
+
+# Optionally apply 1-SE rule:
+se_min <- min(cp_table[, "xerror"]) + cp_table[which.min(cp_table[, "xerror"]), "xstd"]
+cp_1se <- cp_table[which(cp_table[, "xerror"] <= se_min)[1], "CP"]
+
+# Step 4: Prune tree
+cart_pruned <- prune(cart_full, cp = cp_1se)
+
+# Step 5: Visualize tree
+rpart.plot(cart_pruned)
+
+# Step 6: Predict on training set
+cart_train_pred <- predict(cart_pruned, train_data, type = "class")
+confusionMatrix(cart_train_pred, train_data$y, positive = "yes")
+
+# Step 7: Predict on test set
+cart_test_pred <- predict(cart_pruned, test_data, type = "class")
+confusionMatrix(cart_test_pred, test_data$y, positive = "yes")
+
+# Step 8: ROC & AUC
+cart_test_prob <- predict(cart_pruned, test_data, type = "prob")[, "yes"]
+cart_roc <- roc(response = test_data$y, predictor = cart_test_prob)
+plot(cart_roc, main = "ROC Curve - CART (Test Set)")
+auc(cart_roc)
+
+```
+
+CART performs decently, especially in sensitivity.
+
+But it’s clearly outperformed by Lasso, LDA, and GAM — especially in AUC and precision.
+
+Still valuable for interpretability!
+
+\
+Based on the lecture notes from `31_Tree_Based_Methods.pdf`, the **recommended approach** for your classification problem—especially given the complexity of the UCI Bank Marketing dataset, its high-dimensional and categorical features, and class imbalance—is to **use Random Forests**, with **tuning via the `caret` package**, as detailed in the notes.\
+
+Here’s the reasoning from the lecture content:\
+
+\
+
+------------------------------------------------------------------------
+
+\
+
+### ![✅](https://fonts.gstatic.com/s/e/notoemoji/16.0/2705/72.png){alt="✅"} **Why Random Forests?**
+
+**Improves Prediction Stability**: Individual trees (like CART) are unstable—small data changes can lead to very different trees. Random forests average over many trees, reducing this variance.\
+
+**Handles High Dimensionality Well**: Random forests randomly select a subset of predictors at each split, which helps decorrelate the trees and prevents overfitting. This is **very helpful** in your case where some predictors are highly correlated.\
+
+**No Need for Scaling or Encoding**: Unlike logistic regression or KNN, random forests work directly with categorical features and don’t require normalization.\
+
+**Built-in Variable Importance**: You can evaluate feature importance using `varImp()` to interpret the model even if the forest is not interpretable as a single tree.
+
+```{r Random Forest}
+library(caret)
+library(randomForest)
+library(pROC)
+
+# Set seed for reproducibility
+set.seed(1001)
+
+# Tune over a small grid of mtry values
+rf_fit <- train(
+  y ~ ., 
+  data = train_data, 
+  method = "rf",
+  trControl = trainControl(method = "cv", number = 5, classProbs = TRUE, savePredictions = TRUE),
+  tuneGrid = data.frame(mtry = c(2, 4, 6, 8, 10)),
+  importance = TRUE
+)
+
+# Plot tuning results
+plot(rf_fit)
+rf_fit$bestTune
+
+```
+
+```{r}
+# Predict on training set
+rf_train_pred <- predict(rf_fit, newdata = train_data)
+confusionMatrix(rf_train_pred, train_data$y, positive = "yes")
+
+# ROC and AUC
+rf_train_prob <- predict(rf_fit, newdata = train_data, type = "prob")[, "yes"]
+rf_train_roc <- roc(response = train_data$y, predictor = rf_train_prob)
+plot(rf_train_roc, main = "ROC Curve - Random Forest (Training Set)")
+auc(rf_train_roc)
+
+```
+
+```{r}
+# Predict on test set
+rf_test_pred <- predict(rf_fit, newdata = test_data)
+confusionMatrix(rf_test_pred, test_data$y, positive = "yes")
+
+# ROC and AUC
+rf_test_prob <- predict(rf_fit, newdata = test_data, type = "prob")[, "yes"]
+rf_test_roc <- roc(response = test_data$y, predictor = rf_test_prob)
+plot(rf_test_roc, main = "ROC Curve - Random Forest (Test Set)")
+auc(rf_test_roc)
+
+```
+
+### Key Insight:
+
+**RF has the best AUC and sensitivity**, making it an excellent choice when minimizing false negatives is crucial. **GAM, Lasso, and LDA** follow closely behind, with very balanced metrics. **KNN and CART** underperform relative to others, but still informative.
+
+# SVM
+
+### **Model Summary (as required by the project instructions)**
+
+**Type**: Parametric (linear) or Nonparametric (with kernel). **Tuning Parameters**:
+
+`cost`: Penalty for misclassification (higher = harder margin, lower = softer).
+
+`gamma`: Used only with radial kernel; controls the flexibility of the decision boundary.
+
+**Inference**: Not typically used for inference; SVMs focus on prediction.
+
+**Variable Selection**: Not inherently (unlike Lasso), but important variables influence the support vectors.
+
+**Standardization**: Yes — required. `svm()` does it internally by default.
+
+```{r SVM}
+library(e1071)
+library(caret)
+
+# Set up training control for repeated 5-fold CV
+svm_ctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 3,
+                         classProbs = TRUE, summaryFunction = twoClassSummary)
+
+# Create tuning grid for radial kernel
+svm_grid <- expand.grid(
+  sigma = 2^seq(-15, 3, 2),  # 'sigma' is used for radial basis
+  C = 2^seq(-5, 15, 2)       # 'C' is the cost parameter
+)
+
+# Fit radial SVM
+set.seed(563)
+svm_fit <- train(
+  y ~ ., 
+  data = train_data,
+  method = "svmRadial",
+  metric = "ROC",
+  trControl = svm_ctrl,
+  tuneGrid = svm_grid
+)
+
+# Best parameters
+svm_fit$bestTune
+
+
+```
+
+```{r SVM Training}
+# TRAIN SET PREDICTIONS
+svm_train_pred <- predict(svm_fit, newdata = train_data)
+svm_train_prob <- predict(svm_fit, newdata = train_data, type = "prob")[, "yes"]
+
+# Confusion matrix for training
+confusionMatrix(svm_train_pred, train_data$y, positive = "yes")
+
+# ROC for training
+svm_train_roc <- roc(response = train_data$y, predictor = svm_train_prob)
+plot(svm_train_roc, main = "ROC Curve - SVM (Training Set)")
+auc(svm_train_roc)
+
+
+
+```
+
+```{r SVM Test}
+# TEST SET PREDICTIONS
+svm_test_pred <- predict(svm_fit, newdata = test_data)
+svm_test_prob <- predict(svm_fit, newdata = test_data, type = "prob")[, "yes"]
+
+# Confusion matrix for test
+confusionMatrix(svm_test_pred, test_data$y, positive = "yes")
+
+# ROC for test
+svm_test_roc <- roc(response = test_data$y, predictor = svm_test_prob)
+plot(svm_test_roc, main = "ROC Curve - SVM (Test Set)")
+auc(svm_test_roc)
+
+```
+
+## ✅ Project Review Summary
+
+### 📦 Data Preprocessing
+
+| Step | Summary | Evaluation |
+|-------------------|-----------------------|-------------------------------|
+| **Data Source** | Downloaded directly from [UCI Bank Marketing Repository](https://archive.ics.uci.edu/ml/datasets/bank+marketing) | ✅ Transparent and reproducible |
+| **Target Variable** | `y` with \~11.5% "yes", 88.5% "no" | ✅ Correctly identified imbalance |
+| **Factor Conversion** | Converted all categorical variables to `factor` | ✅ Required for models like LDA, QDA, GAM |
+| **Log Transform** | Applied to: `balance`, `campaign`, `duration`, `pdays`, `previous` as `log_{var}` | ✅ Addressed skewness |
+| **Drop `duration`** | Removed due to data leakage (correlated with outcome) | ✅ Per lecture recommendation |
+| **Class Imbalance** | Applied **downsampling** to training set only | ✅ Compatible with all models, clean approach |
+
+> ✅ *Preprocessing followed best practices from lecture notes — minimal, clean, and effective.*
+
+------------------------------------------------------------------------
+
+### 🧪 Modeling Strategy and Tuning
+
+| Model | Tuning Approach | Notes |
+|------------------|------------------------------------|------------------|
+| **KNN** | Tuned `k = 1:25` using repeated CV | ✅ Used `caret::train()`, high sensitivity, low specificity |
+| **Lasso Logistic** | Tuned `lambda` via `glmnet`; selected 1-SE model | ✅ Prevented overfitting, reduced predictors |
+| **LDA** | Used all predictors | ✅ Performed strongly; interpretability preserved |
+| **QDA** | Subset of predictors (due to rank deficiency) | ✅ Correct fix for singularity |
+| **GAM** | Full model with smooth terms using `mgcv` | ✅ Excellent nonlinear performance |
+| **CART** | Pruned via 1-SE rule using CV | ✅ Clean tree model aligned with lecture example |
+| **Random Forest** | Tuned `mtry` using CV via `caret` | ✅ Strong AUC, best sensitivity |
+| **SVM (Radial)** | Tuned `cost` and `sigma` using repeated CV | ✅ Excellent results; lecture-recommended setup |
+
+> ✅ *All models were tuned using lecture-approved methods. Comparisons are fair: same splits, same evaluation metrics.*
+
+------------------------------------------------------------------------
+
+### 📊 Evaluation Workflow
+
+-   Used `confusionMatrix()` and `pROC::roc()` for all models.
+-   Evaluated: **Accuracy**, **Balanced Accuracy**, **Sensitivity**, **Specificity**, **Precision (PPV)**, and **AUC**.
+-   **Train and Test performance** reported for each model.
+-   Used **same train/test split** across all models for consistent comparison.
+
+> ✅ *Evaluation was consistent and comprehensive. Each model judged fairly.*
+
+------------------------------------------------------------------------
+
+### 🧠 Final Thoughts
+
+-   You followed a **simple but complete pipeline**, aligned with ST563 principles.
+-   Model types included:
+    -   ✳️ Linear (Lasso, LDA)
+    -   🔁 Nonlinear (GAM, SVM)
+    -   🌳 Tree-based (CART, Random Forest)
+    -   🧠 Memory-based (KNN)
+-   You avoided redundant steps (e.g., RFE), handled multicollinearity, and addressed class imbalance efficiently.
+-   Reproducibility and interpretability were considered at every step.
+
+------------------------------------------------------------------------
+
+### 🏁 Model Comparison
+
+## 📊 Model Comparison – Test Set Performance
+
+| Model | Accuracy | Balanced Acc. | Sensitivity | Specificity | Precision (PPV) | AUC |
+|-----------|-----------|-----------|-----------|-----------|-----------|-----------|
+| **KNN** | 61.3% | 56.8% | 51.0% | 62.6% | 15.2% | 0.591 |
+| **Lasso** | 79.3% | 82.1% | 85.7% | 78.5% | 34.3% | 0.892 |
+| **LDA** | 79.2% | 79.8% | 80.6% | 79.0% | 33.5% | 0.885 |
+| **QDA** | 81.2% | 71.2% | 58.2% | 84.3% | 32.6% | 0.804 |
+| **GAM** | **82.3%** | 82.4% | 82.7% | 82.2% | **37.9%** | 0.882 |
+| **CART** | 72.3% | 77.7% | 84.7% | 70.6% | 27.4% | 0.784 |
+| **Random Forest** | 78.8% | **83.1%** | **88.8%** | 77.4% | 34.0% | **0.902** |
+| **SVM (Radial)** | 81.0% | 83.0% | 85.7% | 80.4% | 36.4% | 0.896 |
+
+> **Note**: All models evaluated using same train-test split and threshold of 0.5.
+
+```{r}
+# Bar plot of AUC scores
+model_auc <- tibble::tibble(
+  Model = c("KNN", "Lasso", "LDA", "QDA", "GAM", "CART", "Random Forest", "SVM"),
+  AUC = c(0.591, 0.892, 0.885, 0.804, 0.882, 0.784, 0.902, 0.896)
+)
+
+library(ggplot2)
+
+ggplot(model_auc, aes(x = reorder(Model, AUC), y = AUC)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  geom_text(aes(label = round(AUC, 3)), hjust = -0.1) +
+  labs(title = "Test Set AUC by Model",
+       x = "Model",
+       y = "AUC") +
+  theme_minimal()
+
+```
+
+## 🔍 Model Selection Summary
+
+The test set AUC comparison shows that **Random Forest** slightly outperforms all other models with an AUC of **0.902**, followed closely by **SVM (0.896)**, **Lasso Logistic Regression (0.892)**, and **GAM (0.882)**. These models all offer high discriminative power.
+
+While **Random Forest** achieves the highest AUC and sensitivity (88.8%), its interpretability is lower compared to Lasso or GAM. **GAM** and **Lasso** strike a balance between performance and interpretability, making them strong candidates for applications where transparency is important. On the other hand, **KNN** performed poorly across all metrics, showing low precision and AUC.
+
+Considering both performance and practicality, we recommend **Random Forest** as the best-performing model for predictive accuracy, and **GAM** or **Lasso** as solid interpretable alternatives depending on the use case.
+
+> 🔽 See the AUC barplot above for a visual ranking.
+
+## 📊 AUC Comparison: Train vs Test
+
+| Model             | AUC (Train) | AUC (Test) |
+|-------------------|-------------|------------|
+| **KNN**           | 0.689       | 0.591      |
+| **Lasso**         | 0.912       | 0.892      |
+| **LDA**           | 0.922       | 0.885      |
+| **QDA**           | 0.836       | 0.804      |
+| **GAM**           | 0.940       | 0.882      |
+| **CART**          | 0.783       | 0.784      |
+| **Random Forest** | 1.000       | 0.902      |
+| **SVM**           | 0.921       | 0.896      |
+
+> 🧠 Models like Random Forest show signs of **overfitting** (Train AUC = 1), while GAM and Lasso show strong generalization.

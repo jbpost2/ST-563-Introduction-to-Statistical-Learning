@@ -1,0 +1,442 @@
+---
+title: "ST 563 Project"
+output: pdf_document
+date: "2025-04-03"
+---
+
+Introduction: 
+
+The dataset used for this project is the Default of Credit Card Clients dataset from the UCI Machine Learning Repository. The dataset contains 30,000 observations of credit card holders, with 23 predictor variables related to their demographics, credit history, and past repayment behavior. The goal is to predict whether an individual will default on their payment in the next month or not (default.payment.next.month).
+
+This dataset is commonly used in financial risk modeling and expected credit loss, something I'm interested in as a career. Financial institutions and wholesale banking companies rely on similar data to evaluate loan portfolios and predict the likelihood of borrower default using frameworks such as CCAR and CECL. 
+
+The goal is to build classification models to determine the probability of default. I'm going to do this by using models such as kNN, Logistic Regression, etc.
+
+Importing the data locally. We're going to skip reading the first line in because in the raw data we have predictors X1 - X23 and Y (response). The second line actually has the real variable names.
+```{r}
+library(readxl)
+default_data <- read_excel("~/NCSU/ST 563/default of credit card clients.xls", skip = 1)
+default_data
+```
+
+Data Cleaning
+
+Checking the variable type of each of the variables and whether or not there are any missing values. All the variables are numeric which isn't the case so we need to convert sex, education, marriage, PAY_X, and default payment next month to factor variables. The rest of the variables are numeric. There aren't any missing values since 0s in binary variables are significant.
+
+PAY_0 - PAY_6: Indicate whether the client was late in their payments for the past six months (April–September 2005). -2, -1, or 0: Paid on time or in advance; 1, 2, 3,...: Late by that number of months
+
+BILL_AMT and PAY_AMT: 0 values may be valid because a client may have no bill or made no payment. If a large percentage of rows contain all 0s, then we can handle the values differently.
+
+I'm also going to check the summary of some of these variables to make sure there aren't any extreme values or outliers. Even though there's not missing data, it may be useful to check rows that all have 0s for BILL_AMT and PAY_AMT.
+
+There were 795 rows that had 0s across BILL_AMT and PAY_AMT. However, after taking a glance at the raw data, some individuals with all 0s defaulted while others didn't. It may be useful to keep them in our dataset because it could affect the model.
+
+I ran the table function on MARRIAGE and EDUCATION because according to the UCI Machine Learning Repository, those should have the following levels: 
+
+X3: Education (1 = graduate school; 2 = university; 3 = high school; 4 = others).
+X4: Marital status (1 = married; 2 = single; 3 = others).
+
+However, Education had 7 levels instead of 4 and Marital status had 4 levels instead of 3. So, I'm going to add all the levels that aren't specified from the UCI repository into the "others" category to clean them.
+```{r}
+str(default_data)
+
+colSums(is.na(default_data))
+
+summary(default_data[, c("PAY_0", "PAY_2", "BILL_AMT1", "BILL_AMT2", "PAY_AMT1", "PAY_AMT2")])
+
+inactive_clients <- default_data[rowSums(default_data[, grep("BILL_AMT|PAY_AMT", colnames(default_data))] == 0) == 12, ]
+
+nrow(inactive_clients)
+
+default_data$SEX <- as.factor(default_data$SEX)
+default_data$EDUCATION <- as.factor(default_data$EDUCATION)
+default_data$MARRIAGE <- as.factor(default_data$MARRIAGE)
+
+default_data[, c("PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6")] <-  lapply(default_data[, c("PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6")], as.factor)
+
+default_data$`default payment next month` <- as.factor(default_data$`default payment next month`)
+
+table(default_data$EDUCATION)
+table(default_data$MARRIAGE)
+
+default_data$EDUCATION[default_data$EDUCATION %in% c(0, 5, 6)] <- 4
+
+default_data$EDUCATION <- factor(default_data$EDUCATION, 
+levels = c(1, 2, 3, 4), labels = c("Graduate School", "University", "High School", "Other"))
+
+default_data$MARRIAGE[default_data$MARRIAGE == 0] <- 3
+
+default_data$MARRIAGE <- factor(default_data$MARRIAGE, 
+levels = c(1, 2, 3), labels = c("Married", "Single", "Other"))
+
+#checking the structure one more time after data cleaning
+str(default_data)
+```
+
+Split the data into a train and test set (70/30). Rather than doing a random sample, I'm going to do createDataPartition function instead because we have an imbalance between default probability (0: 77.88%, 1: 22.12%). We have a much lower probability of default so we're going to ensure there's an even split between the train and test set.
+```{r}
+library(caret)
+
+set.seed(51)
+
+index <- createDataPartition(default_data$`default payment next month`, 
+                             p = 0.7, 
+                             list = FALSE)
+
+train <- default_data[index, ]
+test <- default_data[-index, ]
+
+id_col <- "ID"
+train_data <- train[, !names(train) %in% id_col]
+test_data <- test[, !names(test) %in% id_col]
+
+dim(train_data)
+dim(test_data)
+```
+
+
+1) kNN: This is a non-parametric model with one tuning parameter (k). The k (nearest neighbors) determines how many of the closest data points are considered when making a prediction. We can also use measures such as Euclidean distance (distance of measures). We can't use it for inference because it's a predictive model; we don't have numeric coefficients we can use to perform inference. kNN does not perform variable selection either. We would have to do some sort of standardization because if we're using the closest points to make a prediction, we need to make sure our predictors that are really large or really small are on the same scale. 
+
+I had to standardize the variables so I looked up some syntax online (Datacamp.com) and it showed me how to scale the variables so I used some of that syntax to scale the variables up to kgrid object.
+```{r}
+preProcValues <- preProcess(train_data[, -which(names(train_data) == "default payment next month")], method = c("center", "scale"))
+
+train_scaled <- predict(preProcValues, train_data)
+test_scaled <- predict(preProcValues, test_data)
+
+train_scaled$`default payment next month` <- train_data$`default payment next month`
+test_scaled$`default payment next month` <- test_data$`default payment next month`
+
+kgrid <- expand.grid(k = seq(1, 21, by = 2))
+
+tr <- trainControl(method = "cv", number = 5)
+
+knn_fit <- train(
+  `default payment next month` ~ .,
+  data = train_scaled, 
+  method = "knn",
+  tuneGrid = kgrid,
+  trControl = tr
+)
+
+best_k <- knn_fit$bestTune$k
+print(best_k)
+
+print(knn_fit)
+```
+
+```{r}
+#used knn3 here instead of train here because the train function was taking too long to run so I found knn3 online and it's way faster
+knn_final <- knn3(
+  `default payment next month` ~ ., 
+  data = train_scaled, 
+  k = 21
+)
+
+#had to convert them to class labels instead and add a threshold of 0.5; the reason for this is because knn3 returns probabilities by default so we have to convert them into classes to get our confusion matrix
+pred_probs <- predict(knn_final, test_scaled, type = "prob")
+preds <- ifelse(pred_probs[,2] > 0.5, 1, 0)
+preds <- as.factor(preds)
+
+confusionMatrix(preds, test_scaled$`default payment next month`)
+```
+
+The accuracy is 81.11%, which is pretty decent. The sensitivity is 95.78% which means the model does well to predict the no default cases since this is for class 0. However, the specificity is 29.45% which means that we're not doing a good job of predicting for default cases. We're heavily favoring the majority class over the minority class because of a data imbalance so we may have to use a different model.
+
+2) Logistic Regression: This is a parametric model because we have a linear combination of the predictors with the logistic function. We don't have any tuning parameters but we do have Lasso and Ridge Regression to help with regularization and feature selection at times. We can also use it for inference because we get coefficients; these are used to infer on log-odds, odds, and probabilities. If we use Lasso, then we shrink some of the coefficients to 0 and do variable selection but the standard logistic regression model doesn't do variable selection. Since we're modeling probability here, we don't need to standardize the predictors. 
+
+```{r}
+default_glm <- glm(`default payment next month` ~ ., family = "binomial", data = train_data)
+
+summary(default_glm)
+```
+
+We have way too many predictors here so we're going to use Lasso to do variable selection. We still have to exclude ID here and then create the design matrix without the ID variable. We're going to standardize our predictors and then fit the lasso model. 
+```{r warning = FALSE}
+library(glmnet)
+
+train_no_id <- train[, !names(train) %in% "ID"]
+
+X_train <- as.matrix(train[, !names(train) %in% c("ID", "default payment next month")])
+y_train <- train$`default payment next month`
+
+X_test <- as.matrix(test[, !names(test) %in% c("ID", "default payment next month")])
+y_test <- test$`default payment next month`
+
+cv_lasso <- cv.glmnet(X_train, y_train, family = "binomial", alpha = 1)
+
+lasso_model <- glmnet(X_train, y_train, family = "binomial", alpha = 1, lambda = cv_lasso$lambda.1se)
+
+coef(lasso_model)
+
+lasso_predictions <- predict(lasso_model, newx = X_test, s = cv_lasso$lambda.1se, type = "response")
+
+lasso_pred_class <- ifelse(lasso_predictions > 0.5, 1, 0)
+
+confusionMatrix(factor(lasso_pred_class, levels = c(0, 1)), factor(y_test, levels = c(0, 1)))
+```
+Setting the threshold at 0.5 shows us that the model does incredibly well to predict the defaults (98.05%). However, the model doesn't do the best job at predicting the no default class (16.33%). If our goal is to just predict the probability of defaulting, then this would be a good model to use. The accuracy is also 80% which means 80% of the predictions are correct. 
+
+What we can also do is tune the threshold to get a better balance of predicting both classes. If our goal would be predict both classes as best as possible, then we can lower the threshold to 0.35 to get 92% sensitivity and 41% specificity and 81% accuracy still. 
+
+3) GAMs: Natural Cubic Splines (with a logistic regression model). The spline function itself is non-parametric and we do have degrees of freedom as a tuning parameter (we can also manually pick this). We could use these for inference but we'd have to plot the results to see the effects. This model does not do variable selection and we don't need to standardize our predictors but it could be helpful in certain situations. 
+
+I was having trouble figuring out how to plot both LIMIT_BAL and AGE since I couldn't find how we plotted two predictors in one plot function from the notes. Instead, I chose to keep age constant by getting the median of AGE and plotted LIMIT_BAL instead.
+```{r warning = FALSE}
+library(ggplot2)
+library(caret)
+library(splines)
+library(gam)
+
+
+
+gam_model <- glm(`default payment next month` ~ ns(LIMIT_BAL, df = 9) + s(AGE, df = 4), data = train_data, family = binomial)
+
+
+summary(gam_model)
+
+xgrid <- seq(min(test_data$LIMIT_BAL), max(test_data$LIMIT_BAL), len = 101)
+
+newage <- median(test_data$AGE)
+
+pred <- predict(gam_model, newdata = data.frame(LIMIT_BAL = xgrid, AGE = newage))
+
+plot(xgrid, pred, type = "l", lwd = 2, 
+     xlab = "LIMIT_BAL", ylab = "f(LIMIT_BAL)")
+```
+
+What this plot is showing is that as the credit limit (LIMIT_BAL) increases, the probability of default decreases because the log-odds are going down. The x-axis shows values of the credit limit going all the way up to near 800,000. Higher credit limits are associated with a lower likelihood of defaulting. 
+
+4) Single tree model: Classification Tree. These are non-parametric and we can use them for limited inference. We get the splits based on the data but we don't have any coefficients or p-values that we can use to do hypothesis testing. The variable selection is built in to the algorithm and we don't need to scale our predictors. It chooses variables based on the split at each node. 
+
+I fit the model using rpart() and printed out the parameter table. This helped show us which pruning level minimizes the cv error. I also extracted the complexity parameter table to get the cv error rates for the different pruning levels and selected some specific levels and plotted the pruned tree using rpart.plot(). I used it to make predictions on the training data and compute the error matrix as well. I did this for for the 1-SE rule and the min cross cv error. I then evaluated the performance on the test set and printed out the confusion matrix to see certain metrics. 
+```{r}
+library(rpart)
+library(rpart.plot)
+library(klaR)
+library(caret)
+library(knitr)
+
+set.seed(1001)
+
+tree_model <- rpart(`default payment next month` ~ LIMIT_BAL + AGE + SEX + EDUCATION + MARRIAGE, data = train_data, method = 'class', parms = list(split = "information"), control = rpart.control(xval = 10, minbucket = 2, cp = 0))
+
+printcp(tree_model)
+
+cp <- tree_model$cptable
+
+final_tree1se <- prune(tree_model, cp = cp[3, 1])
+
+rpart.plot(final_tree1se)
+
+final_tree_mincv <- prune(tree_model, cp = cp[4, 1])
+
+rpart.plot(final_tree_mincv)
+
+pred_train1se <- predict(final_tree1se, newdata = train_data, type = "class")
+
+train_error1se <- klaR::errormatrix(true = train_data$`default payment next month`,  predicted = pred_train1se, relative = TRUE)
+
+train_error1se |> kable()
+
+pred_train_mincv <- predict(final_tree_mincv, newdata = train_data, type = "class")
+
+train_error_mincv <- klaR::errormatrix(true = train_data$`default payment next month`, predicted = pred_train_mincv, relative = TRUE)
+
+train_error_mincv |> kable()
+
+pred_test1se <- predict(final_tree1se, newdata = test_data, type = "class")
+
+confusionMatrix(pred_test1se, test_data$`default payment next month`)
+
+pred_test_mincv <- predict(final_tree_mincv, newdata = test_data, type = "class")
+
+confusionMatrix(pred_test_mincv, test_data$`default payment next month`)
+```
+
+Like before with the logistic regression model, we're doing a really strong job of identifying the default class but the model doesn't do as well identifying the non-default class since we have a low specificity. This is again due to an imbalance in our data so we'd have to use other techniques such sampling balancing (oversampling the minority class or undersampling the majority class). 
+
+5) Ensemble Tree Models - Boosting Regression Trees: This is a non-parametric model since it learns from the patterns in the data. There are tuning parameters such as the best number of trees. We can't really use them for inference since they're used for predicting and we don't get coefficients or p-values to do hypothesis testing on. They do variable selection as well because we pick trees based on importance when splitting them. We do not need to standardize our predictors. 
+
+I had to convert the response to numeric to fit the boosted model and when I went to predict on the new data, I turned the predictions back into classes with a 0.5 threshold. After fitting all the predictors and looking at the relative influence, the most important predictors were: PAY_0, PAY_2, BILL_AMT1, PAY_3, and LIMIT_BAL. So, instead of fitting all the predictors I only chose those predictors to fit the model. 
+```{r}
+library(gbm)
+
+train_data$`default payment next month` <- as.numeric(as.character(train_data$`default payment next month`))
+
+set.seed(1001)
+
+boosted_default <- gbm(
+  formula = `default payment next month` ~ PAY_0 + PAY_2 + PAY_3 + BILL_AMT1 + LIMIT_BAL,
+  data = train_data,
+  distribution = "bernoulli",
+  n.trees = 1000,
+  shrinkage = 0.1*2,
+  interaction.depth = 3,
+  n.minobsinnode = 10,
+  cv.folds = 5
+)
+
+print(boosted_default)
+
+best <- which.min(boosted_default$cv.error)
+best
+
+summary(boosted_default)
+boosted_default$cv.error[best]
+
+gbm.perf(boosted_default, method = "cv")
+
+pred <- predict(boosted_default, newdata = test_data, n.trees = best, type = "response")
+
+pred_class <- ifelse(pred > 0.35, 1, 0)
+
+conf_matrix <- confusionMatrix(factor(pred_class), factor(test_data$`default payment next month`))
+print(conf_matrix)
+```
+
+It looks like the optimal number of trees is 59 (lowest cross validation error). The minimum cv error is 0.869 which is too high because this means the model's log loss at the best iteration is around 0.869. When we fit the model to unseen data with a threshold of 0.5, we get an accuracy of about 81%, similar to the logistic regression model. The sensitivity of 95% tells us that the model does a really strong job of predicting the default class but a 31% of specificity shows us that it's not doing that good of a job predicting the non-default class.
+
+However, setting the threshold to 0.35 on the test set when predicting, we get a better balance between the sensitivity and specificity levels (91% and 44%), which may be a better threshold. Again, we'd probably want to perform oversampling and undersampling in the minority and majority classes, respectively. 
+
+6) Support Vector Machines: SVM is a non-parametric model and it does have tuning parameters such as cost and kernel type can also be a tuning parameter. We don't get coefficients or p-values since this is a classification task so we cannot make inference. It doesn't do feature selection directly but it does focus on providing features that define the support vectors. We do have to standardize the predictors because we're basing our predictions on certain distances. 
+
+I had to standardize the predictors separately because when I tried using the argument scale = TRUE, I got an error saying x must be numeric. My predictors are factors so I first selected only my numeric variables, scale them, and make sure the factor predictors aren't changed. 
+
+set.seed(1001)
+tr <- trainControl(method = "repeatedcv", 
+                   number = 3, repeats = 5)
+tune_grid <- expand.grid(cost = exp(seq(-2,2,len=10)))
+sv_caret <- train(`default payment next month` ~ PAY_0 + PAY_2 + PAY_AMT1 + BILL_AMT1 + LIMIT_BAL + AGE,
+                  data = scaled_train,
+                  method = "svmLinear2",
+                  tuneGrid = tune_grid,
+                  trControl = tr)
+
+I tried using the code above but I kept reaching the max number of iterations because of the size of the dataset. This lead to the dataset not converging. I chose to tune manually instead. I created a for loop that looped over the different values of the cost tuning parameter and that ran a bit faster compared to before. 
+```{r}
+library(e1071)
+library(caret)
+library(klaR)
+library(knitr)
+
+
+train_data$`default payment next month` <- as.factor(train_data$`default payment next month`)
+
+test_data$`default payment next month` <- as.factor(test_data$`default payment next month`)
+
+scaled_train <- train_data
+scaled_test <- test_data
+
+responsevar <- "default payment next month"
+
+numeric_colmns <- sapply(scaled_train, is.numeric)
+numeric_colmns[responsevar] <- FALSE
+
+scaled_train[, numeric_colmns] <- scale(scaled_train[, numeric_colmns])
+
+library(e1071)
+
+svm_default <- svm(
+  `default payment next month` ~ PAY_0 + PAY_2 + PAY_AMT1 + BILL_AMT1 + LIMIT_BAL + AGE,
+  data = scaled_train,
+  type = "C-classification",
+  kernel = "linear",
+  cost = 1
+)
+
+beta_hat <- coef(svm_default)
+beta_hat
+
+cost_values <- exp(seq(-5, 3, length.out = 10))
+
+
+results <- data.frame(cost = cost_values, accuracy = NA)
+
+for (i in 1:length(cost_values)) {
+
+svm_model <- svm(
+    `default payment next month` ~ PAY_0 + PAY_2 + PAY_AMT1 + BILL_AMT1 + LIMIT_BAL + AGE,
+    data = scaled_train,
+    type = "C-classification",
+    kernel = "linear",
+    cost = cost_values[i],
+    scale = FALSE
+  )
+  
+pred <- predict(svm_model, scaled_train)
+  
+
+accuracy <- mean(pred == scaled_train$`default payment next month`)
+  
+
+results$accuracy[i] <- accuracy
+}
+
+# Print results
+print(results)
+
+plot(results$cost, results$accuracy, type = "b", xlab = "Cost", ylab = "Accuracy", log = "x")
+
+
+final_svm <- svm(
+  `default payment next month` ~ PAY_0 + PAY_2 + PAY_AMT1 + BILL_AMT1 + LIMIT_BAL + AGE,
+  data = scaled_train,
+  type = "C-classification",
+  kernel = "linear",
+  cost = 3.39,
+  scale = FALSE
+)
+
+summary(final_svm)
+
+pred_class <- predict(final_svm, newdata = scaled_test)
+
+mean(pred_class == scaled_test$`default payment next month`)
+```
+
+It seems like the model's accuracy on the test set is about 0.5703, which is a bit low. This tells us that there may be some overfitting, where the model performs well on the training data but struggles to generalize to the test data. We also may have to use sampling techniques here to account for the data imbalance (oversampling and undersampling). 
+
+
+Which model do I like best?
+
+The best model for this data would be the logistic regression model. The reason I say that is because the main goal is for us to predict the actual loan defaults. With a threshold of 0.5, we had a really high sensitivity which meant the model predicted really well for the default class. If we decrease the threshold to 0.35, then we had a better balance between sensitivity and specificity. So, overall, the logistic regression model would be the best model to fit here due to its predictive ability which is our main goal here (predicting who would default based on the given predictors).  
+
+Refitting the logistic model to the entire data set
+
+I combined both training and testing sets using ribnd and created a dataframe calling it X_combined and scaled it like I did before in the original model. 
+```{r}
+combined_data <- rbind(train_data, test_data)
+
+X_combined <- combined_data[, !names(combined_data) %in% c("ID", "default payment next month")]
+
+X_combined <- data.frame(lapply(X_combined, as.numeric))
+y_combined <- combined_data$`default payment next month`
+
+X_combined <- scale(X_combined)
+
+cv_lasso_full <- cv.glmnet(X_combined, y_combined, family = "binomial", alpha = 1)
+
+lasso_model_full <- glmnet(X_combined, y_combined, family = "binomial", alpha = 1, lambda = cv_lasso_full$lambda.1se)
+
+coef(lasso_model_full)
+
+lasso_predictions_full <- predict(lasso_model_full, newx = X_combined, s = cv_lasso_full$lambda.1se, type = "response")
+
+threshold <- 0.35
+lasso_pred_class_full <- ifelse(lasso_predictions_full > threshold, 1, 0)
+
+confusionMatrix(factor(lasso_pred_class_full, levels = c(0, 1)), factor(y_combined, levels = c(0, 1)))
+```
+
+
+
+
+
+
+
+
+
+
+
+

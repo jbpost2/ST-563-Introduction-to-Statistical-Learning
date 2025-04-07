@@ -1,0 +1,773 @@
+---
+
+```yaml
+---
+title: "ST563 Final Project: Predicting Migrant Death Counts"
+author: "Alex Devoid"
+date: "`4/2/25`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+---
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+# Introduction
+
+I am investigating migrant death counts across different corridors and years in Arizona, aiming to build a regression model that can predict these counts using a range of environmental and geographic predictors. The data come from a CSV file called `mean_death_datapoints_improved.csv`, containing corridor/year identifiers, environmental features such as elevation, distance to towns, border characteristics, and a count of migrant deaths. Some are charactersitics of the corridor's geography, some are agregated attributes of deaths found in corridors in a given year. ese are categorical. 
+
+The **primary goal** of this project is to model the `death_counts` variable to better understand which features influence migrant deaths, and to compare multiple modeling approaches in terms of their predictive ability.
+
+
+
+Below is my **data dictionary** for quick reference, describing columns in `mean_death_datapoints_improved.csv`. 
+
+```{r data-dictionary, echo=FALSE, results='asis'}
+library(knitr)
+
+dict <- data.frame(
+  Field = c( "Reporting_year", "CORNO", "mountains", "coverage total",
+            "town_distance_miles", "road_distance_miles", "length", "miles", "death_counts",
+            "az_encounters", "az_staffing", "total_border_miles", "total_unwalled_miles",
+            "percent_unwalled_miles", "Reporting_year1", "elev_min", "elev_max", "elev_mean",
+            "elev_std", "slope_mean", "slope_std", "aspect_mean", "aspect_std", "rough_mean",
+            "rough_std", "nlcd_majority", "temp_DJF_mean", "tmax_DJF_max", "tmax_DJF_mean",
+            "temp_MAM_mean", "tmax_MAM_max", "tmax_MAM_mean", "temp_JJA_mean", "tmax_JJA_max",
+            "tmax_JJA_mean", "temp_SON_mean", "tmax_SON_max", "tmax_SON_mean"
+  ),
+  Description = c(
+
+    "Year of the record",
+    "Corridor identifier",
+    "Average mountain category of deaths", 
+     # As a note, I should have used "Mode mountain category of deaths" since this was an agregated categorical variable. 
+    
+    "Avg number of cell coverage polygons intersecting death locations by corridor-year",
+    "Avg miles from nearest town for corridor-year",
+    "Avg miles from the road for corridor-year",
+    "Length of the border in a corridor",
+    "Length in miles of the border corridor",
+    "Number of migrant deaths in that corridor-year",
+    "Encounters in Arizona for that corridor-year",
+    "Border patrol staffing in Arizona for that corridor-year",
+    "Total border length relevant to corridor (miles)",
+    "Miles of border lacking a wall/barrier",
+    "Percentage (0–100) of border miles unwalled",
+    "Duplicate or derived version of Reporting_year",
+    "Minimum elevation in corridor polygon",
+    "Maximum elevation in corridor polygon",
+    "Mean elevation in corridor polygon",
+    "Standard deviation of elevation in polygon",
+    "Mean slope in corridor polygon",
+    "Std dev of slope in polygon",
+    "Mean aspect (0–360) in polygon",
+    "Std dev of aspect in polygon",
+    "Mean terrain roughness index",
+    "Std dev of terrain roughness index",
+    "Most common NLCD land-cover class in polygon",
+    "Average winter temperature (DJF)",
+    "Max of monthly max temps in winter",
+    "Mean of monthly max temps in winter",
+    "Average spring temperature (MAM)",
+    "Max of monthly max temps in spring",
+    "Mean of monthly max temps in spring",
+    "Average summer temperature (JJA)",
+    "Max of monthly max temps in summer",
+    "Mean of monthly max temps in summer",
+    "Average autumn temperature (SON)",
+    "Max of monthly max temps in autumn",
+    "Mean of monthly max temps in autumn"
+  )
+)
+
+kable(dict, caption = "Data Dictionary: mean_death_datapoints_improved.csv")
+```
+
+---
+
+
+
+## Reading the Data & Exploratory Analysis
+
+```{r read-data}
+
+
+
+library(tidyverse)
+library(caret)
+library(mgcv)
+library(rpart)
+library(randomForest)
+library(e1071)
+library(kernlab)
+library(ggpubr)
+library(fixest)
+library(pdp)
+library(vip)
+library(ggplot2)
+library(janitor)
+library(Metrics)  # for R², MAE
+
+
+library(rpart.plot)   # for decision tree visualization
+library(broom)        # for tidy() on fixest or LM
+
+
+#### 2. READING THE DATA ####
+data_raw <- read_csv("/Users/alexdevoid/Documents/migrant_deaths_analysis/mean_death_datapoints_improved.csv")
+
+cat("=== DATA OVERVIEW ===\n")
+cat("Data Source: mean_death_datapoints_improved.csv\n")
+cat("Dimensions:", dim(data_raw)[1], "rows x", dim(data_raw)[2], "columns\n")
+cat("\nColumn types:\n"); print(sapply(data_raw, class))
+cat("\nPreview of first rows:\n"); print(head(data_raw, 3))
+cat("\nSummary of key numeric columns:\n"); print(summary(select(data_raw, where(is.numeric))[1:10]))
+cat("\nMissing value counts per column:\n"); print(colSums(is.na(data_raw)))
+```
+
+**Code Output Explanation**: 
+
+
+- Missing value counts confirm we have variables like `coverage total` with `113` missing entries, `az_staffing` with `48` missing, etc.
+
+### Exploratory Plots
+
+```{r eda-plots}
+#### 2A. EXPLORATORY DATA ANALYSIS PLOTS ####
+# 1) Histogram of death_counts
+ggplot(data_raw, aes(x = death_counts)) +
+  geom_histogram(bins = 30, color = "white") +
+  labs(title = "Histogram of death_counts",
+       x = "death_counts",
+       y = "Frequency") +
+  theme_minimal()
+
+# Save to disk
+p_hist <- ggplot(data_raw, aes(x = death_counts)) +
+  geom_histogram(bins = 30, color = "white") +
+  labs(title = "Histogram of death_counts",
+       x = "death_counts",
+       y = "Frequency") +
+  theme_minimal()
+ggsave("histogram_death_counts.png", plot = p_hist, width = 6, height = 4)
+
+# 2) Boxplot by CORNO
+if ("CORNO" %in% names(data_raw)) {
+  ggplot(data_raw, aes(x = factor(CORNO), y = death_counts)) +
+    geom_boxplot() +
+    labs(title = "Boxplot of death_counts by Corridor (CORNO)",
+         x = "CORNO",
+         y = "death_counts") +
+    theme_minimal()
+}
+if ("CORNO" %in% names(data_raw)) {
+  p_box <- ggplot(data_raw, aes(x = factor(CORNO), y = death_counts)) +
+    geom_boxplot() +
+    labs(title = "Boxplot of death_counts by Corridor (CORNO)",
+         x = "CORNO",
+         y = "death_counts") +
+    theme_minimal()
+  ggsave("boxplot_corridor.png", plot = p_box, width = 6, height = 4)
+}
+
+# 3) Scatterplot for 'town_distance_miles'
+if ("town_distance_miles" %in% names(data_raw)) {
+  ggplot(data_raw, aes(x = town_distance_miles, y = death_counts)) +
+    geom_point(alpha = 0.6) +
+    labs(title = "Scatterplot: Town Distance vs. death_counts",
+         x = "Town Distance (miles)",
+         y = "Death Counts") +
+    theme_minimal()
+}
+if ("town_distance_miles" %in% names(data_raw)) {
+  p_scatter <- ggplot(data_raw, aes(x = town_distance_miles, y = death_counts)) +
+    geom_point(alpha = 0.6) +
+    labs(title = "Scatterplot: Town Distance vs. death_counts",
+         x = "Town Distance (miles)",
+         y = "Death Counts") +
+    theme_minimal()
+  ggsave("scatter_town_distance.png", plot = p_scatter, width = 6, height = 4)
+}
+```
+
+**Observations**:
+I consider the distribution of death counts to have "True zeros” over zero inflation as there are no excess zeros caused by a corridor that's where deaths are impossible. No corridor is imume to deaths, as boides have been found in each corridor at some point. The distribution is skewed right. 
+
+The average distnace to towns seems skewed slightly right. 
+
+
+---
+
+## Data Cleaning & Imputation
+
+```{r cleaning}
+#### 3. DATA CLEANING & IMPUTATION ####
+impute_with_indicator <- function(df, orig_col) {
+  miss_col  <- paste0(orig_col, "_missing")
+  imput_col <- paste0(orig_col, "_imputed")
+  df[[miss_col]]  <- ifelse(is.na(df[[orig_col]]), 1, 0)
+  med_val <- median(df[[orig_col]], na.rm=TRUE)
+  df[[imput_col]] <- ifelse(is.na(df[[orig_col]]), med_val, df[[orig_col]])
+  df
+}
+
+cat("\n=== CLEANING NOTES ===\n")
+cat("Removing columns: Unnamed: 0, Reporting_year1\n")
+data_raw <- data_raw %>% select(-one_of(c("Unnamed: 0","Reporting_year1")))
+
+# Ensure reporting_year is present
+if ("Reporting_year" %in% names(data_raw)) {
+  data_raw <- data_raw %>% mutate(reporting_year = factor(Reporting_year))
+} else {
+  stop("Column 'Reporting_year' is missing.")
+}
+
+vars_to_impute <- c("coverage total","town_distance_miles","road_distance_miles","az_staffing","mountains")
+cat("Imputing median values for: ", paste(vars_to_impute, collapse=", "), "\n")
+
+data_raw <- data_raw %>%
+  mutate(corno = factor(CORNO)) %>%
+  select(-CORNO)
+
+for(v in vars_to_impute){ 
+  if(v %in% names(data_raw)){ 
+    data_raw <- impute_with_indicator(data_raw, v) 
+  }
+}
+data_raw <- data_raw %>% select(-one_of(vars_to_impute))
+data_raw <- data_raw %>% drop_na(death_counts)
+cat("Dimension after cleaning:", dim(data_raw), "\n")
+
+#### 4. SPLIT DATA ####
+set.seed(123)
+train_idx  <- createDataPartition(data_raw$death_counts, p=0.8, list=FALSE)
+train_data <- data_raw[train_idx, ]
+test_data  <- data_raw[-train_idx, ]
+cat("Train size:", nrow(train_data), "Test size:", nrow(test_data), "\n")
+
+#### 5. FURTHER PREPROCESSING ####
+train_data <- train_data %>% mutate(Reporting_year = factor(Reporting_year))
+test_data  <- test_data %>% mutate(Reporting_year = factor(Reporting_year))
+
+nzv <- nearZeroVar(train_data)
+if(length(nzv)>0){
+  cat("[INFO] Removing near-zero variance:\n"); print(colnames(train_data)[nzv])
+  train_data <- train_data[,-nzv]; test_data  <- test_data[ , -nzv, drop=FALSE]
+}
+
+cor_mat2  <- cor(select_if(train_data, is.numeric), use="pairwise.complete.obs")
+high_corr <- findCorrelation(cor_mat2, cutoff=0.90)
+if(length(high_corr) > 0){
+  to_remove <- colnames(train_data)[high_corr]
+  cat("[INFO] Removing correlated (|r|>0.90): ", paste(to_remove, collapse=", "), "\n")
+  train_data <- train_data %>% select(-any_of(to_remove))
+  test_data  <- test_data  %>% select(-any_of(to_remove))
+}
+
+train_data <- train_data %>% drop_na() %>% droplevels() %>% clean_names()
+test_data  <- test_data  %>% drop_na() %>% droplevels() %>% clean_names()
+cat("Final feature count after cleaning: ", ncol(train_data), "\n")
+```
+
+I chose to create a missingness indicator column and then impute with the median because I didn’t want to outright drop rows that had only a few missing values, but I also wanted to record which observations had imputed information. This gives me a sense of where missingness might be concentrated and potentially correlated with the outcome. Additionally, I removed any rows without null death_counts because the outcome variable is essential for both model fitting and evaluation. 
+
+I omitted any numeric variables that showed a correlation above 0.8: I used this threashold to  to guard against multicollinearity issues, ensuring that highly redundant features don’t undermine model performance or interpretability. 
+
+---
+
+## Modeling
+
+I fit the following models with 5-fold cross-validation (`trainControl(method="cv", number=5)`):
+
+```{r modeling}
+#### 6. MODEL TRAINING START ####
+tc <- trainControl(method="cv", number=5)
+
+## 6.1 LM
+lm_fit <- train(death_counts ~ ., data=train_data, method="lm", trControl=tc, preProcess=c("center","scale"))
+cat("\n--- Linear Model (LM) ---\n")
+cat("Type: Parametric, inference-capable\n")
+cat("Tuning: None\n")
+cat("Standardized predictors: Yes (center + scale)\n")
+cat("Variables used:\n"); print(attr(terms(lm_fit$finalModel), "term.labels"))
+print(summary(lm_fit$finalModel))
+
+## 6.2 kNN
+knn_fit <- train(death_counts ~ ., data=train_data, method="knn", tuneGrid=data.frame(k=seq(2,30,2)),
+                 trControl=tc, preProcess=c("center","scale"))
+cat("\n--- kNN ---\n")
+cat("Type: Non-parametric\n")
+cat("Tuning: k =", knn_fit$bestTune$k, "\n")
+cat("Standardized predictors: Yes (center + scale)\n")
+cat("Variables used:\n"); print(knn_fit$finalModel$coefnames)
+
+## 6.3 GAM
+gam_fit <- train(death_counts ~ ., data=train_data, method="gamSpline",
+                 trControl=tc, preProcess=c("center","scale","pca"))
+cat("\n--- GAM ---\n")
+cat("Type: Semi-parametric\n")
+cat("Preprocessing: PCA\n")
+cat("Variables used:\n"); print(gam_fit$finalModel$coefnames)
+
+## 6.4 Decision Tree
+tree_fit <- train(
+  death_counts ~ .,
+  data = train_data,
+  method = "rpart2",
+  tuneGrid = data.frame(maxdepth = 1:10),
+  trControl = tc
+)
+cat("\n--- Decision Tree (rpart2) ---\n")
+cat("Type: Non-parametric\n")
+cat("Tuning: maxdepth =", tree_fit$bestTune$maxdepth, "\n")
+cat("Variables used:\n"); print(tree_fit$finalModel$frame$var)
+
+## 6.5 Random Forest
+rf_fit <- train(
+  death_counts ~ .,
+  data = train_data,
+  method = "rf",
+  ntree = 500,
+  tuneLength = 5,
+  trControl = tc
+)
+cat("\n--- Random Forest ---\n")
+cat("Type: Non-parametric, ensemble\n")
+cat("Tuning: mtry =", rf_fit$bestTune$mtry, ", ntree = 500\n")
+cat("Variable importance:\n")
+rf_importance <- varImp(rf_fit)$importance
+rf_importance <- rf_importance[order(-rf_importance[, 1]), , drop = FALSE]
+cat("\nTop 10 variables by importance (Random Forest):\n")
+print(head(rf_importance, 10))
+
+## 6.6 SVM (Radial)
+svm_fit <- train(
+  death_counts ~ .,
+  data = train_data,
+  method = "svmRadial",
+  tuneLength = 5,
+  trControl = tc,
+  preProcess = c("center", "scale")
+)
+cat("\n--- SVM (Radial) ---\n")
+cat("Type: Non-parametric, kernel-based\n")
+cat("Tuning: sigma & C\n")
+print(svm_fit$bestTune)
+cat("Variables used:\n"); 
+cat("Variables used:\n")
+print(colnames(attr(svm_fit$terms, "dataClasses")))
+```
+
+**Key Tuning Results**:
+- **kNN** best k = 16  
+- **Decision Tree** best maxdepth = 8  
+- **Random Forest** best mtry = 62  
+- **SVM** bestTune: sigma ~ 0.008546, cost = 4  
+
+The Linear Model had no tuning, and GAM used `gamSpline` with PCA pre-processing. Some of the variables had singularities in the LM summary, indicating strong correlation or redundancy.
+
+-----
+
+### Quasi-Poisson Model (fixest)
+
+```{r fixest}
+#### 6.7 fixest QuasiPoisson ####
+cat("Structure of train_data:\n")
+str(train_data)
+
+train_data <- train_data %>% mutate(reporting_year = factor(reporting_year))
+test_data  <- test_data  %>% mutate(reporting_year = factor(reporting_year))
+
+poisson_deviance <- function(y_true, y_pred){
+  eps <- 1e-15
+  y_pred <- pmax(y_pred, eps)
+  y_true <- pmax(y_true, 0)
+  2 * sum(
+    ifelse(y_true > 0,
+           y_true * log(y_true / y_pred) - (y_true - y_pred),
+           -y_pred),
+    na.rm = TRUE
+  )
+}
+
+# Minimal model
+two_predictors_min <- c("town_distance_miles_imputed", "town_distance_miles_missing")
+two_predictors_min <- intersect(two_predictors_min, colnames(train_data))
+
+quasi_fit_min <- feglm(
+  fml = as.formula(paste0("death_counts ~ ",
+                          paste(two_predictors_min, collapse = " + "),
+                          " | reporting_year + corno")),
+  data = train_data,
+  family = "quasipoisson",
+  vcov = "cluster"
+)
+cat("\n--- fixest QuasiPoisson (Minimal) ---\n")
+cat("Type: Parametric GLM, fixed effects\n")
+cat("Fixed Effects: reporting_year + corno\n")
+cat("Variables used:\n"); print(two_predictors_min)
+summary(quasi_fit_min)
+
+pred_min <- predict(quasi_fit_min, newdata = test_data, type = "response")
+pred_min[is.na(pred_min)] <- 0
+rmse_min <- sqrt(mean((pred_min - test_data$death_counts)^2, na.rm = TRUE))
+dev_min  <- poisson_deviance(test_data$death_counts, pred_min)
+cat("[Quasi Min FE] RMSE =", rmse_min, "  Dev =", dev_min, "\n")
+
+# Full model
+full_vars <- setdiff(names(train_data), c("death_counts", "reporting_year", "corno"))
+quasi_fit_full <- feglm(
+  fml = as.formula(paste("death_counts ~", paste(full_vars, collapse = " +"), "| reporting_year + corno")),
+  data = train_data,
+  family = "quasipoisson",
+  vcov = "cluster"
+)
+res_quasi_clustered = summary(quasi_fit_full, se = "cluster")
+DISP <- sum(residuals(quasi_fit_full, type = 'pearson')^2) / 
+  degrees_freedom(res_quasi_clustered, type = "resid")
+
+print("Dispersion Parameter:")
+print(DISP)
+cat("Dispersion Parameter =", DISP, "\n")
+
+
+cat("\n--- fixest QuasiPoisson (Full) ---\n")
+cat("Type: Parametric GLM, fixed effects\n")
+cat("Fixed Effects: reporting_year + corno\n")
+cat("Variables used (", length(full_vars), "):\n")
+print(full_vars)
+summary(quasi_fit_full)
+
+pred_full <- predict(quasi_fit_full, newdata = test_data, type = "response")
+pred_full[is.na(pred_full)] <- 0
+rmse_full <- sqrt(mean((pred_full - test_data$death_counts)^2, na.rm = TRUE))
+dev_full  <- poisson_deviance(test_data$death_counts, pred_full)
+cat("[Quasi Full FE] RMSE =", rmse_full, "  Dev =", dev_full, "\n")
+```
+
+Overdispersion: The dispersion parameter was ~2.63, confirming some overdispersion and justifying Quasi-Poisson usage. The “minimal” model had an RMSE ~7.046, while the “full” model’s RMSE was ~7.118 on the test set.
+
+The QuasiPoisson assumes each death is independent, which makes sense here since migrant deaths aren’t contagious. I also included fixed effects for year and corridor to help control for broader factors—like weather or migration surges—that might vary over time or between regions.
+
+---
+
+## Testing Models
+
+```{r testing}
+#### 7. COMPARE ON TEST SET ####
+evaluate_model <- function(model, test_data, true_vals) {
+  preds <- predict(model, newdata = test_data)
+  rmse <- sqrt(mean((preds - true_vals)^2, na.rm = TRUE))
+  r2 <- R2(preds, true_vals)
+  mae <- mae(true_vals, preds)
+  list(rmse = rmse, r2 = r2, mae = mae, preds = preds)
+}
+
+models_caret <- list(LM = lm_fit, kNN = knn_fit, GAM = gam_fit, Tree = tree_fit, RF = rf_fit, SVM = svm_fit)
+results_metrics <- lapply(models_caret, function(m) evaluate_model(m, test_data, test_data$death_counts))
+
+results_df <- data.frame(
+  Model = names(results_metrics),
+  RMSE = sapply(results_metrics, function(x) x$rmse),
+  R2   = sapply(results_metrics, function(x) x$r2),
+  MAE  = sapply(results_metrics, function(x) x$mae)
+)
+
+# Add fixest QuasiPoisson models
+results_df <- rbind(
+  results_df,
+  data.frame(Model = "QuasiPoisson_MIN", RMSE = rmse_min, R2 = NA, MAE = mae(test_data$death_counts, pred_min)),
+  data.frame(Model = "QuasiPoisson_FULL", RMSE = rmse_full, R2 = NA, MAE = mae(test_data$death_counts, pred_full))
+)
+
+cat("\n=== MODEL COMPARISON (Test Set Metrics) ===\n")
+results_df <- results_df[order(results_df$RMSE), ]
+print(results_df)
+
+# Identify best model
+best_model <- results_df$Model[1]
+cat("\n>>> Best model based on RMSE:", best_model, "\n")
+
+# Sample predictions
+cat("\n--- Sample Predictions for Best Model ---\n")
+if (best_model %in% names(models_caret)) {
+  best_preds <- predict(models_caret[[best_model]], newdata = test_data)
+} else if (best_model == "QuasiPoisson_MIN") {
+  best_preds <- pred_min
+} else {
+  best_preds <- pred_full
+}
+print(head(data.frame(
+  Actual = test_data$death_counts,
+  Predicted = best_preds
+), 10))
+
+cat("\n--- Variable Importance (if applicable) ---\n")
+if (best_model == "RF") {
+  vip(rf_fit)
+} else if (best_model == "GAM") {
+  print(varImp(gam_fit))
+} else if (best_model == "LM") {
+  print(summary(lm_fit$finalModel))
+} else {
+  cat("Variable importance not available for this model type.\n")
+}
+```
+
+**Final Metrics** (test set):
+```
+                 Model      RMSE        R2      MAE
+1     QuasiPoisson_MIN  7.046270        NA 4.161443
+2   QuasiPoisson_FULL  7.117949        NA 4.226407
+3                  RF  7.362209 0.4430411 4.334269
+4                 kNN  7.878056 0.4029324 5.737647
+5                 SVM  8.682081 0.2880650 5.729474
+6               Tree  9.680368 0.1834764 5.744300
+7                GAM 10.174025 0.2490976 6.982540
+8                 LM 11.663990 0.1188335 8.357554
+```
+
+- Best models by RMSE: `QuasiPoisson_MIN` with RMSE ~ 7.046 and `QuasiPoisson_FULL` with RMSE ~ 7.117949  
+- Random Forest was close but slightly higher RMSE at 7.362.  
+- Linear Model gave an RMSE of ~11.66, the largest among these.  
+
+
+
+## Diagnostic & Interpretation Plots
+
+```{r diagnostics}
+
+### 1) LM Diagnostics Plots
+cat("\n--- LM Diagnostics Plots ---\n")
+if (!is.null(lm_fit$finalModel)) {
+  lm_resid_df <- data.frame(
+    Fitted = fitted(lm_fit$finalModel),
+    Residuals = residuals(lm_fit$finalModel)
+  )
+  ggplot(lm_resid_df, aes(x = Fitted, y = Residuals)) +
+    geom_point(alpha = 0.6) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+    labs(title = "LM: Residuals vs. Fitted Values") +
+    theme_minimal()
+
+  lm_qq_df <- data.frame(resid = residuals(lm_fit$finalModel))
+  ggplot(lm_qq_df, aes(sample = resid)) +
+    stat_qq() +
+    stat_qq_line(color = "red") +
+    labs(title = "LM: Q-Q Plot of Residuals") +
+    theme_minimal()
+}
+
+# Save 
+if (!is.null(lm_fit$finalModel)) {
+  p_lm_resid <- ggplot(lm_resid_df, aes(x = Fitted, y = Residuals)) +
+    geom_point(alpha = 0.6) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+    labs(title = "LM: Residuals vs. Fitted Values") +
+    theme_minimal()
+  ggsave("lm_residuals_vs_fitted.png", plot = p_lm_resid, width = 6, height = 4)
+  
+  p_lm_qq <- ggplot(lm_qq_df, aes(sample = resid)) +
+    stat_qq() +
+    stat_qq_line(color = "red") +
+    labs(title = "LM: Q-Q Plot of Residuals") +
+    theme_minimal()
+  ggsave("plots/lm_qq_plot.png", plot = p_lm_qq, width = 6, height = 4)
+}
+
+
+### 2) Decision Tree Plot
+cat("\n--- Decision Tree Plot ---\n")
+if (!is.null(tree_fit$finalModel) && inherits(tree_fit$finalModel, "rpart")) {
+  rpart.plot(tree_fit$finalModel,
+             main="Decision Tree (rpart2)",
+             type=3, extra=1)
+}
+
+if (!is.null(tree_fit$finalModel) && inherits(tree_fit$finalModel, "rpart")) {
+  png("plots/decision_tree_plot.png", width = 800, height = 600)
+  rpart.plot(tree_fit$finalModel,
+             main="Decision Tree (rpart2)",
+             type=3, extra=1)
+  dev.off()
+}
+
+### 3) Partial Dependence for Random Forest (or SVM, GAM)
+cat("\n--- Partial Dependence (Random Forest) ---\n")
+if (best_model == "RF") {
+  top_var <- rownames(rf_importance)[1]
+  cat("Plotting partial dependence for top variable:", top_var, "\n")
+  partial_rf <- partial(rf_fit$finalModel, 
+                        pred.var = top_var, 
+                        train = train_data)
+  autoplot(partial_rf, rug = TRUE, train = train_data) +
+    labs(title = paste("Partial Dependence on", top_var),
+         x = top_var,
+         y = "Predicted Death Counts") +
+    theme_minimal()
+}
+
+if (best_model == "RF") {
+  p_rf_partial <- autoplot(partial_rf, rug = TRUE, train = train_data) +
+    labs(title = paste("Partial Dependence on", top_var),
+         x = top_var,
+         y = "Predicted Death Counts") +
+    theme_minimal()
+  ggsave("plots/rf_partial_dependence.png", plot = p_rf_partial, width = 6, height = 4)
+}
+
+cat("\n--- Partial Dependence (GAM) ---\n")
+if (!is.null(gam_fit$finalModel) && inherits(gam_fit$finalModel, "gam")) {
+  gam_vars <- gam_fit$finalModel$var.summary
+  numeric_vars <- names(gam_vars)[sapply(gam_vars, is.numeric)]
+  if (length(numeric_vars) > 0) {
+    var_for_gam <- numeric_vars[1]
+    cat("Plotting partial dependence for GAM on variable:", var_for_gam, "\n")
+    partial_gam <- partial(gam_fit$finalModel,
+                           pred.var = var_for_gam,
+                           train = train_data)
+    autoplot(partial_gam, rug = TRUE, train = train_data) +
+      labs(title = paste("Partial Dependence (GAM) on", var_for_gam),
+           x = var_for_gam,
+           y = "Predicted Death Counts") +
+      theme_minimal()
+  }
+}
+
+if (!is.null(gam_fit$finalModel) && inherits(gam_fit$finalModel, "gam")) {
+  if (length(numeric_vars) > 0) {
+    p_gam_partial <- autoplot(partial_gam, rug = TRUE, train = train_data) +
+      labs(title = paste("Partial Dependence (GAM) on", var_for_gam),
+           x = var_for_gam,
+           y = "Predicted Death Counts") +
+      theme_minimal()
+    ggsave("plots/gam_partial_dependence.png", plot = p_gam_partial, width = 6, height = 4)
+  }
+}
+
+cat("\n--- Partial Dependence (SVM) ---\n")
+if (best_model == "SVM" && !is.null(svm_fit$finalModel)) {
+  svm_vars <- colnames(attr(svm_fit$terms, "dataClasses"))[-1]
+  if (length(svm_vars) > 0) {
+    var_for_svm <- svm_vars[1]
+    cat("Plotting partial dependence for SVM on variable:", var_for_svm, "\n")
+    partial_svm <- partial(svm_fit$finalModel,
+                           pred.var = var_for_svm,
+                           train = train_data)
+    autoplot(partial_svm, rug = TRUE, train = train_data) +
+      labs(title = paste("Partial Dependence (SVM) on", var_for_svm),
+           x = var_for_svm,
+           y = "Predicted Death Counts") +
+      theme_minimal()
+  }
+}
+if (best_model == "SVM" && !is.null(svm_fit$finalModel)) {
+  if (length(svm_vars) > 0) {
+    p_svm_partial <- autoplot(partial_svm, rug = TRUE, train = train_data) +
+      labs(title = paste("Partial Dependence (SVM) on", var_for_svm),
+           x = var_for_svm,
+           y = "Predicted Death Counts") +
+      theme_minimal()
+    ggsave("plots/svm_partial_dependence1.png", plot = p_svm_partial, width = 6, height = 4)
+  }
+}
+
+### 4) Coefficient Plot for fixest QuasiPoisson
+cat("\n--- fixest Coefficient Plot (Full) ---\n")
+coefs_full <- broom::tidy(quasi_fit_full)
+coefs_nonfe <- coefs_full[!grepl("corno|reporting_year", coefs_full$term), ]
+if(nrow(coefs_nonfe) > 0) {
+  ggplot(coefs_nonfe, aes(x = reorder(term, estimate), y = estimate)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = estimate - 2*std.error, ymax = estimate + 2*std.error), width = 0.2) +
+    coord_flip() +
+    labs(title = "Coefficient Estimates (QuasiPoisson Full)",
+         x = "Term",
+         y = "Estimate") +
+    theme_minimal()
+} else {
+  cat("No non-FE terms to plot in QuasiPoisson Full.\n")
+}
+
+if(nrow(coefs_nonfe) > 0) {
+  p_fixest_coef <- ggplot(coefs_nonfe, aes(x = reorder(term, estimate), y = estimate)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = estimate - 2*std.error, ymax = estimate + 2*std.error), width = 0.2) +
+    coord_flip() +
+    labs(title = "Coefficient Estimates (QuasiPoisson Full)",
+         x = "Term",
+         y = "Estimate") +
+    theme_minimal()
+  ggsave("plots/fixest_coefficient_plot.png", plot = p_fixest_coef, width = 6, height = 4)
+}
+
+### 5) Predicted vs. Actual for the Best Model
+cat("\n--- Predicted vs. Actual Scatter for Best Model ---\n")
+pred_df <- data.frame(
+  Actual = test_data$death_counts,
+  Predicted = best_preds
+)
+ggplot(pred_df, aes(x = Actual, y = Predicted)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(title = paste("Predicted vs. Actual for Best Model:", best_model),
+       x = "Actual death_counts",
+       y = "Predicted") +
+  theme_minimal()
+
+p_pred_vs_actual <- ggplot(pred_df, aes(x = Actual, y = Predicted)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(title = paste("Predicted vs. Actual for Best Model:", best_model),
+       x = "Actual death_counts",
+       y = "Predicted") +
+  theme_minimal()
+ggsave("plots/predicted_vs_actual.png", plot = p_pred_vs_actual, width = 6, height = 4)
+
+
+# Print model summary
+cat("\n--- Coefficient Summary Table ---\n")
+print(res_quasi_clustered$coeftable)
+
+# Print residual summary
+pearson_resid <- residuals(quasi_fit_full, type = "pearson")
+cat("\n--- Pearson Residual Summary ---\n")
+print(summary(pearson_resid))
+
+# Plot residuals vs fitted
+res_df <- data.frame(
+  Fitted = fitted(quasi_fit_full),
+  Residuals = pearson_resid
+)
+
+resid_plot <- ggplot(res_df, aes(x = Fitted, y = Residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "Residuals vs Fitted (QuasiPoisson Full Model)")
+
+print(resid_plot)
+ggsave("residuals_vs_fitted_quasi_full.png", resid_plot, width = 7, height = 5)
+
+```
+
+
+- For my linear model, the residuals are not perfectly normal. 
+
+- From `decision_tree_plot.png` we see the tree first splits on aspect_std < 114, highlighting it as the most important variable. Other key splits include mountains_imputed, coverage_total_missing, elev_min, and az_staffing_imputed, all of which help explain variation in death counts.
+
+Higher predicted deaths (e.g., 55 and 74) appear in nodes with certain combinations of these features, while the far-left node (0 deaths, n=94) reflects lower-risk conditions.
+
+- The full quasi-Poisson model fits reasonably well overall. The only variable that comes out highly significant is coverage_total_missing, which has a strong negative effect. Other predictors like town_distance_miles_imputed and mountains_imputed aren't statistically significant after accounting for year and corridor fixed effects. The residuals vs. fitted plot shows residuals spreading out as predicted deaths increase. This suggests overdispersion, which the quasi-Poisson model is designed to handle.
+
+---
+
+
+
+
+
+

@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<!-- saved from url=(0022)http://localhost:6046/ -->
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Matthieu Cartron">
+
+<title>ST 563 Project</title>
+<style class="anchorjs"></style><style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="./ST 563 Project_files/clipboard.min.js.download"></script>
+<script src="./ST 563 Project_files/quarto.js.download"></script>
+<script src="./ST 563 Project_files/popper.min.js.download"></script>
+<script src="./ST 563 Project_files/tippy.umd.min.js.download"></script>
+<script src="./ST 563 Project_files/anchor.min.js.download"></script>
+<link href="./ST 563 Project_files/tippy.css" rel="stylesheet">
+<link href="./ST 563 Project_files/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="./ST 563 Project_files/bootstrap.min.js.download"></script>
+<link href="./ST 563 Project_files/bootstrap-icons.css" rel="stylesheet">
+<link href="./ST 563 Project_files/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="./ST 563 Project_files/polyfill.min.js.download"></script>
+  <script src="./ST 563 Project_files/tex-chtml-full.js.download" type="text/javascript"></script><style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<style>.ansi-display{font-family:monospace;white-space:pre-wrap;--ansiBlack: #000000;--ansiRed: #cd3131;--ansiGreen: #00BC00;--ansiYellow: #949800;--ansiBlue: #0451a5;--ansiMagenta: #bc05bc;--ansiCyan: #0598bc;--ansiWhite: #555555;--ansiBrightBlack: #666666;--ansiBrightRed: #cd3131;--ansiBrightGreen: #14CE14;--ansiBrightYellow: #b5ba00;--ansiBrightBlue: #0451a5;--ansiBrightMagenta: #bc05bc;--ansiBrightCyan: #0598bc;--ansiBrightWhite: #a5a5a5}.dark-mode .ansi-display{--ansiBlack: #000000;--ansiRed: #cd3131;--ansiGreen: #0DBC79;--ansiYellow: #e5e510;--ansiBlue: #2472c8;--ansiMagenta: #bc3fbc;--ansiCyan: #11a8cd;--ansiWhite: #e5e5e5;--ansiBrightBlack: #666666;--ansiBrightRed: #f14c4c;--ansiBrightGreen: #23d18b;--ansiBrightYellow: #f5f543;--ansiBrightBlue: #3b8eea;--ansiBrightMagenta: #d670d6;--ansiBrightCyan: #29b8db;--ansiBrightWhite: #e5e5e5}@keyframes ansi-displaly-run-blink{50%{opacity:0}}.fui-FluentProvider h2{border-bottom:none;padding-bottom:0}</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-math {
+  display: inline-block;
+  text-align: left;
+  line-height: 0;
+  text-indent: 0;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 100%;
+  font-size-adjust: none;
+  letter-spacing: normal;
+  border-collapse: collapse;
+  word-wrap: normal;
+  word-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  padding: 1px 0;
+}
+
+mjx-container[jax="CHTML"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="CHTML"][display="true"][width="full"] {
+  display: flex;
+}
+
+mjx-container[jax="CHTML"][display="true"] mjx-math {
+  padding: 0;
+}
+
+mjx-container[jax="CHTML"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="CHTML"][justify="right"] {
+  text-align: right;
+}
+
+mjx-msub {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mi {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-c {
+  display: inline-block;
+}
+
+mjx-utext {
+  display: inline-block;
+  padding: .75em 0 .2em 0;
+}
+
+mjx-mn {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+
+mjx-c.mjx-c1D465.TEX-I::before {
+  padding: 0.442em 0.572em 0.011em 0;
+  content: "x";
+}
+
+mjx-c.mjx-c30::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "0";
+}
+
+mjx-c.mjx-c1D706.TEX-I::before {
+  padding: 0.694em 0.583em 0.012em 0;
+  content: "\3BB";
+}
+
+mjx-c.mjx-c1D459.TEX-I::before {
+  padding: 0.694em 0.298em 0.011em 0;
+  content: "l";
+}
+
+mjx-c.mjx-c1D44E.TEX-I::before {
+  padding: 0.441em 0.529em 0.01em 0;
+  content: "a";
+}
+
+mjx-c.mjx-c1D45A.TEX-I::before {
+  padding: 0.442em 0.878em 0.011em 0;
+  content: "m";
+}
+
+mjx-c.mjx-c1D44F.TEX-I::before {
+  padding: 0.694em 0.429em 0.011em 0;
+  content: "b";
+}
+
+mjx-c.mjx-c1D451.TEX-I::before {
+  padding: 0.694em 0.52em 0.01em 0;
+  content: "d";
+}
+
+mjx-c.mjx-c1D436.TEX-I::before {
+  padding: 0.705em 0.76em 0.022em 0;
+  content: "C";
+}
+
+mjx-c.mjx-c1D70E.TEX-I::before {
+  padding: 0.431em 0.571em 0.011em 0;
+  content: "\3C3";
+}
+
+mjx-c.mjx-c1D6FD.TEX-I::before {
+  padding: 0.705em 0.566em 0.194em 0;
+  content: "\3B2";
+}
+</style><style data-make-styles-bucket="d" data-priority="0"></style><style id="fui-FluentProviderr0"></style></head>
+
+<body class="quarto-light" data-tabster="{&quot;root&quot;:{}}">
+
+<i tabindex="0" role="none" data-tabster-dummy="" aria-hidden="true" style="position: fixed; height: 1px; width: 1px; opacity: 0.001; z-index: -1; content-visibility: hidden; top: 0px; left: 0px;"></i><div id="quarto-content" class="page-columns page-rows-contents page-layout-article toc-left">
+<div id="quarto-sidebar-toc-left" class="sidebar toc-left">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of Contents</h2>
+   
+  <ul>
+  <li><a href="http://localhost:6046/#data-processing" id="toc-data-processing" class="nav-link active" data-scroll-target="#data-processing">Data Processing</a>
+  <ul class="">
+  <li><a href="http://localhost:6046/#background-information" id="toc-background-information" class="nav-link" data-scroll-target="#background-information">Background Information</a></li>
+  <li><a href="http://localhost:6046/#ingestion-of-data-and-data-cleaning" id="toc-ingestion-of-data-and-data-cleaning" class="nav-link" data-scroll-target="#ingestion-of-data-and-data-cleaning">Ingestion of Data and Data Cleaning:</a>
+  <ul class="collapse">
+  <li><a href="http://localhost:6046/#dealing-with-multicollinearity" id="toc-dealing-with-multicollinearity" class="nav-link" data-scroll-target="#dealing-with-multicollinearity">Dealing with Multicollinearity</a></li>
+  <li><a href="http://localhost:6046/#transforming-the-response" id="toc-transforming-the-response" class="nav-link" data-scroll-target="#transforming-the-response">Transforming the Response</a></li>
+  <li><a href="http://localhost:6046/#enable-parallel-processing" id="toc-enable-parallel-processing" class="nav-link" data-scroll-target="#enable-parallel-processing">Enable Parallel Processing</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="http://localhost:6046/#modeling" id="toc-modeling" class="nav-link" data-scroll-target="#modeling">Modeling</a>
+  <ul class="collapse">
+  <li><a href="http://localhost:6046/#knn-model" id="toc-knn-model" class="nav-link" data-scroll-target="#knn-model">kNN Model</a></li>
+  <li><a href="http://localhost:6046/#lasso-model" id="toc-lasso-model" class="nav-link" data-scroll-target="#lasso-model">LASSO Model</a></li>
+  <li><a href="http://localhost:6046/#model-3-gam" id="toc-model-3-gam" class="nav-link" data-scroll-target="#model-3-gam">Model 3: GAM</a></li>
+  <li><a href="http://localhost:6046/#single-tree-model-regression" id="toc-single-tree-model-regression" class="nav-link" data-scroll-target="#single-tree-model-regression">Single Tree Model (Regression)</a></li>
+  <li><a href="http://localhost:6046/#random-forest-model" id="toc-random-forest-model" class="nav-link" data-scroll-target="#random-forest-model">Random Forest Model</a></li>
+  <li><a href="http://localhost:6046/#support-vector-machine" id="toc-support-vector-machine" class="nav-link" data-scroll-target="#support-vector-machine">Support Vector Machine</a></li>
+  </ul></li>
+  <li><a href="http://localhost:6046/#results" id="toc-results" class="nav-link" data-scroll-target="#results">Results</a></li>
+  <li><a href="http://localhost:6046/#refit-to-full-data-set" id="toc-refit-to-full-data-set" class="nav-link" data-scroll-target="#refit-to-full-data-set">Refit to Full Data Set</a></li>
+  </ul>
+</nav>
+</div>
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">ST 563 Project</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Matthieu Cartron </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="data-processing" class="level1">
+<h1>Data Processing</h1>
+<section id="background-information" class="level2">
+<h2 class="anchored" data-anchor-id="background-information">Background Information<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#background-information" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h2>
+<p>The following data is sourced from two sources: the U.S Census and the Centers for Medicare and Medicaid Services. From this latter government entity I took two datasets: The FY 2025 SNF VBP Facility-Level Dataset (contains facility-specific performance results for the fiscal year (FY) 2025 Skilled Nursing Facility Value-Based Purchasing (SNF VBP) Program) and the Provider Information Dataset, which includes (as of March 1st) general information on currently active nursing homes, including number of certified beds, quality measure scores, staffing and other information used in the Five-Star Rating System.</p>
+<p>From the U.S census I took ZIP-level median income and unemployment rates, and joined these by ZIP with the FY 2025 SNF VBP Facility-Level Dataset. This was then joined with the Provider Information data set.</p>
+<p><em>Project Goal: I ultimately decided to look at the <code>Total_Weighted_Health_Survey_Score</code>; this will be the response variable in this analysis.</em> The total weighted health survey score seems to give the best sense of how a skilled nursing facility might be operated. It is quite likely that some of the variable I include as predictors are used to construct the score to begin with, but this is what makes the analysis in large part interesting. I also include some economic variables that I thought could be related in some way.</p>
+</section>
+<section id="ingestion-of-data-and-data-cleaning" class="level2">
+<h2 class="anchored" data-anchor-id="ingestion-of-data-and-data-cleaning">Ingestion of Data and Data Cleaning:<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#ingestion-of-data-and-data-cleaning" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h2>
+<p>Below the data sets are combined based on ZIP code and the provider name.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="http://localhost:6046/#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidycensus)</span>
+<span id="cb1-2"><a href="http://localhost:6046/#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-3"><a href="http://localhost:6046/#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(RAQSAPI)</span>
+<span id="cb1-4"><a href="http://localhost:6046/#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
+<span id="cb1-5"><a href="http://localhost:6046/#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="http://localhost:6046/#cb1-6" aria-hidden="true" tabindex="-1"></a>nursing_data <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"FY_2025_SNF_VBP_Facility_Performance.csv"</span>)</span>
+<span id="cb1-7"><a href="http://localhost:6046/#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="http://localhost:6046/#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># bring in economic vars - API key not required</span></span>
+<span id="cb1-9"><a href="http://localhost:6046/#cb1-9" aria-hidden="true" tabindex="-1"></a>acs_data <span class="ot">&lt;-</span> <span class="fu">get_acs</span>(</span>
+<span id="cb1-10"><a href="http://localhost:6046/#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">geography =</span> <span class="st">"zcta"</span>,</span>
+<span id="cb1-11"><a href="http://localhost:6046/#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">variables =</span> <span class="fu">c</span>(<span class="at">median_income =</span> <span class="st">"B19013_001"</span>, <span class="at">unemployment_rate =</span> <span class="st">"B23025_005"</span>),</span>
+<span id="cb1-12"><a href="http://localhost:6046/#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">year =</span> <span class="dv">2023</span>, <span class="at">survey =</span> <span class="st">"acs5"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-13"><a href="http://localhost:6046/#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(GEOID, variable, estimate) <span class="sc">|&gt;</span></span>
+<span id="cb1-14"><a href="http://localhost:6046/#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> variable, <span class="at">values_from =</span> estimate) <span class="sc">|&gt;</span></span>
+<span id="cb1-15"><a href="http://localhost:6046/#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">ZIP_Code =</span> GEOID) <span class="sc">|&gt;</span></span>
+<span id="cb1-16"><a href="http://localhost:6046/#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">ZIP_Code =</span> <span class="fu">as.double</span>(ZIP_Code))</span>
+<span id="cb1-17"><a href="http://localhost:6046/#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="http://localhost:6046/#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="http://localhost:6046/#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="http://localhost:6046/#cb1-20" aria-hidden="true" tabindex="-1"></a>nursing_data <span class="ot">&lt;-</span> nursing_data <span class="sc">|&gt;</span></span>
+<span id="cb1-21"><a href="http://localhost:6046/#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Provider_Name =</span> <span class="st">`</span><span class="at">Provider Name</span><span class="st">`</span>,</span>
+<span id="cb1-22"><a href="http://localhost:6046/#cb1-22" aria-hidden="true" tabindex="-1"></a>         <span class="at">ZIP_Code =</span> <span class="st">`</span><span class="at">ZIP Code</span><span class="st">`</span>)</span>
+<span id="cb1-23"><a href="http://localhost:6046/#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="http://localhost:6046/#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge with nursing home data</span></span>
+<span id="cb1-25"><a href="http://localhost:6046/#cb1-25" aria-hidden="true" tabindex="-1"></a>nursing_data <span class="ot">&lt;-</span> nursing_data <span class="sc">|&gt;</span></span>
+<span id="cb1-26"><a href="http://localhost:6046/#cb1-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(acs_data, <span class="at">by =</span> <span class="st">"ZIP_Code"</span>)</span>
+<span id="cb1-27"><a href="http://localhost:6046/#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="http://localhost:6046/#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-29"><a href="http://localhost:6046/#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="http://localhost:6046/#cb1-30" aria-hidden="true" tabindex="-1"></a>cms_nursing_data <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"NH_ProviderInfo_Mar2025.csv"</span>)</span>
+<span id="cb1-31"><a href="http://localhost:6046/#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="http://localhost:6046/#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Standardize provider names for better matching</span></span>
+<span id="cb1-33"><a href="http://localhost:6046/#cb1-33" aria-hidden="true" tabindex="-1"></a>nursing_data <span class="ot">&lt;-</span> nursing_data <span class="sc">|&gt;</span></span>
+<span id="cb1-34"><a href="http://localhost:6046/#cb1-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">'Provider_Name'</span> <span class="ot">=</span> <span class="fu">tolower</span>(<span class="fu">trimws</span>(Provider_Name)))</span>
+<span id="cb1-35"><a href="http://localhost:6046/#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="http://localhost:6046/#cb1-36" aria-hidden="true" tabindex="-1"></a>cms_nursing_data <span class="ot">&lt;-</span> cms_nursing_data <span class="sc">|&gt;</span></span>
+<span id="cb1-37"><a href="http://localhost:6046/#cb1-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Provider_Name =</span> <span class="st">`</span><span class="at">Provider Name</span><span class="st">`</span>,</span>
+<span id="cb1-38"><a href="http://localhost:6046/#cb1-38" aria-hidden="true" tabindex="-1"></a>         <span class="at">ZIP_Code =</span> <span class="st">`</span><span class="at">ZIP Code</span><span class="st">`</span>,</span>
+<span id="cb1-39"><a href="http://localhost:6046/#cb1-39" aria-hidden="true" tabindex="-1"></a>         <span class="at">CMS_Rating =</span> <span class="st">`</span><span class="at">Overall Rating</span><span class="st">`</span>) </span>
+<span id="cb1-40"><a href="http://localhost:6046/#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="http://localhost:6046/#cb1-41" aria-hidden="true" tabindex="-1"></a>cms_nursing_data <span class="ot">&lt;-</span> cms_nursing_data <span class="sc">|&gt;</span></span>
+<span id="cb1-42"><a href="http://localhost:6046/#cb1-42" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(<span class="at">ZIP_Code =</span> <span class="fu">as.double</span>(ZIP_Code)) <span class="sc">|&gt;</span></span>
+<span id="cb1-43"><a href="http://localhost:6046/#cb1-43" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(<span class="at">Provider_Name =</span> <span class="fu">tolower</span>(<span class="fu">trimws</span>(Provider_Name)))</span>
+<span id="cb1-44"><a href="http://localhost:6046/#cb1-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-45"><a href="http://localhost:6046/#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge using BOTH Provider Name &amp; ZIP Code</span></span>
+<span id="cb1-46"><a href="http://localhost:6046/#cb1-46" aria-hidden="true" tabindex="-1"></a>nursing_data <span class="ot">&lt;-</span> nursing_data <span class="sc">|&gt;</span></span>
+<span id="cb1-47"><a href="http://localhost:6046/#cb1-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(cms_nursing_data, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"Provider_Name"</span>, <span class="st">"ZIP_Code"</span>))</span>
+<span id="cb1-48"><a href="http://localhost:6046/#cb1-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-49"><a href="http://localhost:6046/#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-50"><a href="http://localhost:6046/#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(nursing_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 9,762
+Columns: 123
+$ `SNF VBP Program Ranking`                                                    &lt;dbl&gt; …
+$ `Footnote -- SNF VBP Program Ranking`                                        &lt;lgl&gt; …
+$ `CMS Certification Number (CCN).x`                                           &lt;dbl&gt; …
+$ Provider_Name                                                                &lt;chr&gt; …
+$ `Provider Address.x`                                                         &lt;chr&gt; …
+$ `City/Town.x`                                                                &lt;chr&gt; …
+$ State.x                                                                      &lt;chr&gt; …
+$ ZIP_Code                                                                     &lt;dbl&gt; …
+$ `Baseline Period: FY 2019 Risk-Standardized Readmission Rate`                &lt;chr&gt; …
+$ `Footnote -- Baseline Period: FY 2019 Risk-Standardized Readmission Rate`    &lt;chr&gt; …
+$ `Performance Period: FY 2023 Risk-Standardized Readmission Rate`             &lt;dbl&gt; …
+$ `Footnote -- Performance Period: FY 2023 Risk-Standardized Readmission Rate` &lt;lgl&gt; …
+$ `Achievement Score`                                                          &lt;dbl&gt; …
+$ `Footnote -- Achievement Score`                                              &lt;lgl&gt; …
+$ `Improvement Score`                                                          &lt;chr&gt; …
+$ `Footnote -- Improvement Score`                                              &lt;chr&gt; …
+$ `Performance Score`                                                          &lt;dbl&gt; …
+$ `Footnote -- Performance Score`                                              &lt;lgl&gt; …
+$ `Incentive Payment Multiplier`                                               &lt;dbl&gt; …
+$ `Footnote -- Incentive Payment Multiplier`                                   &lt;lgl&gt; …
+$ median_income                                                                &lt;dbl&gt; …
+$ unemployment_rate                                                            &lt;dbl&gt; …
+$ `CMS Certification Number (CCN).y`                                           &lt;chr&gt; …
+$ `Provider Address.y`                                                         &lt;chr&gt; …
+$ `City/Town.y`                                                                &lt;chr&gt; …
+$ State.y                                                                      &lt;chr&gt; …
+$ `Telephone Number`                                                           &lt;dbl&gt; …
+$ `Provider SSA County Code`                                                   &lt;chr&gt; …
+$ `County/Parish`                                                              &lt;chr&gt; …
+$ `Ownership Type`                                                             &lt;chr&gt; …
+$ `Number of Certified Beds`                                                   &lt;dbl&gt; …
+$ `Average Number of Residents per Day`                                        &lt;dbl&gt; …
+$ `Average Number of Residents per Day Footnote`                               &lt;dbl&gt; …
+$ `Provider Type`                                                              &lt;chr&gt; …
+$ `Provider Resides in Hospital`                                               &lt;chr&gt; …
+$ `Legal Business Name`                                                        &lt;chr&gt; …
+$ `Date First Approved to Provide Medicare and Medicaid Services`              &lt;date&gt; …
+$ `Affiliated Entity Name`                                                     &lt;chr&gt; …
+$ `Affiliated Entity ID`                                                       &lt;dbl&gt; …
+$ `Continuing Care Retirement Community`                                       &lt;chr&gt; …
+$ `Special Focus Status`                                                       &lt;chr&gt; …
+$ `Abuse Icon`                                                                 &lt;chr&gt; …
+$ `Most Recent Health Inspection More Than 2 Years Ago`                        &lt;chr&gt; …
+$ `Provider Changed Ownership in Last 12 Months`                               &lt;chr&gt; …
+$ `With a Resident and Family Council`                                         &lt;chr&gt; …
+$ `Automatic Sprinkler Systems in All Required Areas`                          &lt;chr&gt; …
+$ CMS_Rating                                                                   &lt;dbl&gt; …
+$ `Overall Rating Footnote`                                                    &lt;dbl&gt; …
+$ `Health Inspection Rating`                                                   &lt;dbl&gt; …
+$ `Health Inspection Rating Footnote`                                          &lt;dbl&gt; …
+$ `QM Rating`                                                                  &lt;dbl&gt; …
+$ `QM Rating Footnote`                                                         &lt;dbl&gt; …
+$ `Long-Stay QM Rating`                                                        &lt;dbl&gt; …
+$ `Long-Stay QM Rating Footnote`                                               &lt;dbl&gt; …
+$ `Short-Stay QM Rating`                                                       &lt;dbl&gt; …
+$ `Short-Stay QM Rating Footnote`                                              &lt;dbl&gt; …
+$ `Staffing Rating`                                                            &lt;dbl&gt; …
+$ `Staffing Rating Footnote`                                                   &lt;dbl&gt; …
+$ `Reported Staffing Footnote`                                                 &lt;dbl&gt; …
+$ `Physical Therapist Staffing Footnote`                                       &lt;dbl&gt; …
+$ `Reported Nurse Aide Staffing Hours per Resident per Day`                    &lt;dbl&gt; …
+$ `Reported LPN Staffing Hours per Resident per Day`                           &lt;dbl&gt; …
+$ `Reported RN Staffing Hours per Resident per Day`                            &lt;dbl&gt; …
+$ `Reported Licensed Staffing Hours per Resident per Day`                      &lt;dbl&gt; …
+$ `Reported Total Nurse Staffing Hours per Resident per Day`                   &lt;dbl&gt; …
+$ `Total number of nurse staff hours per resident per day on the weekend`      &lt;dbl&gt; …
+$ `Registered Nurse hours per resident per day on the weekend`                 &lt;dbl&gt; …
+$ `Reported Physical Therapist Staffing Hours per Resident Per Day`            &lt;dbl&gt; …
+$ `Total nursing staff turnover`                                               &lt;dbl&gt; …
+$ `Total nursing staff turnover footnote`                                      &lt;dbl&gt; …
+$ `Registered Nurse turnover`                                                  &lt;dbl&gt; …
+$ `Registered Nurse turnover footnote`                                         &lt;dbl&gt; …
+$ `Number of administrators who have left the nursing home`                    &lt;dbl&gt; …
+$ `Administrator turnover footnote`                                            &lt;dbl&gt; …
+$ `Nursing Case-Mix Index`                                                     &lt;dbl&gt; …
+$ `Nursing Case-Mix Index Ratio`                                               &lt;dbl&gt; …
+$ `Case-Mix Nurse Aide Staffing Hours per Resident per Day`                    &lt;dbl&gt; …
+$ `Case-Mix LPN Staffing Hours per Resident per Day`                           &lt;dbl&gt; …
+$ `Case-Mix RN Staffing Hours per Resident per Day`                            &lt;dbl&gt; …
+$ `Case-Mix Total Nurse Staffing Hours per Resident per Day`                   &lt;dbl&gt; …
+$ `Case-Mix Weekend Total Nurse Staffing Hours per Resident per Day`           &lt;dbl&gt; …
+$ `Adjusted Nurse Aide Staffing Hours per Resident per Day`                    &lt;dbl&gt; …
+$ `Adjusted LPN Staffing Hours per Resident per Day`                           &lt;dbl&gt; …
+$ `Adjusted RN Staffing Hours per Resident per Day`                            &lt;dbl&gt; …
+$ `Adjusted Total Nurse Staffing Hours per Resident per Day`                   &lt;dbl&gt; …
+$ `Adjusted Weekend Total Nurse Staffing Hours per Resident per Day`           &lt;dbl&gt; …
+$ `Rating Cycle 1 Standard Survey Health Date`                                 &lt;date&gt; …
+$ `Rating Cycle 1 Total Number of Health Deficiencies`                         &lt;dbl&gt; …
+$ `Rating Cycle 1 Number of Standard Health Deficiencies`                      &lt;dbl&gt; …
+$ `Rating Cycle 1 Number of Complaint Health Deficiencies`                     &lt;dbl&gt; …
+$ `Rating Cycle 1 Health Deficiency Score`                                     &lt;dbl&gt; …
+$ `Rating Cycle 1 Number of Health Revisits`                                   &lt;dbl&gt; …
+$ `Rating Cycle 1 Health Revisit Score`                                        &lt;dbl&gt; …
+$ `Rating Cycle 1 Total Health Score`                                          &lt;dbl&gt; …
+$ `Rating Cycle 2 Standard Health Survey Date`                                 &lt;date&gt; …
+$ `Rating Cycle 2 Total Number of Health Deficiencies`                         &lt;dbl&gt; …
+$ `Rating Cycle 2 Number of Standard Health Deficiencies`                      &lt;dbl&gt; …
+$ `Rating Cycle 2 Number of Complaint Health Deficiencies`                     &lt;dbl&gt; …
+$ `Rating Cycle 2 Health Deficiency Score`                                     &lt;dbl&gt; …
+$ `Rating Cycle 2 Number of Health Revisits`                                   &lt;dbl&gt; …
+$ `Rating Cycle 2 Health Revisit Score`                                        &lt;dbl&gt; …
+$ `Rating Cycle 2 Total Health Score`                                          &lt;dbl&gt; …
+$ `Rating Cycle 3 Standard Health Survey Date`                                 &lt;date&gt; …
+$ `Rating Cycle 3 Total Number of Health Deficiencies`                         &lt;dbl&gt; …
+$ `Rating Cycle 3 Number of Standard Health Deficiencies`                      &lt;dbl&gt; …
+$ `Rating Cycle 3 Number of Complaint Health Deficiencies`                     &lt;dbl&gt; …
+$ `Rating Cycle 3 Health Deficiency Score`                                     &lt;dbl&gt; …
+$ `Rating Cycle 3 Number of Health Revisits`                                   &lt;dbl&gt; …
+$ `Rating Cycle 3 Health Revisit Score`                                        &lt;dbl&gt; …
+$ `Rating Cycle 3 Total Health Score`                                          &lt;dbl&gt; …
+$ `Total Weighted Health Survey Score`                                         &lt;dbl&gt; …
+$ `Number of Facility Reported Incidents`                                      &lt;dbl&gt; …
+$ `Number of Substantiated Complaints`                                         &lt;dbl&gt; …
+$ `Number of Citations from Infection Control Inspections`                     &lt;dbl&gt; …
+$ `Number of Fines`                                                            &lt;dbl&gt; …
+$ `Total Amount of Fines in Dollars`                                           &lt;dbl&gt; …
+$ `Number of Payment Denials`                                                  &lt;dbl&gt; …
+$ `Total Number of Penalties`                                                  &lt;dbl&gt; …
+$ Location                                                                     &lt;chr&gt; …
+$ Latitude                                                                     &lt;dbl&gt; …
+$ Longitude                                                                    &lt;dbl&gt; …
+$ `Geocoding Footnote`                                                         &lt;dbl&gt; …
+$ `Processing Date`                                                            &lt;date&gt; …</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="http://localhost:6046/#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(nursing_data, file = "skilled_nursing_data_Cartron_ST563.csv", </span></span>
+<span id="cb3-2"><a href="http://localhost:6046/#cb3-2" aria-hidden="true" tabindex="-1"></a>          <span class="co">#row.names = FALSE)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Below variables are renamed to be more useable. In addition, only a subset of the cleaned and renamed variables are used - I looked for what I thought would be mostly uncorrelated, interesting, and important predictors.</p>
+<p><em>NOTE</em>: We drop rows with N/A values as there are not many and we have a large, robust data set even without these missing values. Given the sample size, losing some important observations should not be expected to have a material impact on the results.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="http://localhost:6046/#cb4-1" aria-hidden="true" tabindex="-1"></a>nursing_data_cleaned <span class="ot">&lt;-</span> nursing_data <span class="sc">|&gt;</span></span>
+<span id="cb4-2"><a href="http://localhost:6046/#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Rename columns: Replace spaces with underscores and remove special characters</span></span>
+<span id="cb4-3"><a href="http://localhost:6046/#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb4-4"><a href="http://localhost:6046/#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">SNF_VBP_Program_Ranking =</span> <span class="st">`</span><span class="at">SNF VBP Program Ranking</span><span class="st">`</span>,</span>
+<span id="cb4-5"><a href="http://localhost:6046/#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">Provider_Name =</span> <span class="st">`</span><span class="at">Provider_Name</span><span class="st">`</span>,</span>
+<span id="cb4-6"><a href="http://localhost:6046/#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">Provider_Address =</span> <span class="st">`</span><span class="at">Provider Address.x</span><span class="st">`</span>,</span>
+<span id="cb4-7"><a href="http://localhost:6046/#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">City_Town =</span> <span class="st">`</span><span class="at">City/Town.x</span><span class="st">`</span>,</span>
+<span id="cb4-8"><a href="http://localhost:6046/#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">State =</span> <span class="st">`</span><span class="at">State.x</span><span class="st">`</span>,</span>
+<span id="cb4-9"><a href="http://localhost:6046/#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">ZIP_Code =</span> <span class="st">`</span><span class="at">ZIP_Code</span><span class="st">`</span>,</span>
+<span id="cb4-10"><a href="http://localhost:6046/#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Readmission_Rate_2019 =</span> <span class="st">`</span><span class="at">Baseline Period: FY 2019 Risk-Standardized Readmission Rate</span><span class="st">`</span>,</span>
+<span id="cb4-11"><a href="http://localhost:6046/#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">Readmission_Rate =</span> <span class="st">`</span><span class="at">Performance Period: FY 2023 Risk-Standardized Readmission Rate</span><span class="st">`</span>,</span>
+<span id="cb4-12"><a href="http://localhost:6046/#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">Achievement_Score =</span> <span class="st">`</span><span class="at">Achievement Score</span><span class="st">`</span>,</span>
+<span id="cb4-13"><a href="http://localhost:6046/#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">Improvement_Score =</span> <span class="st">`</span><span class="at">Improvement Score</span><span class="st">`</span>,</span>
+<span id="cb4-14"><a href="http://localhost:6046/#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">Performance_Score =</span> <span class="st">`</span><span class="at">Performance Score</span><span class="st">`</span>,</span>
+<span id="cb4-15"><a href="http://localhost:6046/#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">Incentive_Payment_Multiplier =</span> <span class="st">`</span><span class="at">Incentive Payment Multiplier</span><span class="st">`</span>,</span>
+<span id="cb4-16"><a href="http://localhost:6046/#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_income =</span> <span class="st">`</span><span class="at">median_income</span><span class="st">`</span>,</span>
+<span id="cb4-17"><a href="http://localhost:6046/#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">unemployment_rate =</span> <span class="st">`</span><span class="at">unemployment_rate</span><span class="st">`</span>,</span>
+<span id="cb4-18"><a href="http://localhost:6046/#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">CMS_Certification_Number =</span> <span class="st">`</span><span class="at">CMS Certification Number (CCN).y</span><span class="st">`</span>,</span>
+<span id="cb4-19"><a href="http://localhost:6046/#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">Provider_Address_y =</span> <span class="st">`</span><span class="at">Provider Address.y</span><span class="st">`</span>,</span>
+<span id="cb4-20"><a href="http://localhost:6046/#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">City_Town_y =</span> <span class="st">`</span><span class="at">City/Town.y</span><span class="st">`</span>,</span>
+<span id="cb4-21"><a href="http://localhost:6046/#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">State_y =</span> <span class="st">`</span><span class="at">State.y</span><span class="st">`</span>,</span>
+<span id="cb4-22"><a href="http://localhost:6046/#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">Telephone_Number =</span> <span class="st">`</span><span class="at">Telephone Number</span><span class="st">`</span>,</span>
+<span id="cb4-23"><a href="http://localhost:6046/#cb4-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">Provider_SSA_County_Code =</span> <span class="st">`</span><span class="at">Provider SSA County Code</span><span class="st">`</span>,</span>
+<span id="cb4-24"><a href="http://localhost:6046/#cb4-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">County_Parish =</span> <span class="st">`</span><span class="at">County/Parish</span><span class="st">`</span>,</span>
+<span id="cb4-25"><a href="http://localhost:6046/#cb4-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">Ownership_Type =</span> <span class="st">`</span><span class="at">Ownership Type</span><span class="st">`</span>,</span>
+<span id="cb4-26"><a href="http://localhost:6046/#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">Number_of_Certified_Beds =</span> <span class="st">`</span><span class="at">Number of Certified Beds</span><span class="st">`</span>,</span>
+<span id="cb4-27"><a href="http://localhost:6046/#cb4-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">Average_Number_of_Residents_per_Day =</span> <span class="st">`</span><span class="at">Average Number of Residents per Day</span><span class="st">`</span>,</span>
+<span id="cb4-28"><a href="http://localhost:6046/#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">Provider_Type =</span> <span class="st">`</span><span class="at">Provider Type</span><span class="st">`</span>,</span>
+<span id="cb4-29"><a href="http://localhost:6046/#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">Provider_Resides_in_Hospital =</span> <span class="st">`</span><span class="at">Provider Resides in Hospital</span><span class="st">`</span>,</span>
+<span id="cb4-30"><a href="http://localhost:6046/#cb4-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">Affiliated_Entity_Name =</span> <span class="st">`</span><span class="at">Affiliated Entity Name</span><span class="st">`</span>,</span>
+<span id="cb4-31"><a href="http://localhost:6046/#cb4-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">Continuing_Care_Retirement_Community =</span> <span class="st">`</span><span class="at">Continuing Care Retirement Community</span><span class="st">`</span>,</span>
+<span id="cb4-32"><a href="http://localhost:6046/#cb4-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">Abuse_Icon =</span> <span class="st">`</span><span class="at">Abuse Icon</span><span class="st">`</span>,</span>
+<span id="cb4-33"><a href="http://localhost:6046/#cb4-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">Most_Recent_Health_Inspection_More_Than_2_Years_Ago =</span> <span class="st">`</span><span class="at">Most Recent Health Inspection More Than 2 Years Ago</span><span class="st">`</span>,</span>
+<span id="cb4-34"><a href="http://localhost:6046/#cb4-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">Provider_Changed_Ownership_in_Last_12_Months =</span> <span class="st">`</span><span class="at">Provider Changed Ownership in Last 12 Months</span><span class="st">`</span>,</span>
+<span id="cb4-35"><a href="http://localhost:6046/#cb4-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">Resident_and_Family_Council =</span> <span class="st">`</span><span class="at">With a Resident and Family Council</span><span class="st">`</span>,</span>
+<span id="cb4-36"><a href="http://localhost:6046/#cb4-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">Automatic_Sprinkler_Required_Areas =</span> <span class="st">`</span><span class="at">Automatic Sprinkler Systems in All Required Areas</span><span class="st">`</span>,</span>
+<span id="cb4-37"><a href="http://localhost:6046/#cb4-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">CMS_Rating =</span> <span class="st">`</span><span class="at">CMS_Rating</span><span class="st">`</span>,</span>
+<span id="cb4-38"><a href="http://localhost:6046/#cb4-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">Health_Inspection_Rating =</span> <span class="st">`</span><span class="at">Health Inspection Rating</span><span class="st">`</span>,</span>
+<span id="cb4-39"><a href="http://localhost:6046/#cb4-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">QM_Rating =</span> <span class="st">`</span><span class="at">QM Rating</span><span class="st">`</span>,</span>
+<span id="cb4-40"><a href="http://localhost:6046/#cb4-40" aria-hidden="true" tabindex="-1"></a>    <span class="at">Long_Stay_QM_Rating =</span> <span class="st">`</span><span class="at">Long-Stay QM Rating</span><span class="st">`</span>,</span>
+<span id="cb4-41"><a href="http://localhost:6046/#cb4-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">Short_Stay_QM_Rating =</span> <span class="st">`</span><span class="at">Short-Stay QM Rating</span><span class="st">`</span>,</span>
+<span id="cb4-42"><a href="http://localhost:6046/#cb4-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">Staffing_Rating =</span> <span class="st">`</span><span class="at">Staffing Rating</span><span class="st">`</span>,</span>
+<span id="cb4-43"><a href="http://localhost:6046/#cb4-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">Reported_Nurse_Aide_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Reported Nurse Aide Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-44"><a href="http://localhost:6046/#cb4-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">Reported_LPN_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Reported LPN Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-45"><a href="http://localhost:6046/#cb4-45" aria-hidden="true" tabindex="-1"></a>    <span class="at">Reported_RN_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Reported RN Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-46"><a href="http://localhost:6046/#cb4-46" aria-hidden="true" tabindex="-1"></a>    <span class="at">Reported_Licensed_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Reported Licensed Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-47"><a href="http://localhost:6046/#cb4-47" aria-hidden="true" tabindex="-1"></a>    <span class="at">Reported_Total_Nurse_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Reported Total Nurse Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-48"><a href="http://localhost:6046/#cb4-48" aria-hidden="true" tabindex="-1"></a>    <span class="at">Total_Number_of_Nurse_Staff_Hours_per_Resident_per_Day_on_Weekend =</span> <span class="st">`</span><span class="at">Total number of nurse staff hours per resident per day on the weekend</span><span class="st">`</span>,</span>
+<span id="cb4-49"><a href="http://localhost:6046/#cb4-49" aria-hidden="true" tabindex="-1"></a>    <span class="at">Registered_Nurse_Hours_per_Resident_per_Day_on_Weekend =</span> <span class="st">`</span><span class="at">Registered Nurse hours per resident per day on the weekend</span><span class="st">`</span>,</span>
+<span id="cb4-50"><a href="http://localhost:6046/#cb4-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">Reported_Physical_Therapist_Staffing_Hours_per_Resident_Per_Day =</span> <span class="st">`</span><span class="at">Reported Physical Therapist Staffing Hours per Resident Per Day</span><span class="st">`</span>,</span>
+<span id="cb4-51"><a href="http://localhost:6046/#cb4-51" aria-hidden="true" tabindex="-1"></a>    <span class="at">Total_Nursing_Staff_Turnover =</span> <span class="st">`</span><span class="at">Total nursing staff turnover</span><span class="st">`</span>,</span>
+<span id="cb4-52"><a href="http://localhost:6046/#cb4-52" aria-hidden="true" tabindex="-1"></a>    <span class="at">Registered_Nurse_Turnover =</span> <span class="st">`</span><span class="at">Registered Nurse turnover</span><span class="st">`</span>,</span>
+<span id="cb4-53"><a href="http://localhost:6046/#cb4-53" aria-hidden="true" tabindex="-1"></a>    <span class="at">Number_of_Administrators_Having_Left_the_Nursing_Home =</span> <span class="st">`</span><span class="at">Number of administrators who have left the nursing home</span><span class="st">`</span>,</span>
+<span id="cb4-54"><a href="http://localhost:6046/#cb4-54" aria-hidden="true" tabindex="-1"></a>    <span class="at">Nursing_Case_Mix_Index =</span> <span class="st">`</span><span class="at">Nursing Case-Mix Index</span><span class="st">`</span>,</span>
+<span id="cb4-55"><a href="http://localhost:6046/#cb4-55" aria-hidden="true" tabindex="-1"></a>    <span class="at">Nursing_Case_Mix_Index_Ratio =</span> <span class="st">`</span><span class="at">Nursing Case-Mix Index Ratio</span><span class="st">`</span>,</span>
+<span id="cb4-56"><a href="http://localhost:6046/#cb4-56" aria-hidden="true" tabindex="-1"></a>    <span class="at">Case_Mix_Nurse_Aide_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Case-Mix Nurse Aide Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-57"><a href="http://localhost:6046/#cb4-57" aria-hidden="true" tabindex="-1"></a>    <span class="at">Case_Mix_LPN_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Case-Mix LPN Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-58"><a href="http://localhost:6046/#cb4-58" aria-hidden="true" tabindex="-1"></a>    <span class="at">Case_Mix_RN_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Case-Mix RN Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-59"><a href="http://localhost:6046/#cb4-59" aria-hidden="true" tabindex="-1"></a>    <span class="at">Case_Mix_Total_Nurse_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Case-Mix Total Nurse Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-60"><a href="http://localhost:6046/#cb4-60" aria-hidden="true" tabindex="-1"></a>    <span class="at">Case_Mix_Weekend_Total_Nurse_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Case-Mix Weekend Total Nurse Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-61"><a href="http://localhost:6046/#cb4-61" aria-hidden="true" tabindex="-1"></a>    <span class="at">Adjusted_Nurse_Aide_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Adjusted Nurse Aide Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-62"><a href="http://localhost:6046/#cb4-62" aria-hidden="true" tabindex="-1"></a>    <span class="at">Adjusted_LPN_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Adjusted LPN Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-63"><a href="http://localhost:6046/#cb4-63" aria-hidden="true" tabindex="-1"></a>    <span class="at">Adjusted_RN_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Adjusted RN Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-64"><a href="http://localhost:6046/#cb4-64" aria-hidden="true" tabindex="-1"></a>    <span class="at">Adjusted_Total_Nurse_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Adjusted Total Nurse Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-65"><a href="http://localhost:6046/#cb4-65" aria-hidden="true" tabindex="-1"></a>    <span class="at">Adjusted_Weekend_Total_Nurse_Staffing_Hours_per_Resident_per_Day =</span> <span class="st">`</span><span class="at">Adjusted Weekend Total Nurse Staffing Hours per Resident per Day</span><span class="st">`</span>,</span>
+<span id="cb4-66"><a href="http://localhost:6046/#cb4-66" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_1_Total_Number_of_Health_Deficiencies =</span> <span class="st">`</span><span class="at">Rating Cycle 1 Total Number of Health Deficiencies</span><span class="st">`</span>,</span>
+<span id="cb4-67"><a href="http://localhost:6046/#cb4-67" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_1_Number_of_Standard_Health_Deficiencies =</span> <span class="st">`</span><span class="at">Rating Cycle 1 Number of Standard Health Deficiencies</span><span class="st">`</span>,</span>
+<span id="cb4-68"><a href="http://localhost:6046/#cb4-68" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_1_Number_of_Complaint_Health_Deficiencies =</span> <span class="st">`</span><span class="at">Rating Cycle 1 Number of Complaint Health Deficiencies</span><span class="st">`</span>,</span>
+<span id="cb4-69"><a href="http://localhost:6046/#cb4-69" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_1_Health_Deficiency_Score =</span> <span class="st">`</span><span class="at">Rating Cycle 1 Health Deficiency Score</span><span class="st">`</span>,</span>
+<span id="cb4-70"><a href="http://localhost:6046/#cb4-70" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_1_Number_of_Health_Revisits =</span> <span class="st">`</span><span class="at">Rating Cycle 1 Number of Health Revisits</span><span class="st">`</span>,</span>
+<span id="cb4-71"><a href="http://localhost:6046/#cb4-71" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_1_Health_Revisit_Score =</span> <span class="st">`</span><span class="at">Rating Cycle 1 Health Revisit Score</span><span class="st">`</span>,</span>
+<span id="cb4-72"><a href="http://localhost:6046/#cb4-72" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_1_Total_Health_Score =</span> <span class="st">`</span><span class="at">Rating Cycle 1 Total Health Score</span><span class="st">`</span>,</span>
+<span id="cb4-73"><a href="http://localhost:6046/#cb4-73" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_2_Total_Number_of_Health_Deficiencies =</span> <span class="st">`</span><span class="at">Rating Cycle 2 Total Number of Health Deficiencies</span><span class="st">`</span>,</span>
+<span id="cb4-74"><a href="http://localhost:6046/#cb4-74" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_2_Number_of_Standard_Health_Deficiencies =</span> <span class="st">`</span><span class="at">Rating Cycle 2 Number of Standard Health Deficiencies</span><span class="st">`</span>,</span>
+<span id="cb4-75"><a href="http://localhost:6046/#cb4-75" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_2_Number_of_Complaint_Health_Deficiencies =</span> <span class="st">`</span><span class="at">Rating Cycle 2 Number of Complaint Health Deficiencies</span><span class="st">`</span>,</span>
+<span id="cb4-76"><a href="http://localhost:6046/#cb4-76" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_2_Health_Deficiency_Score =</span> <span class="st">`</span><span class="at">Rating Cycle 2 Health Deficiency Score</span><span class="st">`</span>,</span>
+<span id="cb4-77"><a href="http://localhost:6046/#cb4-77" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_2_Number_of_Health_Revisits =</span> <span class="st">`</span><span class="at">Rating Cycle 2 Number of Health Revisits</span><span class="st">`</span>,</span>
+<span id="cb4-78"><a href="http://localhost:6046/#cb4-78" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_2_Health_Revisit_Score =</span> <span class="st">`</span><span class="at">Rating Cycle 2 Health Revisit Score</span><span class="st">`</span>,</span>
+<span id="cb4-79"><a href="http://localhost:6046/#cb4-79" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_2_Total_Health_Score =</span> <span class="st">`</span><span class="at">Rating Cycle 2 Total Health Score</span><span class="st">`</span>,</span>
+<span id="cb4-80"><a href="http://localhost:6046/#cb4-80" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_3_Total_Number_of_Health_Deficiencies =</span> <span class="st">`</span><span class="at">Rating Cycle 3 Total Number of Health Deficiencies</span><span class="st">`</span>,</span>
+<span id="cb4-81"><a href="http://localhost:6046/#cb4-81" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_3_Number_of_Standard_Health_Deficiencies =</span> <span class="st">`</span><span class="at">Rating Cycle 3 Number of Standard Health Deficiencies</span><span class="st">`</span>,</span>
+<span id="cb4-82"><a href="http://localhost:6046/#cb4-82" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_3_Number_of_Complaint_Health_Deficiencies =</span> <span class="st">`</span><span class="at">Rating Cycle 3 Number of Complaint Health Deficiencies</span><span class="st">`</span>,</span>
+<span id="cb4-83"><a href="http://localhost:6046/#cb4-83" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_3_Health_Deficiency_Score =</span> <span class="st">`</span><span class="at">Rating Cycle 3 Health Deficiency Score</span><span class="st">`</span>,</span>
+<span id="cb4-84"><a href="http://localhost:6046/#cb4-84" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_3_Number_of_Health_Revisits =</span> <span class="st">`</span><span class="at">Rating Cycle 3 Number of Health Revisits</span><span class="st">`</span>,</span>
+<span id="cb4-85"><a href="http://localhost:6046/#cb4-85" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_3_Health_Revisit_Score =</span> <span class="st">`</span><span class="at">Rating Cycle 3 Health Revisit Score</span><span class="st">`</span>,</span>
+<span id="cb4-86"><a href="http://localhost:6046/#cb4-86" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating_Cycle_3_Total_Health_Score =</span> <span class="st">`</span><span class="at">Rating Cycle 3 Total Health Score</span><span class="st">`</span>,</span>
+<span id="cb4-87"><a href="http://localhost:6046/#cb4-87" aria-hidden="true" tabindex="-1"></a>    <span class="at">Total_Weighted_Health_Survey_Score =</span> <span class="st">`</span><span class="at">Total Weighted Health Survey Score</span><span class="st">`</span>,</span>
+<span id="cb4-88"><a href="http://localhost:6046/#cb4-88" aria-hidden="true" tabindex="-1"></a>    <span class="at">Number_of_Facility_Reported_Incidents =</span> <span class="st">`</span><span class="at">Number of Facility Reported Incidents</span><span class="st">`</span>,</span>
+<span id="cb4-89"><a href="http://localhost:6046/#cb4-89" aria-hidden="true" tabindex="-1"></a>    <span class="at">Number_of_Substantiated_Complaints =</span> <span class="st">`</span><span class="at">Number of Substantiated Complaints</span><span class="st">`</span>,</span>
+<span id="cb4-90"><a href="http://localhost:6046/#cb4-90" aria-hidden="true" tabindex="-1"></a>    <span class="at">Number_of_Fines =</span> <span class="st">`</span><span class="at">Number of Fines</span><span class="st">`</span>,</span>
+<span id="cb4-91"><a href="http://localhost:6046/#cb4-91" aria-hidden="true" tabindex="-1"></a>    <span class="at">Total_Amount_of_Fines_in_Dollars =</span> <span class="st">`</span><span class="at">Total Amount of Fines in Dollars</span><span class="st">`</span>,</span>
+<span id="cb4-92"><a href="http://localhost:6046/#cb4-92" aria-hidden="true" tabindex="-1"></a>    <span class="at">Number_of_Payment_Denials =</span> <span class="st">`</span><span class="at">Number of Payment Denials</span><span class="st">`</span>,</span>
+<span id="cb4-93"><a href="http://localhost:6046/#cb4-93" aria-hidden="true" tabindex="-1"></a>    <span class="at">Total_Number_of_Penalties =</span> <span class="st">`</span><span class="at">Total Number of Penalties</span><span class="st">`</span></span>
+<span id="cb4-94"><a href="http://localhost:6046/#cb4-94" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb4-95"><a href="http://localhost:6046/#cb4-95" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Select only necessary vars</span></span>
+<span id="cb4-96"><a href="http://localhost:6046/#cb4-96" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb4-97"><a href="http://localhost:6046/#cb4-97" aria-hidden="true" tabindex="-1"></a>    Readmission_Rate, </span>
+<span id="cb4-98"><a href="http://localhost:6046/#cb4-98" aria-hidden="true" tabindex="-1"></a>    median_income, </span>
+<span id="cb4-99"><a href="http://localhost:6046/#cb4-99" aria-hidden="true" tabindex="-1"></a>    unemployment_rate,</span>
+<span id="cb4-100"><a href="http://localhost:6046/#cb4-100" aria-hidden="true" tabindex="-1"></a>    Number_of_Certified_Beds, </span>
+<span id="cb4-101"><a href="http://localhost:6046/#cb4-101" aria-hidden="true" tabindex="-1"></a>    Average_Number_of_Residents_per_Day, </span>
+<span id="cb4-102"><a href="http://localhost:6046/#cb4-102" aria-hidden="true" tabindex="-1"></a>    Provider_Type,</span>
+<span id="cb4-103"><a href="http://localhost:6046/#cb4-103" aria-hidden="true" tabindex="-1"></a>    Continuing_Care_Retirement_Community,</span>
+<span id="cb4-104"><a href="http://localhost:6046/#cb4-104" aria-hidden="true" tabindex="-1"></a>    Abuse_Icon,</span>
+<span id="cb4-105"><a href="http://localhost:6046/#cb4-105" aria-hidden="true" tabindex="-1"></a>    Health_Inspection_Rating,</span>
+<span id="cb4-106"><a href="http://localhost:6046/#cb4-106" aria-hidden="true" tabindex="-1"></a>    Staffing_Rating,</span>
+<span id="cb4-107"><a href="http://localhost:6046/#cb4-107" aria-hidden="true" tabindex="-1"></a>    Total_Weighted_Health_Survey_Score,</span>
+<span id="cb4-108"><a href="http://localhost:6046/#cb4-108" aria-hidden="true" tabindex="-1"></a>    Number_of_Facility_Reported_Incidents,</span>
+<span id="cb4-109"><a href="http://localhost:6046/#cb4-109" aria-hidden="true" tabindex="-1"></a>    Number_of_Substantiated_Complaints,</span>
+<span id="cb4-110"><a href="http://localhost:6046/#cb4-110" aria-hidden="true" tabindex="-1"></a>    Total_Amount_of_Fines_in_Dollars,</span>
+<span id="cb4-111"><a href="http://localhost:6046/#cb4-111" aria-hidden="true" tabindex="-1"></a>    Number_of_Payment_Denials,</span>
+<span id="cb4-112"><a href="http://localhost:6046/#cb4-112" aria-hidden="true" tabindex="-1"></a>    Total_Number_of_Penalties</span>
+<span id="cb4-113"><a href="http://localhost:6046/#cb4-113" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb4-114"><a href="http://localhost:6046/#cb4-114" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Convert categorical variables to indicators</span></span>
+<span id="cb4-115"><a href="http://localhost:6046/#cb4-115" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb4-116"><a href="http://localhost:6046/#cb4-116" aria-hidden="true" tabindex="-1"></a>    <span class="at">Provider_Type =</span> <span class="fu">ifelse</span>(Provider_Type <span class="sc">==</span> <span class="st">"Medicare and Medicaid"</span>, <span class="dv">1</span>, <span class="dv">0</span>),</span>
+<span id="cb4-117"><a href="http://localhost:6046/#cb4-117" aria-hidden="true" tabindex="-1"></a>    <span class="at">Continuing_Care_Retirement_Community =</span> <span class="fu">ifelse</span>(Continuing_Care_Retirement_Community <span class="sc">==</span> <span class="st">"Y"</span>, <span class="dv">1</span>, <span class="dv">0</span>),</span>
+<span id="cb4-118"><a href="http://localhost:6046/#cb4-118" aria-hidden="true" tabindex="-1"></a>    <span class="at">Abuse_Icon =</span> <span class="fu">ifelse</span>(Abuse_Icon <span class="sc">==</span> <span class="st">"Y"</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb4-119"><a href="http://localhost:6046/#cb4-119" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb4-120"><a href="http://localhost:6046/#cb4-120" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Remove rows with missing values</span></span>
+<span id="cb4-121"><a href="http://localhost:6046/#cb4-121" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="dealing-with-multicollinearity" class="level3">
+<h3 class="anchored" data-anchor-id="dealing-with-multicollinearity">Dealing with Multicollinearity<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#dealing-with-multicollinearity" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h3>
+<p>Below we remove highly correlated predictors (threshold above 0.7):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="http://localhost:6046/#cb5-1" aria-hidden="true" tabindex="-1"></a>cor_matrix <span class="ot">&lt;-</span> nursing_data_cleaned <span class="sc">|&gt;</span></span>
+<span id="cb5-2"><a href="http://localhost:6046/#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">where</span>(<span class="sc">~</span> <span class="fu">is.numeric</span>(.))) <span class="sc">|&gt;</span>  <span class="co"># Select numeric vars ONLY</span></span>
+<span id="cb5-3"><a href="http://localhost:6046/#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">where</span>(<span class="sc">~</span> <span class="fu">n_distinct</span>(.) <span class="sc">&gt;</span> <span class="dv">2</span>)) <span class="sc">|&gt;</span>  </span>
+<span id="cb5-4"><a href="http://localhost:6046/#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cor</span>(<span class="at">use =</span> <span class="st">"pairwise.complete.obs"</span>)  <span class="co"># Compute correlation matrix</span></span>
+<span id="cb5-5"><a href="http://localhost:6046/#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="http://localhost:6046/#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="http://localhost:6046/#cb5-7" aria-hidden="true" tabindex="-1"></a>high_cor <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">as.table</span>(cor_matrix)) <span class="sc">|&gt;</span></span>
+<span id="cb5-8"><a href="http://localhost:6046/#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Var1 <span class="sc">!=</span> Var2 <span class="sc">&amp;</span> <span class="fu">abs</span>(Freq) <span class="sc">&gt;</span> <span class="fl">0.7</span>)  <span class="co"># Exclude diagonal &amp; filter high correlations</span></span>
+<span id="cb5-9"><a href="http://localhost:6046/#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="http://localhost:6046/#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># View highly correlated pairs</span></span>
+<span id="cb5-11"><a href="http://localhost:6046/#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(high_cor)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                                 Var1                                Var2
+1 Average_Number_of_Residents_per_Day            Number_of_Certified_Beds
+2            Number_of_Certified_Beds Average_Number_of_Residents_per_Day
+       Freq
+1 0.9229966
+2 0.9229966</code></pre>
+</div>
+</div>
+<p>It turns out that <code>Number_of_Certified_Beds</code> and <code>Average_Number_of_Residents_per_Day</code> are highly correlated. While this may not be an issue for all of our models, if we want to ensure that the models with some interpretability do not have any issues with multicollinearity, we can combine these two variables into a single variable.</p>
+<p>Let’s combine these into a new variable: <code>occupancy</code></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="http://localhost:6046/#cb7-1" aria-hidden="true" tabindex="-1"></a>nursing_mlr_dat <span class="ot">&lt;-</span> nursing_data_cleaned <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="http://localhost:6046/#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">"occupancy"</span> <span class="ot">=</span> Average_Number_of_Residents_per_Day<span class="sc">/</span>Number_of_Certified_Beds) <span class="sc">|&gt;</span></span>
+<span id="cb7-3"><a href="http://localhost:6046/#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(Average_Number_of_Residents_per_Day, Number_of_Certified_Beds)) <span class="co"># remove pair</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="transforming-the-response" class="level3">
+<h3 class="anchored" data-anchor-id="transforming-the-response">Transforming the Response<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#transforming-the-response" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h3>
+<p>While not necessary for all of our model, for our parametric models that expect the response to be normally distributed, a check for normality is done via a histogram. Clearly, we do not have a normally distributed response.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="http://localhost:6046/#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(nursing_data_cleaned<span class="sc">$</span>Total_Weighted_Health_Survey_Score, </span>
+<span id="cb8-2"><a href="http://localhost:6046/#cb8-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Distribution of Total Weighted Health Survey Scores"</span>, </span>
+<span id="cb8-3"><a href="http://localhost:6046/#cb8-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Total Weighted Health Survey Score"</span>, </span>
+<span id="cb8-4"><a href="http://localhost:6046/#cb8-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Frequency"</span>, </span>
+<span id="cb8-5"><a href="http://localhost:6046/#cb8-5" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">"purple"</span>, </span>
+<span id="cb8-6"><a href="http://localhost:6046/#cb8-6" aria-hidden="true" tabindex="-1"></a>     <span class="at">border =</span> <span class="st">"black"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="./ST 563 Project_files/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can use a Box-Cox transformation to find an optimal transformation (resulting in approximately normally distributed data), which is done below:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="http://localhost:6046/#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MASS)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'MASS'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:dplyr':
+
+    select</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="http://localhost:6046/#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check if the response variable is &gt; 0 - shift if needed</span></span>
+<span id="cb12-2"><a href="http://localhost:6046/#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="http://localhost:6046/#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">any</span>(nursing_data_cleaned<span class="sc">$</span>Total_Weighted_Health_Survey_Score <span class="sc">&lt;=</span> <span class="dv">0</span>)) {</span>
+<span id="cb12-4"><a href="http://localhost:6046/#cb12-4" aria-hidden="true" tabindex="-1"></a>  offset <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">min</span>(nursing_data_cleaned<span class="sc">$</span>Total_Weighted_Health_Survey_Score)) <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb12-5"><a href="http://localhost:6046/#cb12-5" aria-hidden="true" tabindex="-1"></a>  nursing_data_cleaned<span class="sc">$</span>Total_Weighted_Health_Survey_Score <span class="ot">&lt;-</span> </span>
+<span id="cb12-6"><a href="http://localhost:6046/#cb12-6" aria-hidden="true" tabindex="-1"></a>    nursing_data_cleaned<span class="sc">$</span>Total_Weighted_Health_Survey_Score <span class="sc">+</span> offset</span>
+<span id="cb12-7"><a href="http://localhost:6046/#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Response variable adjusted by offset:"</span>, offset, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb12-8"><a href="http://localhost:6046/#cb12-8" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Response variable adjusted by offset: 1 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="http://localhost:6046/#cb14-1" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">lm</span>(Total_Weighted_Health_Survey_Score <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> nursing_data_cleaned)</span>
+<span id="cb14-2"><a href="http://localhost:6046/#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="http://localhost:6046/#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Box-Cox transformation</span></span>
+<span id="cb14-4"><a href="http://localhost:6046/#cb14-4" aria-hidden="true" tabindex="-1"></a>boxcox_result <span class="ot">&lt;-</span> <span class="fu">boxcox</span>(model, <span class="at">lambda =</span> <span class="fu">seq</span>(<span class="sc">-</span><span class="dv">2</span>, <span class="dv">2</span>, <span class="at">by =</span> <span class="fl">0.1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="./ST 563 Project_files/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="http://localhost:6046/#cb15-1" aria-hidden="true" tabindex="-1"></a>best_lambda <span class="ot">&lt;-</span> boxcox_result<span class="sc">$</span>x[<span class="fu">which.max</span>(boxcox_result<span class="sc">$</span>y)]</span>
+<span id="cb15-2"><a href="http://localhost:6046/#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Best lambda:"</span>, best_lambda, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Best lambda: 0.1414141 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="http://localhost:6046/#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the Box-Cox transformation using the best lambda (found above).</span></span>
+<span id="cb17-2"><a href="http://localhost:6046/#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="http://localhost:6046/#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">abs</span>(best_lambda) <span class="sc">&lt;</span> <span class="fl">1e-6</span>) {  </span>
+<span id="cb17-4"><a href="http://localhost:6046/#cb17-4" aria-hidden="true" tabindex="-1"></a>  transformed_data <span class="ot">&lt;-</span> <span class="fu">log</span>(nursing_data_cleaned<span class="sc">$</span>Total_Weighted_Health_Survey_Score)</span>
+<span id="cb17-5"><a href="http://localhost:6046/#cb17-5" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb17-6"><a href="http://localhost:6046/#cb17-6" aria-hidden="true" tabindex="-1"></a>  transformed_data <span class="ot">&lt;-</span> (nursing_data_cleaned<span class="sc">$</span>Total_Weighted_Health_Survey_Score<span class="sc">^</span>best_lambda <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">/</span> best_lambda</span>
+<span id="cb17-7"><a href="http://localhost:6046/#cb17-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb17-8"><a href="http://localhost:6046/#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="http://localhost:6046/#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the histogram of the transformed data - looks much better! </span></span>
+<span id="cb17-10"><a href="http://localhost:6046/#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(transformed_data, </span>
+<span id="cb17-11"><a href="http://localhost:6046/#cb17-11" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Distribution of Box-Cox Transformed Scores"</span>, </span>
+<span id="cb17-12"><a href="http://localhost:6046/#cb17-12" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Transformed Total Weighted Health Survey Score"</span>, </span>
+<span id="cb17-13"><a href="http://localhost:6046/#cb17-13" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">"purple"</span>, </span>
+<span id="cb17-14"><a href="http://localhost:6046/#cb17-14" aria-hidden="true" tabindex="-1"></a>     <span class="at">border =</span> <span class="st">"black"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="./ST 563 Project_files/unnamed-chunk-6-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="http://localhost:6046/#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(best_lambda)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1414141</code></pre>
+</div>
+</div>
+<p>Incorporate the transformation to the data set:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="http://localhost:6046/#cb20-1" aria-hidden="true" tabindex="-1"></a>nursing_mlr_dat <span class="ot">&lt;-</span> nursing_mlr_dat <span class="sc">|&gt;</span></span>
+<span id="cb20-2"><a href="http://localhost:6046/#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Transformed_Health_Survey_Score =</span> (Total_Weighted_Health_Survey_Score<span class="sc">^</span><span class="fl">0.14</span> <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">/</span> <span class="fl">0.14</span>) <span class="sc">|&gt;</span></span>
+<span id="cb20-3"><a href="http://localhost:6046/#cb20-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span><span class="fu">one_of</span>(<span class="st">"Total_Weighted_Health_Survey_Score"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="enable-parallel-processing" class="level3">
+<h3 class="anchored" data-anchor-id="enable-parallel-processing">Enable Parallel Processing<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#enable-parallel-processing" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h3>
+<p>Enabling parallel processing will improve the runtime of the models fitted later in the document.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="http://localhost:6046/#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(doParallel)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'doParallel' was built under R version 4.4.3</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: foreach</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'foreach'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:purrr':
+
+    accumulate, when</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: iterators</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: parallel</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="http://localhost:6046/#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(foreach)</span>
+<span id="cb28-2"><a href="http://localhost:6046/#cb28-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-3"><a href="http://localhost:6046/#cb28-3" aria-hidden="true" tabindex="-1"></a>cl <span class="ot">&lt;-</span> <span class="fu">makePSOCKcluster</span>(<span class="dv">6</span>)  <span class="co"># use 6 cores</span></span>
+<span id="cb28-4"><a href="http://localhost:6046/#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="fu">registerDoParallel</span>(cl)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="modeling" class="level1">
+<h1>Modeling</h1>
+<p>Below we partition our data into training and test sets. These sets will be used to train our models and evaluate them on unseen data, respectively.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="http://localhost:6046/#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caret)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: lattice</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'caret'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:purrr':
+
+    lift</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="http://localhost:6046/#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
+<span id="cb33-2"><a href="http://localhost:6046/#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="http://localhost:6046/#cb33-3" aria-hidden="true" tabindex="-1"></a>in_train <span class="ot">&lt;-</span> <span class="fu">createDataPartition</span>(nursing_mlr_dat<span class="sc">$</span>Transformed_Health_Survey_Score, </span>
+<span id="cb33-4"><a href="http://localhost:6046/#cb33-4" aria-hidden="true" tabindex="-1"></a>                                <span class="at">p =</span> <span class="fl">0.7</span>, </span>
+<span id="cb33-5"><a href="http://localhost:6046/#cb33-5" aria-hidden="true" tabindex="-1"></a>                                <span class="at">list =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb33-6"><a href="http://localhost:6046/#cb33-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-7"><a href="http://localhost:6046/#cb33-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-8"><a href="http://localhost:6046/#cb33-8" aria-hidden="true" tabindex="-1"></a>nursing_train <span class="ot">&lt;-</span> nursing_mlr_dat[in_train, ]</span>
+<span id="cb33-9"><a href="http://localhost:6046/#cb33-9" aria-hidden="true" tabindex="-1"></a>nursing_test <span class="ot">&lt;-</span> nursing_mlr_dat[<span class="sc">-</span>in_train, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="knn-model" class="level2">
+<h2 class="anchored" data-anchor-id="knn-model">kNN Model<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#knn-model" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h2>
+<p>The K-Nearest Neighbors is a regression and classification method that uses the closest k observations to make predictions (using a distance measure - usually Euclidean distance)</p>
+<p>The k-Nearest Neighbor method is:</p>
+<ul>
+<li>non-parametric</li>
+<li>has a single tuning parameter, <em>k</em>, which specifies the number of nearest observations (‘neighbors’) off of which predictions are made for a new observation <span class="math inline"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="0" style="font-size: 113.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-msub><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D465 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-mn class="mjx-n" size="s"><mjx-c class="mjx-c30"></mjx-c></mjx-mn></mjx-script></mjx-msub></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mi>x</mi><mn>0</mn></msub></math></mjx-assistive-mml></mjx-container></span>.</li>
+<li>This is not a particularly interpretable model, and we cannot use it for meaningful inferences</li>
+<li>This model does not perform variable selection</li>
+</ul>
+<p>The kNN has the advantage of not being overly complex and is easy to use to demonstrate various machine learning ideas.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="http://localhost:6046/#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">56</span>)</span>
+<span id="cb34-2"><a href="http://localhost:6046/#cb34-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-3"><a href="http://localhost:6046/#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="http://localhost:6046/#cb34-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-5"><a href="http://localhost:6046/#cb34-5" aria-hidden="true" tabindex="-1"></a>fit_control_knn <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(<span class="at">method =</span> <span class="st">'cv'</span>,</span>
+<span id="cb34-6"><a href="http://localhost:6046/#cb34-6" aria-hidden="true" tabindex="-1"></a>             <span class="at">number =</span> <span class="dv">10</span>,</span>
+<span id="cb34-7"><a href="http://localhost:6046/#cb34-7" aria-hidden="true" tabindex="-1"></a>             <span class="at">allowParallel =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb34-8"><a href="http://localhost:6046/#cb34-8" aria-hidden="true" tabindex="-1"></a>             <span class="at">verboseIter =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb34-9"><a href="http://localhost:6046/#cb34-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-10"><a href="http://localhost:6046/#cb34-10" aria-hidden="true" tabindex="-1"></a>tune_knn <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(<span class="at">k =</span> <span class="fu">seq</span>(<span class="dv">1</span>, <span class="dv">500</span>, <span class="at">by =</span> <span class="dv">10</span>))</span>
+<span id="cb34-11"><a href="http://localhost:6046/#cb34-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-12"><a href="http://localhost:6046/#cb34-12" aria-hidden="true" tabindex="-1"></a>kNN_out <span class="ot">&lt;-</span> <span class="fu">train</span>(Transformed_Health_Survey_Score <span class="sc">~</span>., </span>
+<span id="cb34-13"><a href="http://localhost:6046/#cb34-13" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> nursing_train,</span>
+<span id="cb34-14"><a href="http://localhost:6046/#cb34-14" aria-hidden="true" tabindex="-1"></a>                 <span class="at">method =</span> <span class="st">'knn'</span>,</span>
+<span id="cb34-15"><a href="http://localhost:6046/#cb34-15" aria-hidden="true" tabindex="-1"></a>                 <span class="at">trControl =</span> fit_control_knn,</span>
+<span id="cb34-16"><a href="http://localhost:6046/#cb34-16" aria-hidden="true" tabindex="-1"></a>                 <span class="at">tuneGrid =</span> tune_knn,</span>
+<span id="cb34-17"><a href="http://localhost:6046/#cb34-17" aria-hidden="true" tabindex="-1"></a>                 <span class="at">verbose =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb34-18"><a href="http://localhost:6046/#cb34-18" aria-hidden="true" tabindex="-1"></a>                 <span class="at">allowParallel =</span> <span class="cn">TRUE</span></span>
+<span id="cb34-19"><a href="http://localhost:6046/#cb34-19" aria-hidden="true" tabindex="-1"></a>                 )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Aggregating results
+Selecting tuning parameters
+Fitting k = 151 on full training set</code></pre>
+</div>
+</div>
+</section>
+<section id="lasso-model" class="level2">
+<h2 class="anchored" data-anchor-id="lasso-model">LASSO Model<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#lasso-model" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h2>
+<p>Least absolute shrinkage and selection operator regression (LASSO) is a regression method that uses L1 regularization in determining the model fit. It has the notable quality of shrinking unimportant predictors toward (and to) zero, allowing for built-in variable selection and added interpretability.</p>
+<p>The LASSO model is - parametric - has the tuning parameter <span class="math inline"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="1" style="font-size: 113.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D706 TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>λ</mi></math></mjx-assistive-mml></mjx-container></span> which controls the level of regularization or shrinkage. - is interpretable, but because of the shrinkage, we cannot perform the same statistical inference as we are able to with regular least squares regression - requires the standardization of predictors</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="http://localhost:6046/#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">90</span>)</span>
+<span id="cb36-2"><a href="http://localhost:6046/#cb36-2" aria-hidden="true" tabindex="-1"></a>train_control_lasso <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(<span class="at">method =</span> <span class="st">'cv'</span>,</span>
+<span id="cb36-3"><a href="http://localhost:6046/#cb36-3" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">number =</span> <span class="dv">10</span>)</span>
+<span id="cb36-4"><a href="http://localhost:6046/#cb36-4" aria-hidden="true" tabindex="-1"></a>tune_grid_lasso <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(<span class="at">alpha =</span> <span class="dv">1</span>, <span class="at">lambda =</span> <span class="fu">seq</span>(<span class="fl">0.00001</span>, <span class="fl">0.025</span>, <span class="at">length =</span> <span class="dv">1000</span>))</span>
+<span id="cb36-5"><a href="http://localhost:6046/#cb36-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-6"><a href="http://localhost:6046/#cb36-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-7"><a href="http://localhost:6046/#cb36-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-8"><a href="http://localhost:6046/#cb36-8" aria-hidden="true" tabindex="-1"></a>lasso_out <span class="ot">&lt;-</span> <span class="fu">train</span>(Transformed_Health_Survey_Score <span class="sc">~</span>., </span>
+<span id="cb36-9"><a href="http://localhost:6046/#cb36-9" aria-hidden="true" tabindex="-1"></a>                   <span class="at">data =</span> nursing_train,</span>
+<span id="cb36-10"><a href="http://localhost:6046/#cb36-10" aria-hidden="true" tabindex="-1"></a>                   <span class="at">preProcess =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"scale"</span>),</span>
+<span id="cb36-11"><a href="http://localhost:6046/#cb36-11" aria-hidden="true" tabindex="-1"></a>                   <span class="at">method =</span> <span class="st">"glmnet"</span>,</span>
+<span id="cb36-12"><a href="http://localhost:6046/#cb36-12" aria-hidden="true" tabindex="-1"></a>                   <span class="at">trControl =</span> train_control_lasso,</span>
+<span id="cb36-13"><a href="http://localhost:6046/#cb36-13" aria-hidden="true" tabindex="-1"></a>                   <span class="at">tuneGrid =</span> tune_grid_lasso,</span>
+<span id="cb36-14"><a href="http://localhost:6046/#cb36-14" aria-hidden="true" tabindex="-1"></a>                   <span class="at">allowParallel =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb36-15"><a href="http://localhost:6046/#cb36-15" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(lasso_out<span class="sc">$</span>bestTune)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    alpha      lambda
+140     1 0.003487087</code></pre>
+</div>
+</div>
+</section>
+<section id="model-3-gam" class="level2">
+<h2 class="anchored" data-anchor-id="model-3-gam">Model 3: GAM<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#model-3-gam" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h2>
+<p>The smoothing spline model is a generalized additive model (GAM) whose fit complexity is regularized by the tuning parameter <span class="math inline"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="2" style="font-size: 113.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D706 TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>λ</mi></math></mjx-assistive-mml></mjx-container></span>, penalizing the curvature in the function (by having a penalty proportional to the integral of the squared second derivative) which allows for the balancing of the flexibility and smoothness of the fit. The chosen <span class="math inline"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="3" style="font-size: 113.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D706 TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>λ</mi></math></mjx-assistive-mml></mjx-container></span> specifies the effective degrees of freedom.</p>
+<p>Smoothing splines - are non-parametric - has the tuning parameter <span class="math inline"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="4" style="font-size: 113.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D706 TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>λ</mi></math></mjx-assistive-mml></mjx-container></span> (see the paragraph above) - are less interpretable than parametric regression methods but do allow for some inference - in particular with comparing a model with a spline term (or additional spline term) with one that does not include that term. This is like an anova F-test. - do not inherently perform variable selection - do not require the standarization of predictors</p>
+<p>Below we fit a smoothing spline model with basis functions applied to a number of the predictors. The <code>REML</code> method is used to find the optimal <span class="math inline"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="5" style="font-size: 113.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D459 TEX-I"></mjx-c></mjx-mi><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D44E TEX-I"></mjx-c></mjx-mi><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D45A TEX-I"></mjx-c></mjx-mi><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D44F TEX-I"></mjx-c></mjx-mi><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D451 TEX-I"></mjx-c></mjx-mi><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D44E TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>l</mi><mi>a</mi><mi>m</mi><mi>b</mi><mi>d</mi><mi>a</mi></math></mjx-assistive-mml></mjx-container></span> for each spline. <code>REML</code> is restricted maximum likelihood (can be used for estimating smoothing params), but it is not the only metric that can be used here.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="http://localhost:6046/#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">90</span>)</span>
+<span id="cb38-2"><a href="http://localhost:6046/#cb38-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-3"><a href="http://localhost:6046/#cb38-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mgcv)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'mgcv' was built under R version 4.4.3</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: nlme</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'nlme'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:dplyr':
+
+    collapse</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>This is mgcv 1.9-1. For overview type 'help("mgcv-package")'.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="http://localhost:6046/#cb44-1" aria-hidden="true" tabindex="-1"></a>gam_out <span class="ot">&lt;-</span> <span class="fu">gam</span>(</span>
+<span id="cb44-2"><a href="http://localhost:6046/#cb44-2" aria-hidden="true" tabindex="-1"></a>  Transformed_Health_Survey_Score <span class="sc">~</span></span>
+<span id="cb44-3"><a href="http://localhost:6046/#cb44-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">s</span>(median_income) <span class="sc">+</span></span>
+<span id="cb44-4"><a href="http://localhost:6046/#cb44-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">s</span>(unemployment_rate) <span class="sc">+</span></span>
+<span id="cb44-5"><a href="http://localhost:6046/#cb44-5" aria-hidden="true" tabindex="-1"></a>    Health_Inspection_Rating <span class="sc">+</span></span>
+<span id="cb44-6"><a href="http://localhost:6046/#cb44-6" aria-hidden="true" tabindex="-1"></a>    Staffing_Rating <span class="sc">+</span></span>
+<span id="cb44-7"><a href="http://localhost:6046/#cb44-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">s</span>(Number_of_Facility_Reported_Incidents) <span class="sc">+</span></span>
+<span id="cb44-8"><a href="http://localhost:6046/#cb44-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">s</span>(Number_of_Substantiated_Complaints) <span class="sc">+</span></span>
+<span id="cb44-9"><a href="http://localhost:6046/#cb44-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">s</span>(Total_Amount_of_Fines_in_Dollars) <span class="sc">+</span></span>
+<span id="cb44-10"><a href="http://localhost:6046/#cb44-10" aria-hidden="true" tabindex="-1"></a>    Number_of_Payment_Denials <span class="sc">+</span></span>
+<span id="cb44-11"><a href="http://localhost:6046/#cb44-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">factor</span>(Provider_Type) <span class="sc">+</span>  </span>
+<span id="cb44-12"><a href="http://localhost:6046/#cb44-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">factor</span>(Abuse_Icon) <span class="sc">+</span>  </span>
+<span id="cb44-13"><a href="http://localhost:6046/#cb44-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">factor</span>(Continuing_Care_Retirement_Community),</span>
+<span id="cb44-14"><a href="http://localhost:6046/#cb44-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> nursing_train,</span>
+<span id="cb44-15"><a href="http://localhost:6046/#cb44-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"REML"</span>  <span class="co">#example method - REML is a placeholder here</span></span>
+<span id="cb44-16"><a href="http://localhost:6046/#cb44-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb44-17"><a href="http://localhost:6046/#cb44-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-18"><a href="http://localhost:6046/#cb44-18" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(gam_out<span class="sc">$</span>sp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                        s(median_income) 
+                              5.54732077 
+                    s(unemployment_rate) 
+                              0.90087741 
+s(Number_of_Facility_Reported_Incidents) 
+                              0.15338638 
+   s(Number_of_Substantiated_Complaints) 
+                              0.00915701 
+     s(Total_Amount_of_Fines_in_Dollars) 
+                              0.27795709 </code></pre>
+</div>
+</div>
+</section>
+<section id="single-tree-model-regression" class="level2">
+<h2 class="anchored" data-anchor-id="single-tree-model-regression">Single Tree Model (Regression)<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#single-tree-model-regression" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h2>
+<p>Tree-based methods split the predictor space into regions, and within each region the predicted value of the response is the average (value that minimizes the residual sum of squares) of the training data. With multiple predictors, as is the case in the fitted model below, we use recursive binary splitting to fit the model so that we can circumvent the impossible task of considering all possible partitions of the predictor space. Recursive binary splitting involves searching the training set for the predictor and split point that creates the two initial regions (first split) minimizing the total sum of squares - this process is then repeated until some stopping criterion is met. A single tree provides the foundation of ensemble tree methods.</p>
+<p>A single regression tree</p>
+<ul>
+<li>Is a non-parametric method</li>
+<li>Consists of the tuning parameter <code>cp</code>, or cost complexity, which controls the trade off between the complexity of sub-trees and their fit to the data.</li>
+<li>Is a highly interpretable method but is not generally best for inference in the statistical sense (hypothesis testing, confidence intervals, etc.)</li>
+<li>Performs variable selection in the sense that we can look at certain measures of variable importance (Gini Importance, for example) and see what variables were used for splits (some may not have been used, or were hardly used)</li>
+<li>does not require the standardization of predictors</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="http://localhost:6046/#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">58</span>)</span>
+<span id="cb46-2"><a href="http://localhost:6046/#cb46-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-3"><a href="http://localhost:6046/#cb46-3" aria-hidden="true" tabindex="-1"></a>train_control_stree <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(<span class="at">method =</span> <span class="st">"cv"</span>, </span>
+<span id="cb46-4"><a href="http://localhost:6046/#cb46-4" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">number =</span> <span class="dv">5</span>)</span>
+<span id="cb46-5"><a href="http://localhost:6046/#cb46-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-6"><a href="http://localhost:6046/#cb46-6" aria-hidden="true" tabindex="-1"></a>single_tree_out <span class="ot">&lt;-</span> <span class="fu">train</span>(Transformed_Health_Survey_Score <span class="sc">~</span> ., </span>
+<span id="cb46-7"><a href="http://localhost:6046/#cb46-7" aria-hidden="true" tabindex="-1"></a>                  <span class="at">data =</span> nursing_train,</span>
+<span id="cb46-8"><a href="http://localhost:6046/#cb46-8" aria-hidden="true" tabindex="-1"></a>                  <span class="at">method =</span> <span class="st">"rpart"</span>,</span>
+<span id="cb46-9"><a href="http://localhost:6046/#cb46-9" aria-hidden="true" tabindex="-1"></a>                  <span class="at">tuneLength =</span> <span class="dv">50</span>, <span class="co"># number of cp values considered </span></span>
+<span id="cb46-10"><a href="http://localhost:6046/#cb46-10" aria-hidden="true" tabindex="-1"></a>                  <span class="at">trControl =</span> train_control_stree)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in nominalTrainWorkflow(x = x, y = y, wts = weights, info = trainInfo,
+: There were missing values in resampled performance measures.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="http://localhost:6046/#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(single_tree_out<span class="sc">$</span>bestTune)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>         cp
+39 0.003794</code></pre>
+</div>
+</div>
+</section>
+<section id="random-forest-model" class="level2">
+<h2 class="anchored" data-anchor-id="random-forest-model">Random Forest Model<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#random-forest-model" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h2>
+<p>The Random Forest model is a special case of a bagged tree where, for each split of each tree, a random subset of the predictors is used rather than all predictors. This subsetting helps the model train on less influential predictors - including all models with each tree means that the most important predictors will dominate those that are less important, and thus we lose out on some of the signal in these less influential predictors.</p>
+<p>The random forest</p>
+<ul>
+<li>Is a non-parametric method</li>
+<li>Has the same tuning parameters as a bagged tree (minimum size of the terminal nodes, the number of trees, etc.), but most importantly it requires a natural number for the number of subsetted variables used to fit each tree (<code>mtry</code>) (at each split). We will use the default bagging hyperparameter values but will allow the value for the subet <code>mtry</code> to vary.</li>
+<li>Is not particularly useful when the objective is inference due to a lack of interpretability (though there is some research positing statistical methods for evaluating variable importance in models like the random forest: https://pmc.ncbi.nlm.nih.gov/articles/PMC6428414/) Thank you Dr.&nbsp;Post for the link!)</li>
+<li>does perform variable selection in the sense that we get an idea of the important variables in the model (think Gini importance or some other measure) and those that are unimportant (and not used)</li>
+<li>does not require the standardization of the predictors.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="http://localhost:6046/#cb50-1" aria-hidden="true" tabindex="-1"></a>train_control_rf <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(</span>
+<span id="cb50-2"><a href="http://localhost:6046/#cb50-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"cv"</span>,   </span>
+<span id="cb50-3"><a href="http://localhost:6046/#cb50-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">number =</span> <span class="dv">5</span>,      </span>
+<span id="cb50-4"><a href="http://localhost:6046/#cb50-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">allowParallel =</span> <span class="cn">TRUE</span>,  </span>
+<span id="cb50-5"><a href="http://localhost:6046/#cb50-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">verboseIter =</span> <span class="cn">TRUE</span> </span>
+<span id="cb50-6"><a href="http://localhost:6046/#cb50-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb50-7"><a href="http://localhost:6046/#cb50-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-8"><a href="http://localhost:6046/#cb50-8" aria-hidden="true" tabindex="-1"></a>tune_grid_rf <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(</span>
+<span id="cb50-9"><a href="http://localhost:6046/#cb50-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">mtry =</span> <span class="dv">1</span><span class="sc">:</span>(<span class="fu">ncol</span>(nursing_train) <span class="sc">-</span> <span class="dv">1</span>) <span class="co"># number to be subsetted</span></span>
+<span id="cb50-10"><a href="http://localhost:6046/#cb50-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb50-11"><a href="http://localhost:6046/#cb50-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-12"><a href="http://localhost:6046/#cb50-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-13"><a href="http://localhost:6046/#cb50-13" aria-hidden="true" tabindex="-1"></a>rf_out <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb50-14"><a href="http://localhost:6046/#cb50-14" aria-hidden="true" tabindex="-1"></a>  Transformed_Health_Survey_Score <span class="sc">~</span> .,  </span>
+<span id="cb50-15"><a href="http://localhost:6046/#cb50-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> nursing_train, </span>
+<span id="cb50-16"><a href="http://localhost:6046/#cb50-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"rf"</span>, </span>
+<span id="cb50-17"><a href="http://localhost:6046/#cb50-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">trControl =</span> train_control_rf, </span>
+<span id="cb50-18"><a href="http://localhost:6046/#cb50-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">tuneGrid =</span> tune_grid_rf  </span>
+<span id="cb50-19"><a href="http://localhost:6046/#cb50-19" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Aggregating results
+Selecting tuning parameters
+Fitting mtry = 3 on full training set</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="http://localhost:6046/#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(rf_out<span class="sc">$</span>bestTune)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  mtry
+3    3</code></pre>
+</div>
+</div>
+</section>
+<section id="support-vector-machine" class="level2">
+<h2 class="anchored" data-anchor-id="support-vector-machine">Support Vector Machine<a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="http://localhost:6046/#support-vector-machine" style="font: 1em / 1 anchorjs-icons; margin-left: 0.1875em; padding-right: 0.1875em; padding-left: 0.1875em;"></a></h2>
+<p>The support vector machine (SVM) is an extension of the support vector classifier that enlarges the predictor space via some family of kernel functions.</p>
+<ul>
+<li>SVMs will be nonparametric when the number of parameters depends on the size of the training set; this is the case with the radial basis function, which is the kernel method chosen for this model.<br>
+</li>
+<li>The SVM using the RBF kernel has two parameters: 1). The regularization parameter (controlling the flexibility of the decision boundary) <span class="math inline"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="6" style="font-size: 113.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D436 TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>C</mi></math></mjx-assistive-mml></mjx-container></span> and the kernel coefficient <span class="math inline"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="7" style="font-size: 113.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>σ</mi></math></mjx-assistive-mml></mjx-container></span>, which controls the influence of the training observations on the model.</li>
+<li>SVMs are generally not as well-suited to inferential questions as they are to prediction</li>
+<li>SVMs do not inherently perform feature selection</li>
+<li>Because SVM kernels are calculated using some kind of distance measure, the predictors must be scaled.</li>
+</ul>
+<p>Below we use ten combinations of the hyperparameters along with 5-fold cross validation to select our best SVM model:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="http://localhost:6046/#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(kernlab)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'kernlab'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:purrr':
+
+    cross</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:ggplot2':
+
+    alpha</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="http://localhost:6046/#cb58-1" aria-hidden="true" tabindex="-1"></a>svm_out <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb58-2"><a href="http://localhost:6046/#cb58-2" aria-hidden="true" tabindex="-1"></a>  Transformed_Health_Survey_Score <span class="sc">~</span> ., </span>
+<span id="cb58-3"><a href="http://localhost:6046/#cb58-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> nursing_train,</span>
+<span id="cb58-4"><a href="http://localhost:6046/#cb58-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"svmRadial"</span>,  <span class="co"># Radial basis function kernel</span></span>
+<span id="cb58-5"><a href="http://localhost:6046/#cb58-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">preProcess =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"scale"</span>),</span>
+<span id="cb58-6"><a href="http://localhost:6046/#cb58-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">trControl =</span> <span class="fu">trainControl</span>(<span class="at">method =</span> <span class="st">"cv"</span>, </span>
+<span id="cb58-7"><a href="http://localhost:6046/#cb58-7" aria-hidden="true" tabindex="-1"></a>                           <span class="at">number =</span> <span class="dv">5</span>),</span>
+<span id="cb58-8"><a href="http://localhost:6046/#cb58-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">tuneLength =</span> <span class="dv">10</span> <span class="co"># 10 combinations of the tuning params</span></span>
+<span id="cb58-9"><a href="http://localhost:6046/#cb58-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb58-10"><a href="http://localhost:6046/#cb58-10" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(svm_out<span class="sc">$</span>bestTune)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       sigma C
+4 0.08503423 2</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="results" class="level1">
+<h1>Results</h1>
+<p>Below we evaluate our models on the test set using <code>rmse</code>, or root mean square error as our metric.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="http://localhost:6046/#cb60-1" aria-hidden="true" tabindex="-1"></a>knn_preds <span class="ot">&lt;-</span> <span class="fu">predict</span>(kNN_out, nursing_test)</span>
+<span id="cb60-2"><a href="http://localhost:6046/#cb60-2" aria-hidden="true" tabindex="-1"></a>lasso_preds <span class="ot">&lt;-</span> <span class="fu">predict</span>(lasso_out, nursing_test)</span>
+<span id="cb60-3"><a href="http://localhost:6046/#cb60-3" aria-hidden="true" tabindex="-1"></a>single_tree_preds <span class="ot">&lt;-</span> <span class="fu">predict</span>(single_tree_out, nursing_test) </span>
+<span id="cb60-4"><a href="http://localhost:6046/#cb60-4" aria-hidden="true" tabindex="-1"></a>rf_preds <span class="ot">&lt;-</span> <span class="fu">predict</span>(rf_out, nursing_test)</span>
+<span id="cb60-5"><a href="http://localhost:6046/#cb60-5" aria-hidden="true" tabindex="-1"></a>svm_preds <span class="ot">&lt;-</span> <span class="fu">predict</span>(svm_out, nursing_test)</span>
+<span id="cb60-6"><a href="http://localhost:6046/#cb60-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-7"><a href="http://localhost:6046/#cb60-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-8"><a href="http://localhost:6046/#cb60-8" aria-hidden="true" tabindex="-1"></a><span class="co"># [1] to grab just rmse</span></span>
+<span id="cb60-9"><a href="http://localhost:6046/#cb60-9" aria-hidden="true" tabindex="-1"></a>knn_rmse <span class="ot">&lt;-</span> <span class="fu">postResample</span>(<span class="at">pred =</span> knn_preds, </span>
+<span id="cb60-10"><a href="http://localhost:6046/#cb60-10" aria-hidden="true" tabindex="-1"></a>                         <span class="at">obs =</span> nursing_test<span class="sc">$</span>Transformed_Health_Survey_Score)[<span class="dv">1</span>]</span>
+<span id="cb60-11"><a href="http://localhost:6046/#cb60-11" aria-hidden="true" tabindex="-1"></a>lasso_rmse <span class="ot">&lt;-</span> <span class="fu">postResample</span>(<span class="at">pred =</span> lasso_preds, </span>
+<span id="cb60-12"><a href="http://localhost:6046/#cb60-12" aria-hidden="true" tabindex="-1"></a>                           <span class="at">obs =</span> nursing_test<span class="sc">$</span>Transformed_Health_Survey_Score)[<span class="dv">1</span>]</span>
+<span id="cb60-13"><a href="http://localhost:6046/#cb60-13" aria-hidden="true" tabindex="-1"></a>single_tree_rmse <span class="ot">&lt;-</span> <span class="fu">postResample</span>(<span class="at">pred =</span> single_tree_preds, </span>
+<span id="cb60-14"><a href="http://localhost:6046/#cb60-14" aria-hidden="true" tabindex="-1"></a>                                 <span class="at">obs =</span> nursing_test<span class="sc">$</span>Transformed_Health_Survey_Score)[<span class="dv">1</span>]</span>
+<span id="cb60-15"><a href="http://localhost:6046/#cb60-15" aria-hidden="true" tabindex="-1"></a>rf_rmse <span class="ot">&lt;-</span> <span class="fu">postResample</span>(<span class="at">pred =</span> rf_preds, </span>
+<span id="cb60-16"><a href="http://localhost:6046/#cb60-16" aria-hidden="true" tabindex="-1"></a>                        <span class="at">obs =</span> nursing_test<span class="sc">$</span>Transformed_Health_Survey_Score)[<span class="dv">1</span>]</span>
+<span id="cb60-17"><a href="http://localhost:6046/#cb60-17" aria-hidden="true" tabindex="-1"></a>svm_rmse <span class="ot">&lt;-</span> <span class="fu">postResample</span>(<span class="at">pred =</span> svm_preds, </span>
+<span id="cb60-18"><a href="http://localhost:6046/#cb60-18" aria-hidden="true" tabindex="-1"></a>                         <span class="at">obs =</span> nursing_test<span class="sc">$</span>Transformed_Health_Survey_Score)[<span class="dv">1</span>]</span>
+<span id="cb60-19"><a href="http://localhost:6046/#cb60-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-20"><a href="http://localhost:6046/#cb60-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-21"><a href="http://localhost:6046/#cb60-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-22"><a href="http://localhost:6046/#cb60-22" aria-hidden="true" tabindex="-1"></a>result_list <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb60-23"><a href="http://localhost:6046/#cb60-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">"The optimal kNN model"</span> <span class="ot">=</span> knn_rmse, </span>
+<span id="cb60-24"><a href="http://localhost:6046/#cb60-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">"The optimal LASSO model"</span> <span class="ot">=</span> lasso_rmse, </span>
+<span id="cb60-25"><a href="http://localhost:6046/#cb60-25" aria-hidden="true" tabindex="-1"></a>  <span class="st">"The optimal single Tree"</span> <span class="ot">=</span> single_tree_rmse, </span>
+<span id="cb60-26"><a href="http://localhost:6046/#cb60-26" aria-hidden="true" tabindex="-1"></a>  <span class="st">"The optimal Random Forest model"</span> <span class="ot">=</span> rf_rmse, </span>
+<span id="cb60-27"><a href="http://localhost:6046/#cb60-27" aria-hidden="true" tabindex="-1"></a>  <span class="st">"The optimal SVM model"</span> <span class="ot">=</span> svm_rmse</span>
+<span id="cb60-28"><a href="http://localhost:6046/#cb60-28" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb60-29"><a href="http://localhost:6046/#cb60-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-30"><a href="http://localhost:6046/#cb60-30" aria-hidden="true" tabindex="-1"></a><span class="co"># loop that prints results</span></span>
+<span id="cb60-31"><a href="http://localhost:6046/#cb60-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-32"><a href="http://localhost:6046/#cb60-32" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (name <span class="cf">in</span> <span class="fu">names</span>(result_list)) {</span>
+<span id="cb60-33"><a href="http://localhost:6046/#cb60-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">paste</span>(<span class="st">"The"</span>, name, <span class="st">"rmse is"</span>, result_list[[name]]))</span>
+<span id="cb60-34"><a href="http://localhost:6046/#cb60-34" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "The The optimal kNN model rmse is 1.48086819265042"
+[1] "The The optimal LASSO model rmse is 1.03435783750333"
+[1] "The The optimal single Tree rmse is 1.01394944167336"
+[1] "The The optimal Random Forest model rmse is 0.962617711171913"
+[1] "The The optimal SVM model rmse is 1.01115983844883"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="http://localhost:6046/#cb62-1" aria-hidden="true" tabindex="-1"></a>best_mod <span class="ot">&lt;-</span> <span class="fu">min</span>(<span class="fu">unlist</span>(result_list))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The model that performed best on the test set was the random forest model. This is the model I would choose if I wanted to ensure that I had the most accurate predictions. I also, however, like the LASSO model that I constructed. It seems to perform reasonably well in a predictive sense, but it also gives me insight into the variables that mattered in forming those predictions. For this latter reason, I’ll investigate this model a little further after refitting to the entire data set.</p>
+</section>
+<section id="refit-to-full-data-set" class="level1">
+<h1>Refit to Full Data Set</h1>
+<p>For computational savings and because I preferred the interpretability of the LASSO model over the random forest, I refit the LASSO model to the entire data set.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="http://localhost:6046/#cb63-1" aria-hidden="true" tabindex="-1"></a>lasso_full_out <span class="ot">&lt;-</span> <span class="fu">train</span>(Transformed_Health_Survey_Score <span class="sc">~</span> ., </span>
+<span id="cb63-2"><a href="http://localhost:6046/#cb63-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">data =</span> nursing_mlr_dat, </span>
+<span id="cb63-3"><a href="http://localhost:6046/#cb63-3" aria-hidden="true" tabindex="-1"></a>                          <span class="at">preProcess =</span> <span class="fu">c</span>(<span class="st">"center"</span>, <span class="st">"scale"</span>),</span>
+<span id="cb63-4"><a href="http://localhost:6046/#cb63-4" aria-hidden="true" tabindex="-1"></a>                          <span class="at">method =</span> <span class="st">"glmnet"</span>, </span>
+<span id="cb63-5"><a href="http://localhost:6046/#cb63-5" aria-hidden="true" tabindex="-1"></a>                          <span class="at">trControl =</span> <span class="fu">trainControl</span>(<span class="at">method =</span> <span class="st">"none"</span>),  <span class="co"># no cross-validation</span></span>
+<span id="cb63-6"><a href="http://localhost:6046/#cb63-6" aria-hidden="true" tabindex="-1"></a>                          <span class="at">tuneGrid =</span> <span class="fu">expand.grid</span>(<span class="at">alpha =</span> <span class="dv">1</span>, <span class="at">lambda =</span> best_lambda),</span>
+<span id="cb63-7"><a href="http://localhost:6046/#cb63-7" aria-hidden="true" tabindex="-1"></a>                          <span class="at">allowParallel =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can also now stop the parallel processing:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="http://localhost:6046/#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="fu">stopCluster</span>(cl) <span class="co"># stop parallel</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>From the coefficient traceplot, we can see how the different predictors were shrunk.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="http://localhost:6046/#cb65-1" aria-hidden="true" tabindex="-1"></a>final_model <span class="ot">&lt;-</span> lasso_full_out<span class="sc">$</span>finalModel</span>
+<span id="cb65-2"><a href="http://localhost:6046/#cb65-2" aria-hidden="true" tabindex="-1"></a>lambda_seq <span class="ot">&lt;-</span> final_model<span class="sc">$</span>lambda</span>
+<span id="cb65-3"><a href="http://localhost:6046/#cb65-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-4"><a href="http://localhost:6046/#cb65-4" aria-hidden="true" tabindex="-1"></a>coefs <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(final_model<span class="sc">$</span>beta)</span>
+<span id="cb65-5"><a href="http://localhost:6046/#cb65-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-6"><a href="http://localhost:6046/#cb65-6" aria-hidden="true" tabindex="-1"></a>coefs_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">lambda =</span> lambda_seq, <span class="fu">t</span>(coefs))</span>
+<span id="cb65-7"><a href="http://localhost:6046/#cb65-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-8"><a href="http://localhost:6046/#cb65-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-9"><a href="http://localhost:6046/#cb65-9" aria-hidden="true" tabindex="-1"></a>coefs_long <span class="ot">&lt;-</span> <span class="fu">pivot_longer</span>(coefs_df, </span>
+<span id="cb65-10"><a href="http://localhost:6046/#cb65-10" aria-hidden="true" tabindex="-1"></a>                           <span class="at">cols =</span> <span class="sc">-</span>lambda, </span>
+<span id="cb65-11"><a href="http://localhost:6046/#cb65-11" aria-hidden="true" tabindex="-1"></a>                           <span class="at">names_to =</span> <span class="st">"predictor"</span>, </span>
+<span id="cb65-12"><a href="http://localhost:6046/#cb65-12" aria-hidden="true" tabindex="-1"></a>                           <span class="at">values_to =</span> <span class="st">"coefficient"</span>)</span>
+<span id="cb65-13"><a href="http://localhost:6046/#cb65-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-14"><a href="http://localhost:6046/#cb65-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-15"><a href="http://localhost:6046/#cb65-15" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(coefs_long, <span class="fu">aes</span>(<span class="at">x =</span> lambda, <span class="at">y =</span> coefficient, <span class="at">color =</span> predictor)) <span class="sc">+</span></span>
+<span id="cb65-16"><a href="http://localhost:6046/#cb65-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb65-17"><a href="http://localhost:6046/#cb65-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_log10</span>() <span class="sc">+</span>  <span class="co"># log-scale preferable</span></span>
+<span id="cb65-18"><a href="http://localhost:6046/#cb65-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Beta Traceplot for Lasso Model"</span>,</span>
+<span id="cb65-19"><a href="http://localhost:6046/#cb65-19" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Lambda (log scale)"</span>,</span>
+<span id="cb65-20"><a href="http://localhost:6046/#cb65-20" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Coefficient"</span>) <span class="sc">+</span></span>
+<span id="cb65-21"><a href="http://localhost:6046/#cb65-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="./ST 563 Project_files/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The beta coefficient are also printed out:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="http://localhost:6046/#cb66-1" aria-hidden="true" tabindex="-1"></a>optimal_lambda <span class="ot">&lt;-</span> lasso_full_out<span class="sc">$</span>bestTune<span class="sc">$</span>lambda</span>
+<span id="cb66-2"><a href="http://localhost:6046/#cb66-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-3"><a href="http://localhost:6046/#cb66-3" aria-hidden="true" tabindex="-1"></a>lasso_summary <span class="ot">&lt;-</span> <span class="fu">coef</span>(lasso_full_out<span class="sc">$</span>finalModel, <span class="at">s =</span> optimal_lambda)</span>
+<span id="cb66-4"><a href="http://localhost:6046/#cb66-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-5"><a href="http://localhost:6046/#cb66-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-6"><a href="http://localhost:6046/#cb66-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(lasso_summary)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>15 x 1 sparse Matrix of class "dgCMatrix"
+                                                s1
+(Intercept)                            5.235566606
+Readmission_Rate                       .          
+median_income                          .          
+unemployment_rate                      .          
+Provider_Type                          .          
+Continuing_Care_Retirement_Community   .          
+Abuse_Icon                             .          
+Health_Inspection_Rating              -1.168986189
+Staffing_Rating                       -0.002090015
+Number_of_Facility_Reported_Incidents  0.050225727
+Number_of_Substantiated_Complaints     0.166615618
+Total_Amount_of_Fines_in_Dollars       0.175913987
+Number_of_Payment_Denials              0.006028798
+Total_Number_of_Penalties              .          
+occupancy                              .          </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="http://localhost:6046/#cb68-1" aria-hidden="true" tabindex="-1"></a>beta_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb68-2"><a href="http://localhost:6046/#cb68-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">predictor =</span> <span class="fu">rownames</span>(lasso_summary),</span>
+<span id="cb68-3"><a href="http://localhost:6046/#cb68-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">coefficient =</span> <span class="fu">as.vector</span>(lasso_summary)</span>
+<span id="cb68-4"><a href="http://localhost:6046/#cb68-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb68-5"><a href="http://localhost:6046/#cb68-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(beta_df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                               predictor  coefficient
+1                            (Intercept)  5.235566606
+2                       Readmission_Rate  0.000000000
+3                          median_income  0.000000000
+4                      unemployment_rate  0.000000000
+5                          Provider_Type  0.000000000
+6   Continuing_Care_Retirement_Community  0.000000000
+7                             Abuse_Icon  0.000000000
+8               Health_Inspection_Rating -1.168986189
+9                        Staffing_Rating -0.002090015
+10 Number_of_Facility_Reported_Incidents  0.050225727
+11    Number_of_Substantiated_Complaints  0.166615618
+12      Total_Amount_of_Fines_in_Dollars  0.175913987
+13             Number_of_Payment_Denials  0.006028798
+14             Total_Number_of_Penalties  0.000000000
+15                             occupancy  0.000000000</code></pre>
+</div>
+</div>
+<p>From the traceplot and the regularized <span class="math inline"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="8" style="font-size: 113.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D6FD TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>β</mi></math></mjx-assistive-mml></mjx-container></span> values, we can see that variables like <code>Health_Inspection_Rating</code>, <code>Number_of_Facility_Reported_Incidents</code>, <code>Number_of_Substantiated_Complaints</code>, and <code>Total_Amount_of_Fines_in_Dollars</code> are important (not as much shrinkage), while a number of the others were shrunk to effectively zero or near zero, like <code>Readmission_Rate</code>.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+
+<script>window.backupDefine = window.define; window.define = undefined;</script>
+<script type="text/javascript" src="./ST 563 Project_files/quarto-preview.js.download"></script>
+<script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+<script type="text/javascript">
+  const options = {
+    origin: "",
+    search: "",
+    inputFile: "C:\Users\Matthieu\Documents\Matthieu\Stat 563\Project_ST563_CartronMatthieu.qmd",
+    isPresentation: false
+  }
+  document.addEventListener("DOMContentLoaded", function () {
+    window.QuartoPreview.init(options);
+  });
+</script>
+<div><div dir="ltr" class="fui-FluentProvider fui-FluentProviderr0 ___jdtuxv0 f19n0e5 fxugw4r f1o700av fk6fouc fkhj508 figsok6 f1i3iumi"></div></div><i tabindex="0" role="none" data-tabster-dummy="" aria-hidden="true" style="position: fixed; height: 1px; width: 1px; opacity: 0.001; z-index: -1; content-visibility: hidden; top: 0px; left: 0px;"></i></body></html>

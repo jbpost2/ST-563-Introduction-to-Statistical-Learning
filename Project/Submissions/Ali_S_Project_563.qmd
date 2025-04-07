@@ -1,0 +1,1415 @@
+---
+title: "Classification Project Report"
+format:
+  html: default
+  pdf: default
+date: "`r Sys.Date()`"
+author: "Ali Shashaani"
+---
+
+::: {.callout-note title="Goal"}
+To build a predictive model for the variable `y` (subscription to term deposit) using the UCI Bank Marketing Dataset and evaluate various classification techniques using consistent training and testing data, with appropriate data processing and evaluation strategies.
+:::
+
+## 1. Load and Prepare Data
+
+```{r Setup}
+# Load essential libraries for data analysis and modeling
+library(tidyverse)      # Data manipulation and visualization
+library(caret)          # Machine learning framework
+library(MASS)           # LDA and QDA models
+library(rpart)          # Decision trees
+library(rpart.plot)     # Tree visualization
+library(randomForest)   # Random forest models
+library(e1071)          # SVM implementation
+library(glmnet)         # Lasso regression
+library(mgcv)           # Generalized additive models (GAM)
+library(corrplot)       # Correlation plots
+library(pROC)           # ROC curves
+library(conflicted)     # Manage function conflicts
+library(pdp)            # Partial dependence plots
+
+# Resolve naming conflicts
+conflict_prefer("filter", "dplyr")
+conflict_prefer("select", "dplyr")
+conflict_prefer("partial", "pdp")
+conflict_prefer("gam", "mgcv")
+set.seed(563)
+# Download and read the data
+temp_file <- tempfile(fileext = ".zip")
+download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",
+              destfile = temp_file, mode = "wb", method = "libcurl")
+bank_data <- read_csv2(unz(temp_file, "bank.csv"))
+unlink(temp_file)  # Clean up
+
+# Preview the data
+glimpse(bank_data)
+summary(bank_data)
+head(bank_data, 5)
+
+```
+
+```{r First cleanup}
+# Convert all character variables to factors
+bank_data <- bank_data %>%
+  mutate(across(where(is.character), as.factor))
+
+# Drop duration (target leakage) and all campaign-related features
+bank_data <- bank_data %>%
+  select(
+    -duration,    # target leakage
+    -contact,     # campaign-related
+    -month,       # campaign-related
+    -day,         # campaign-related
+    -campaign,    # campaign-related
+    -pdays,       # campaign-related
+    -previous,    # campaign-related
+    -poutcome     # campaign-related
+  )
+
+# Ensure 'y' is a factor with "no" as the reference level
+bank_data$y <- factor(bank_data$y, levels = c("no", "yes"))
+
+# Preview cleaned dataset
+glimpse(bank_data)
+summary(bank_data)
+
+
+```
+
+# Introduction
+
+This project analyzes direct marketing campaigns conducted by a Portuguese banking institution. The campaigns, primarily conducted via phone calls, were aimed at persuading clients to subscribe to a term deposit. The data was collected between **May 2008 and November 2010** and is publicly available via the [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/222/bank+marketing).
+
+## Project Overview
+
+The dataset captures both **client-related attributes** (demographics and personal finance) and **campaign-related attributes** (marketing effort details). Each observation represents an individual contact with a customer, and the **target variable** `y` indicates whether the client subscribed to the term deposit (`"yes"` or `"no"`).
+
+## Data Source and Description
+
+-   **Source**: UCI Machine Learning Repository — *Bank Marketing Data Set*
+-   **Unit of Analysis**: A single contact with a client
+-   **Target Variable**: `y` — indicates if the client subscribed to a term deposit
+
+## Key Attributes
+
+**Client-Related Variables** (used in modeling): - `age`: Customer's age *(numeric)* - `job`: Job category *(factor)* - `marital`: Marital status *(factor)* - `education`: Education level *(factor)* - `default`: Has credit in default? *(yes/no)* - `housing`: Has housing loan? *(yes/no)* - `loan`: Has personal loan? *(yes/no)*
+
+**Campaign-Related Variables** (excluded from modeling): - `contact`: Contact communication type *(e.g., cellular, telephone)* - `month`: Last contact month *(categorical)* - `day`: Day of the month of last contact - `duration`: Duration of last contact in seconds *(numeric)* - `campaign`: Number of contacts during the current campaign - `pdays`: Days since last contact from a previous campaign *(999 = never contacted)* - `previous`: Number of contacts before this campaign - `poutcome`: Outcome of the previous campaign
+
+## Project Objective
+
+Our main goal is to understand how **client characteristics alone** can predict the likelihood of a subscription. To that end, we will **manually exclude all campaign-related features** from the modeling stage and focus exclusively on the client-related variables.
+
+We will: - Implement a suite of **classification models** (e.g., logistic regression, decision trees, etc.) - Evaluate model performance using **ROC AUC**, **confusion matrix**, **sensitivity**, and **specificity** - Interpret model results to uncover the **most influential client features**
+
+## Why Model This Variable?
+
+Developing a model to predict `y` — term deposit subscription — can have valuable real-world implications:
+
+-   📈 **Resource Optimization**: Focus effort on clients likely to convert
+-   💸 **Cost Efficiency**: Reduce wasted marketing outreach
+-   🙂 **Improved Customer Experience**: Avoid irrelevant or excessive contact
+-   🎯 **Smarter Campaign Design**: Understand which customer features drive conversions
+-   🧠 **Economic Insight**: Learn how individual traits link to financial product adoption
+
+------------------------------------------------------------------------
+
+## 2. Data Cleaning & Transformation
+
+We first check to see if we need to regularize the numeric variable of balance in the data or not:
+
+```{r}
+# Visualize and summarize skewness in the original 'balance' variable
+library(ggplot2)
+
+# Histogram of balance
+ggplot(bank_data, aes(x = balance)) +
+  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of Balance", x = "Balance", y = "Count") +
+  theme_minimal()
+
+# Numerical summary
+summary(bank_data$balance)
+
+```
+
+### Log Transformation of `balance`
+
+The `balance` variable displays significant positive skew, with values ranging from negative to over 70,000. This skew can negatively impact model performance, particularly for algorithms sensitive to scale.
+
+To address this, we apply a **logarithmic transformation** using `log1p(balance)`, which computes `log(1 + balance)`:
+
+-   This approach handles zeros safely.
+-   It reduces the effect of large outliers.
+-   It avoids undefined values for negative balances by applying `pmax(balance, 0)`.
+
+After the transformation, the original `balance` column is removed, and `log_balance` is used as a cleaner, normalized predictor in the modeling pipeline.
+
+```{r data cleaning}
+
+# Apply log1p transformation to balance after handling negatives
+bank_data <- bank_data %>%
+  mutate(log_balance = log1p(pmax(balance, 0))) %>%
+  select(-balance)
+
+# Summary of the new transformed variable
+summary(bank_data$log_balance)
+
+# Histogram of transformed balance
+ggplot(bank_data, aes(x = log_balance)) +
+  geom_histogram(bins = 50, fill = "darkgreen", color = "white") +
+  labs(title = "Distribution of Log-Transformed Balance", x = "log(1 + balance)", y = "Count") +
+  theme_minimal()
+
+```
+
+Based on the Data description we have no missing value.
+
+the class imbalance is **significant** and typical for this dataset. So we do not expect KNN to perform really good here but we will run it in our model anyway.
+
+## 3. Train-Test Split
+
+```{r Train Test}
+
+# Stratified 70/30 split to maintain class distribution
+set.seed(563)
+split_index <- createDataPartition(bank_data$y, p = 0.7, list = FALSE)
+train_data <- bank_data[split_index, ]
+test_data  <- bank_data[-split_index, ]
+
+# Check dimensions and class balance
+table(train_data$y)
+table(test_data$y)
+
+
+```
+
+## 4. kNN Model
+
+-   **Type**: Non-parametric\
+    KNN is a memory-based learner that classifies a new observation by majority vote among its *k* nearest neighbors in the training data.
+
+-   **Tuning Parameter**:
+
+    -   `k` — the number of nearest neighbors.\
+        A small `k` results in more flexible (wiggly) decision boundaries but higher variance, while a larger `k` smooths the boundary and reduces variance. Cross-validation is used to select the optimal `k` that balances bias-variance trade-off.
+
+-   **Inference**: ❌ No
+
+    -   KNN provides **no coefficients, p-values, or confidence intervals**. It’s purely predictive and non-parametric. We cannot use it for formal hypothesis testing.
+
+-   **Variable Selection**: ❌ No
+
+    -   All features contribute equally to distance calculations. This means **irrelevant or noisy variables can reduce accuracy**, especially in high-dimensional settings.
+
+-   **Standardization**: ✅ Yes
+
+    -   KNN uses distance metrics (e.g., Euclidean distance), so **standardizing predictors is essential** to prevent variables on larger scales from dominating the calculation.
+
+-   **Interpretability**: ⚠️ Low
+
+    -   While intuitive, KNN does not provide interpretable relationships between predictors and the outcome.
+
+-   **Theoretical Connection**:
+
+    -   KNN can be viewed as a **direct estimate of conditional probability**, approximating the Bayes classifier by assigning classes based on the majority label among nearest observations​:contentReference[oaicite:0]{index="0"}.
+
+```{r KNN cv}
+
+
+# Load caret if not already loaded
+library(caret)
+
+# Set up repeated cross-validation
+set.seed(563)
+ctrl <- trainControl(method = "repeatedcv", 
+                     number = 5, 
+                     repeats = 5, 
+                     classProbs = TRUE)
+
+# Grid of k: 1 to 25 in steps of 2 (as in lecture)
+k_grid <- data.frame(k = seq(1, 25, by = 2))
+
+# Fit KNN model with cross-validation
+knn_fit <- train(
+  y ~ ., 
+  data = train_data,
+  method = "knn",
+  tuneGrid = k_grid,
+  trControl = ctrl,
+  preProcess = c("center", "scale")
+)
+
+# Plot accuracy over k values
+plot(knn_fit)
+
+```
+
+```{r best k}
+
+
+# Show the best value of k chosen by CV
+knn_fit$bestTune
+
+```
+
+```{r knn Training}
+
+
+# Predict on training set using best k
+train_pred_knn <- predict(knn_fit, newdata = train_data)
+
+# Confusion matrix on training set
+confusionMatrix(train_pred_knn, train_data$y, positive = "yes")
+
+```
+
+```{r knn Test}
+
+# Predict on test set using best k
+test_pred_knn <- predict(knn_fit, newdata = test_data)
+
+# Confusion matrix on test set
+confusionMatrix(test_pred_knn, test_data$y, positive = "yes")
+```
+
+### KNN Model Performance Summary
+
+The KNN model was tuned using repeated 5-fold cross-validation. The best-performing value was **k = 19**.
+
+While overall **accuracy** was high on both the training (0.885) and test (0.886) sets, this is largely due to the imbalanced nature of the target variable.
+
+-   **Specificity** was perfect (1.000), meaning the model correctly predicted almost all `"no"` cases.
+-   However, **sensitivity** was extremely low (0.0027 on training, 0.0064 on test), indicating a near-total failure to identify `"yes"` cases.
+-   **Balanced accuracy** hovered around 0.50, suggesting the model is no better than random at distinguishing between classes.
+
+Overall, the KNN model is biased toward the majority class and performs poorly in identifying term deposit subscribers.
+
+## 6. Lasso Logistic Regression
+
+### Logistic Regression with Lasso Penalty
+
+**Type**: Parametric\
+**Tuning Parameter**: λ — the regularization parameter that controls the strength of the penalty on the regression coefficients.\
+**Inference**: ❌ Not directly — coefficients are shrunk, and statistical significance is not straightforward.\
+**Variable Selection**: ✅ Yes — Lasso can shrink some coefficients to zero, effectively performing variable selection.\
+**Standardization**: ✅ Yes — `glmnet()` automatically standardizes predictors before fitting.
+
+------------------------------------------------------------------------
+
+We fit a logistic regression model with a **Lasso penalty** using `glmnet::cv.glmnet()` to select the optimal λ via cross-validation.\
+Only the **client-related features** (excluding all campaign features) are used in the model.
+
+```{r Lasso LR}
+
+library(glmnet) #We use glmnet to automatically obtain 1 SE lambda
+
+# Prepare the design matrix (X) and response (y) for glmnet
+x_train <- model.matrix(y ~ ., data = train_data)[, -1]  # Remove intercept
+y_train <- train_data$y
+
+# Lasso logistic regression with cross-validation
+set.seed(563)
+lasso_cv <- cv.glmnet(
+  x = x_train,
+  y = y_train,
+  family = "binomial",
+  alpha = 1,               # alpha = 1 for Lasso
+  nfolds = 5               # 5-fold CV
+)
+
+# Plot CV error vs. log(lambda)
+plot(lasso_cv)
+
+# Extract the best lambda using 1-SE rule
+lambda_1se <- lasso_cv$lambda.1se
+
+
+```
+
+```{r Lasso on Train}
+
+
+# Fit final Lasso model using lambda.1se
+lasso_final <- glmnet(
+  x = x_train,
+  y = y_train,
+  family = "binomial",
+  alpha = 1,
+  lambda = lambda_1se
+)
+
+# Predict on training set (class labels)
+train_prob_lasso <- predict(lasso_final, newx = x_train, type = "response")
+train_pred_lasso <- ifelse(train_prob_lasso > 0.5, "yes", "no") |> factor(levels = c("no", "yes"))
+
+# Evaluate on training set
+confusionMatrix(train_pred_lasso, y_train, positive = "yes")
+
+# Get coefficients for the final model
+lasso_coefs <- coef(lasso_final)
+
+# Convert to data frame and inspect non-zero coefficients
+nonzero_coefs <- as.matrix(lasso_coefs)
+nonzero_coefs[nonzero_coefs != 0, , drop = FALSE]
+
+```
+
+```{r LR on Test}
+
+# Create test matrix
+x_test <- model.matrix(y ~ ., data = test_data)[, -1]
+y_test <- test_data$y
+
+# Predict on test set
+test_prob_lasso <- predict(lasso_final, newx = x_test, type = "response")
+test_pred_lasso <- ifelse(test_prob_lasso > 0.5, "yes", "no") |> factor(levels = c("no", "yes"))
+
+# Evaluate on test set
+confusionMatrix(test_pred_lasso, y_test, positive = "yes")
+
+```
+
+### Lasso Logistic Regression Performance Summary
+
+We used 5-fold cross-validation to tune the regularization parameter (λ) in a logistic regression model with Lasso penalty. The optimal λ was chosen using the **1-SE rule**, leading to a sparse and regularized model.
+
+-   **Training Accuracy**: 0.885\
+-   **Test Accuracy**: 0.885\
+-   **Specificity**: 1.000 (perfectly predicts `"no"` class)\
+-   **Sensitivity**: 0.000 (completely fails to predict `"yes"` class)\
+-   **Balanced Accuracy**: 0.500 (no better than random guessing)
+
+Although the model generalizes in terms of accuracy, it fails to detect any positive cases (`"yes"`), indicating that Lasso heavily penalized or zeroed out all predictors that could distinguish term deposit subscribers.
+
+All other predictor coefficients were **shrunk to exactly zero** by the Lasso penalty. This implies that the model essentially reduced to a **null model** — one that makes predictions based solely on the overall class distribution, without considering any input features.
+
+This explains the earlier performance metrics:
+
+-   **Accuracy**: High (due to class imbalance)
+    **Sensitivity**: 0 (no `"yes"` cases detected)
+
+    **Balanced Accuracy**: 0.50 (random performance)
+
+    The heavy regularization imposed by the 1-SE rule led to a model that **excluded all predictors**, highlighting how Lasso can aggressively simplify models when signals are weak or classes are imbalanced.
+
+## 7.LDA
+
+### Linear Discriminant Analysis (LDA)
+
+**Type**: Parametric, generative model\
+**Tuning Parameter**: ❌ None — LDA does not require tuning.\
+**Inference**: ✅ Yes — LDA provides class means, prior probabilities, and linear discriminants that can be interpreted.\
+**Variable Selection**: ❌ No — All predictors are used unless pre-selected manually.\
+**Standardization**: ⚠️ Not required if predictors are on similar scales. LDA assumes equal covariance matrices across classes.
+
+------------------------------------------------------------------------
+
+LDA models the probability of class membership by assuming that predictors are normally distributed within each class and share a common covariance matrix. It finds a linear combination of predictors that best separates the classes.
+
+```{r LDA model}
+library(MASS)
+
+# Fit LDA model
+lda_fit <- lda(y ~ ., data = train_data)
+
+# View model details (prior probs, means, etc.)
+lda_fit
+```
+
+```{r LDA on Train}
+
+# Predict on training set
+lda_train_pred <- predict(lda_fit, newdata = train_data)$class
+
+# Confusion matrix for training set
+confusionMatrix(lda_train_pred, train_data$y, positive = "yes")
+```
+
+```{r LDA on Test}
+
+
+# Predict on test set
+lda_test_pred <- predict(lda_fit, newdata = test_data)$class
+
+# Confusion matrix for test set
+confusionMatrix(lda_test_pred, test_data$y, positive = "yes")
+```
+
+### Linear Discriminant Analysis (LDA) Performance Summary
+
+The LDA model was fit on the training set without tuning, assuming normally distributed predictors and shared covariance matrices between classes.
+
+#### Discriminant Function
+
+-   The linear discriminant was a weighted combination of all predictors.
+-   Coefficients for features like `jobretired`, `jobstudent`, `educationtertiary`, and `log_balance` had strong positive contributions.
+-   Features like `loanyes`, `housingyes`, and `maritalmarried` had strong negative contributions.
+
+#### Performance
+
+Despite perfect classification of `"no"` responses, the model fails to detect `"yes"` cases. This reflects the dominance of the majority class in the decision boundary, and the absence of a threshold adjustment or resampling method.
+
+LDA is retained for comparison but shows poor sensitivity.
+
+## 8.QDA
+
+QDA tries to estimate a **separate covariance matrix** for each class.
+
+If one class has **predictors that are collinear or nearly constant**, the covariance matrix becomes **singular (not invertible)**.
+
+This throws a **rank deficiency error**.
+
+**Type**: Parametric, generative model\
+**Tuning Parameter**: ❌ None — QDA does not require tuning.\
+**Inference**: ✅ Yes — QDA provides class-specific means and covariance matrices.\
+**Variable Selection**: ❌ No — All predictors are used unless selected manually.\
+**Standardization**: ⚠️ Not required, but QDA estimates a separate covariance matrix for each class.
+
+------------------------------------------------------------------------
+
+QDA is similar to LDA but **relaxes the assumption of equal covariance matrices** between classes. This allows for **quadratic** decision boundaries, potentially improving performance when class distributions differ in spread or shape.
+
+```{r QDA model}
+
+library(MASS)
+
+# Fit QDA model
+qda_fit <- qda(y ~ ., data = train_data)
+
+# View model details (priors, means, etc.)
+qda_fit
+
+```
+
+We have multicollinearity — it’s likely due to **linear dependencies** or **constant values** within a group (especially the `"no"` class).
+
+```{r QDA on Train}
+
+# Predict on training set
+qda_train_pred <- predict(qda_fit, newdata = train_data)$class
+
+# Confusion matrix for training set
+confusionMatrix(qda_train_pred, train_data$y, positive = "yes")
+```
+
+```{r QDA on Test}
+
+# Predict on test set
+qda_test_pred <- predict(qda_fit, newdata = test_data)$class
+
+# Confusion matrix for test set
+confusionMatrix(qda_test_pred, test_data$y, positive = "yes")
+
+```
+
+-   QDA needs **invertible covariance matrices** for each class.
+
+-   If full feature sets cause **singularities**, using a **simplified model** is an accepted fix.
+
+### Quadratic Discriminant Analysis (QDA) Performance Summary
+
+QDA was fit without tuning, allowing for class-specific covariance matrices. This flexibility yielded slightly improved sensitivity compared to previous models.
+
+#### Performance
+
+QDA achieves a better tradeoff between specificity and sensitivity than KNN, Lasso, and LDA. It detects more `"yes"` cases while still maintaining high specificity. This suggests that allowing quadratic decision boundaries helps separate the minority class more effectively.
+
+## 9.GAM
+
+### Generalized Additive Model (GAM)
+
+**Type**: Semi-parametric, non-linear extension of GLM.
+
+**Tuning Parameter**: Degrees of freedom for each smoother function (e.g., `df = 4` for splines); controls flexibility and smoothness of fitted terms.
+
+**Inference**: ✅ Partial — GAMs allow partial interpretability through visualization of smooth terms but do not provide simple global coefficients like linear models.
+
+**Variable Selection**: ❌ Not automatic — all included predictors remain unless manually removed.
+
+**Standardization**: ⚠️ Mixed — numerical variables with smooth functions are internally scaled; categorical variables are handled via dummies.
+
+**Modeling Logic**:
+GAMs extend logistic regression by modeling the log-odds as an additive combination of *smooth* functions for continuous variables and *linear* terms for categorical variables:
+
+```{r GAM model}
+# Load mgcv package
+library(mgcv)
+
+# Fit GAM with smoothing splines for continuous variables
+gam_fit <- gam(
+  y ~ s(age) + s(log_balance) + job + marital + education +
+      default + housing + loan,
+  data = train_data,
+  family = binomial(link = "logit")
+)
+
+# Plot smooth functions
+plot(gam_fit, se = TRUE)
+```
+
+```{r GAM on Train}
+
+# Predict on training set
+train_prob_gam <- predict(gam_fit, newdata = train_data, type = "response")
+train_pred_gam <- ifelse(train_prob_gam > 0.5, "yes", "no") |> factor(levels = c("no", "yes"))
+
+# Confusion matrix
+confusionMatrix(train_pred_gam, train_data$y, positive = "yes")
+```
+
+```{r GAM on Test}
+
+
+# Predict on test set
+test_prob_gam <- predict(gam_fit, newdata = test_data, type = "response")
+test_pred_gam <- ifelse(test_prob_gam > 0.5, "yes", "no") |> factor(levels = c("no", "yes"))
+
+# Confusion matrix
+confusionMatrix(test_pred_gam, test_data$y, positive = "yes")
+```
+
+### Generalized Additive Model (GAM) Performance Summary
+
+We fit a GAM using smoothing splines for continuous variables (`age`, `log_balance`) and linear terms for categorical predictors. The smooth terms revealed:
+
+-   A slight positive trend in the log-odds of subscription with increasing **age** (more noticeable after age 60)
+-   A non-linear relationship between **log_balance** and the outcome, with a peak effect around log-balance 8
+
+#### Performance
+
+GAM showed a small improvement in sensitivity on the training set but failed to detect any `"yes"` cases in the test set. While it provides more flexibility in modeling predictor effects, it suffers from the same imbalance-driven limitations as earlier models.
+
+\
+
+------------------------------------------------------------------------
+
+\
+
+## 10.CART
+
+```{r CART model}
+
+library(rpart)
+library(rpart.plot)
+
+# Fit a full classification tree using Gini index
+cart_full <- rpart(
+  y ~ ., 
+  data = train_data,
+  method = "class",
+  parms = list(split = "gini"),
+  control = rpart.control(cp = 0.001, xval = 10)  # small cp to grow a large tree
+)
+
+# Plot cross-validated error vs. complexity
+plotcp(cart_full)
+
+```
+
+```{r CART prune}
+
+# Find best cp using 1-SE rule
+cp_table <- cart_full$cptable
+min_xerror <- min(cp_table[,"xerror"])
+se_threshold <- min_xerror + cp_table[which.min(cp_table[,"xerror"]), "xstd"]
+best_cp <- cp_table[cp_table[,"xerror"] <= se_threshold, ][1, "CP"]
+
+# Prune tree
+cart_pruned <- prune(cart_full, cp = best_cp)
+
+# Plot final pruned tree
+rpart.plot(cart_pruned, type = 2, extra = 104, fallen.leaves = TRUE)
+
+```
+
+```{r CART on Train}
+
+# Predict on training set
+train_pred_cart <- predict(cart_pruned, newdata = train_data, type = "class")
+
+# Confusion matrix
+confusionMatrix(train_pred_cart, train_data$y, positive = "yes")
+
+```
+
+```{r CART on Test}
+
+# Predict on test set
+test_pred_cart <- predict(cart_pruned, newdata = test_data, type = "class")
+
+# Confusion matrix
+confusionMatrix(test_pred_cart, test_data$y, positive = "yes")
+
+```
+
+### Classification Tree (CART) Performance Summary
+
+We fit a classification tree using the Gini index and applied **10-fold cross-validation** to select the optimal complexity parameter (`cp`). Pruning was performed using the **1-SE rule**, which led to a fully pruned tree (root node only).
+
+#### Tree Structure
+
+-   No splits were retained — the pruned tree predicts all clients as `"no"`, reflecting the class imbalance in the training data.
+
+#### Performance
+
+While the model achieves high accuracy due to the dominance of the `"no"` class, it fails to identify any term deposit subscribers (`"yes"` cases). This outcome is typical when the **pruning criterion favors simpler trees** in imbalanced settings.
+
+## 11.Random Forest
+
+**Type**: Non-parametric, ensemble tree-based method\
+**Tuning Parameter**:\
+- `mtry`: Number of predictors randomly selected at each split\
+- `ntree`: Total number of trees (usually fixed at a large value like 500)
+
+**Inference**: ❌ No — Random Forests are predictive and not interpretable \
+**Variable Selection**: ✅ Yes — implicitly performed via random subsetting and node splits\
+**Standardization**: ❌ Not required — scale-invariant like trees
+
+------------------------------------------------------------------------
+
+Random Forest is an ensemble learning method that combines multiple decision trees using **bagging** and **random feature selection**. Each tree is built on a bootstrap sample of the data, and only a random subset of predictors is considered at each split, which decorrelates the trees and improves generalization.
+
+The final prediction is made via **majority vote** (for classification). Random Forests typically outperform single decision trees in predictive accuracy, though at the cost of reduced interpretability.
+
+In this project, we use repeated 5-fold cross-validation to tune `mtry` and evaluate model performance.
+
+```{r RF model}
+
+library(randomForest)
+
+# Set up tuning grid for mtry (try small range, e.g., 2 to 6)
+rf_grid <- expand.grid(mtry = 2:6)
+
+# Train the random forest using caret
+set.seed(563)
+rf_fit <- train(
+  y ~ .,
+  data = train_data,
+  method = "rf",
+  metric = "Accuracy",
+  tuneGrid = rf_grid,
+  trControl = trainControl(method = "repeatedcv", number = 5, repeats = 3)
+)
+
+# Plot CV accuracy vs. mtry
+plot(rf_fit)
+rf_fit$bestTune
+
+```
+
+```{r RF on Train}
+
+# Predict on training set
+train_pred_rf <- predict(rf_fit, newdata = train_data)
+
+# Confusion matrix
+confusionMatrix(train_pred_rf, train_data$y, positive = "yes")
+
+```
+
+```{r RF on Test}
+
+
+# Predict on test set
+test_pred_rf <- predict(rf_fit, newdata = test_data)
+
+# Confusion matrix
+confusionMatrix(test_pred_rf, test_data$y, positive = "yes")
+
+```
+
+### Random Forest Performance Summary
+
+We trained a Random Forest model using repeated 5-fold cross-validation to tune `mtry`, the number of predictors considered at each split. The optimal value was `mtry = 2`, which yielded the best cross-validated accuracy.
+
+Despite the model’s flexibility and ensemble nature, it predicted only the `"no"` class due to the strong class imbalance.
+
+#### Performance
+
+While Random Forests typically improve generalization, they can still struggle to detect rare events without explicit handling of imbalance.
+
+## 11.SVM
+
+**Type**: Non-parametric, margin-based classifier\
+**Tuning Parameters**:\
+- `C` (Cost): Controls the trade-off between a wide margin and classification error.\
+- `sigma` (Gamma): Defines the influence of a single training point in the radial kernel.
+
+**Inference**: ❌ No — SVMs are black-box classifiers with limited interpretability\
+**Variable Selection**: ❌ No — all predictors contribute via distance-based margins\
+**Standardization**: ✅ Required — SVMs are sensitive to scale due to their reliance on distance calculations
+
+------------------------------------------------------------------------
+
+SVMs aim to find a decision boundary that maximizes the **margin** between classes, using only the most influential observations (called **support vectors**). When the classes are not linearly separable, SVMs apply a **kernel trick** to project the data into a higher-dimensional space where a linear separation becomes possible.
+
+In this project, we use a **radial basis function (RBF) kernel**, which enables highly flexible non-linear classification boundaries. The `caret::train()` function is used to tune the `C` and `sigma` parameters via repeated cross-validation.
+
+```{r SVM}
+
+
+library(e1071)
+
+# Set up repeated CV
+ctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 3)
+
+# Fit SVM with radial kernel using caret
+set.seed(563)
+svm_fit <- train(
+  y ~ .,
+  data = train_data,
+  method = "svmRadial",
+  metric = "Accuracy",
+  preProcess = c("center", "scale"),
+  tuneLength = 10,
+  trControl = ctrl
+)
+
+# Plot cross-validation results
+plot(svm_fit)
+
+# Best tuning parameters
+svm_fit$bestTune
+
+```
+
+```{r SVM Training}
+
+# Predict on training set
+train_pred_svm <- predict(svm_fit, newdata = train_data)
+
+# Confusion matrix
+confusionMatrix(train_pred_svm, train_data$y, positive = "yes")
+
+```
+
+```{r SVM Test}
+
+# Predict on test set
+test_pred_svm <- predict(svm_fit, newdata = test_data)
+
+# Confusion matrix
+confusionMatrix(test_pred_svm, test_data$y, positive = "yes")
+
+```
+
+### Support Vector Machine (SVM) Performance Summary
+
+We trained a Support Vector Machine with a **radial basis function (RBF) kernel**, tuning the `C` and `sigma` parameters using repeated 5-fold cross-validation. The best parameters were:
+
+-   `sigma` = 0.0397\
+-   `C` = 0.25
+
+Despite the flexibility of the kernel method, the SVM failed to identify any `"yes"` cases in the imbalanced dataset, defaulting to the majority class.
+
+#### Performance
+
+While SVMs can capture complex decision boundaries, they are still sensitive to class imbalance without further strategies like cost-sensitive learning or resampling.
+
+------------------------------------------------------------------------
+
+## 📊 Model Comparison: Train vs Test
+
+### Final Model Comparison
+
+The table below summarizes the performance of all models evaluated in this project. We focus on key classification metrics: **Accuracy**, **Sensitivity**, **Specificity**, and **Balanced Accuracy**, using both the training and test sets for consistency.
+
+| Model | Accuracy (Train) | Sensitivity (Train) | Specificity (Train) | Balanced Acc. (Train) | Accuracy (Test) | Sensitivity (Test) | Specificity (Test) | Balanced Acc. (Test) |
+|------------|-----------|-------------|------------|-----------|-----------|------------|------------|--------------|
+| KNN (k = 19) | 0.885 | 0.003 | 1.000 | 0.501 | 0.886 | 0.006 | 1.000 | 0.503 |
+| Lasso | 0.885 | 0.000 | 1.000 | 0.500 | 0.885 | 0.000 | 1.000 | 0.500 |
+| LDA | 0.885 | 0.003 | 1.000 | 0.501 | 0.885 | 0.000 | 1.000 | 0.500 |
+| QDA | 0.855 | 0.184 | 0.942 | 0.563 | 0.840 | 0.179 | 0.926 | 0.553 |
+| GAM | 0.886 | 0.014 | 0.9996 | 0.507 | 0.884 | 0.000 | 0.9992 | 0.500 |
+| CART | 0.885 | 0.000 | 1.000 | 0.500 | 0.885 | 0.000 | 1.000 | 0.500 |
+| Random Forest | 0.885 | 0.000 | 1.000 | 0.500 | 0.885 | 0.000 | 1.000 | 0.500 |
+| SVM (RBF) | 0.885 | 0.000 | 1.000 | 0.500 | 0.885 | 0.000 | 1.000 | 0.500 |
+
+> ✅ **QDA** stands out as the only model that showed meaningful detection of `"yes"` responses, offering higher sensitivity and improved balanced accuracy on both training and test sets.
+
+# Reorganized Model 
+
+Since we have a highly imbalanced dataset, in order to have a meaningful analysis, we’ll walk through the entire updated analysis from the beginning, but this time with **downsampling applied to the training data only**. The test set will remain untouched to see how that would contribute to our overall analysis.
+
+For this run, we go fast up to the comparison chunk.
+
+```{r}
+# Load essential libraries for data analysis and modeling
+library(tidyverse)      # Data manipulation and visualization
+library(caret)          # Machine learning framework
+library(MASS)           # LDA and QDA models
+library(rpart)          # Decision trees
+library(rpart.plot)     # Tree visualization
+library(randomForest)   # Random forest models
+library(e1071)          # SVM implementation
+library(glmnet)         # Lasso regression
+library(mgcv)           # Generalized additive models (GAM)
+library(corrplot)       # Correlation plots
+library(pROC)           # ROC curves
+library(conflicted)     # Manage function conflicts
+library(pdp)            # Partial dependence plots
+
+# Resolve naming conflicts
+conflict_prefer("filter", "dplyr")
+conflict_prefer("select", "dplyr")
+conflict_prefer("partial", "pdp")
+conflict_prefer("gam", "mgcv")
+set.seed(563)
+# Download and read the data
+temp_file <- tempfile(fileext = ".zip")
+download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank.zip",
+              destfile = temp_file, mode = "wb", method = "libcurl")
+bank_data <- read_csv2(unz(temp_file, "bank.csv"))
+unlink(temp_file)  # Clean up
+
+# Preview the data
+glimpse(bank_data)
+summary(bank_data)
+head(bank_data, 5)
+
+```
+
+```{r}
+# Convert all character variables to factors
+bank_data <- bank_data %>%
+  mutate(across(where(is.character), as.factor))
+
+# Drop duration (target leakage) and all campaign-related features
+bank_data <- bank_data %>%
+  select(
+    -duration,    # target leakage
+    -contact,     # campaign-related
+    -month,       # campaign-related
+    -day,         # campaign-related
+    -campaign,    # campaign-related
+    -pdays,       # campaign-related
+    -previous,    # campaign-related
+    -poutcome     # campaign-related
+  )
+
+# Ensure 'y' is a factor with "no" as the reference level
+bank_data$y <- factor(bank_data$y, levels = c("no", "yes"))
+
+# Preview cleaned dataset
+glimpse(bank_data)
+summary(bank_data)
+
+# Create log-transformed balance, drop original
+bank_data <- bank_data %>%
+  mutate(log_balance = log1p(pmax(balance, 0))) %>%
+  select(-balance)
+
+```
+
+```{r Split Training and Test with Downsampling}
+
+
+# Stratified 70/30 split to maintain class distribution
+set.seed(563)
+split_index <- createDataPartition(bank_data$y, p = 0.7, list = FALSE)
+train_data <- bank_data[split_index, ]
+test_data  <- bank_data[-split_index, ]
+
+# Downsample the majority class in training data
+train_data_down <- downSample(
+  x = train_data %>% select(-y),
+  y = train_data$y,
+  yname = "y"
+)
+
+# Check class balance after downsampling
+table(train_data_down$y)
+
+```
+
+This method confront the imbalance in dataset with equally distributing binary responses.
+
+#### KNN
+
+```{r}
+#| label: knn-train
+#| echo: true
+
+# Set up repeated cross-validation
+set.seed(563)
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 5,
+  repeats = 5,
+  classProbs = TRUE
+)
+
+# Grid of k: 1 to 25 by 2
+k_grid <- data.frame(k = seq(1, 25, by = 2))
+
+# Train KNN model on downsampled training set
+knn_fit <- train(
+  y ~ ., 
+  data = train_data_down,
+  method = "knn",
+  tuneGrid = k_grid,
+  trControl = ctrl,
+  preProcess = c("center", "scale")
+)
+
+# Plot tuning results
+plot(knn_fit)
+knn_fit$bestTune
+
+```
+
+```{r}
+
+
+# Predict on training set
+train_pred_knn <- predict(knn_fit, newdata = train_data_down)
+confusionMatrix(train_pred_knn, train_data_down$y, positive = "yes")
+
+# Predict on test set (original test set, not downsampled)
+test_pred_knn <- predict(knn_fit, newdata = test_data)
+confusionMatrix(test_pred_knn, test_data$y, positive = "yes")
+
+```
+
+with downsampling, it’s now showing **significantly better sensitivity and balanced accuracy**, especially on the test set.
+
+#### LR with Lasso
+
+```{r}
+
+library(glmnet)
+
+# Prepare design matrix (X) and response (y) from downsampled training data
+x_train <- model.matrix(y ~ ., data = train_data_down)[, -1]  # remove intercept
+y_train <- train_data_down$y
+
+# Lasso logistic regression with cross-validation
+set.seed(563)
+lasso_cv <- cv.glmnet(
+  x = x_train,
+  y = y_train,
+  family = "binomial",
+  alpha = 1,
+  nfolds = 5
+)
+
+# Plot cross-validation curve
+plot(lasso_cv)
+
+# Get lambda using 1-SE rule
+lambda_1se <- lasso_cv$lambda.1se
+lambda_1se
+
+```
+
+```{r}
+
+
+# Fit final Lasso model using 1-SE lambda
+lasso_final <- glmnet(
+  x = x_train,
+  y = y_train,
+  family = "binomial",
+  alpha = 1,
+  lambda = lambda_1se
+)
+
+# Predict on downsampled training set
+train_prob_lasso <- predict(lasso_final, newx = x_train, type = "response")
+train_pred_lasso <- ifelse(train_prob_lasso > 0.5, "yes", "no") |> 
+  factor(levels = c("no", "yes"))
+
+confusionMatrix(train_pred_lasso, y_train, positive = "yes")
+
+# Prepare test matrix
+x_test <- model.matrix(y ~ ., data = test_data)[, -1]
+y_test <- test_data$y
+
+# Predict on test set
+test_prob_lasso <- predict(lasso_final, newx = x_test, type = "response")
+test_pred_lasso <- ifelse(test_prob_lasso > 0.5, "yes", "no") |> 
+  factor(levels = c("no", "yes"))
+
+confusionMatrix(test_pred_lasso, y_test, positive = "yes")
+
+```
+
+Downsampling **significantly improved** the model’s ability to identify the minority class ("**yes**"). While accuracy [dropped]{.underline}, **the model is now actually useful** for predicting positive cases — which is the goal of this classification problem.
+
+#### LDA
+
+```{r}
+
+library(MASS)
+
+# Fit LDA model on downsampled data
+lda_fit <- lda(y ~ ., data = train_data_down)
+
+# View LDA model summary (priors, group means, etc.)
+lda_fit
+
+```
+
+```{r}
+
+# Predict on downsampled training set
+train_pred_lda <- predict(lda_fit, newdata = train_data_down)$class
+confusionMatrix(train_pred_lda, train_data_down$y, positive = "yes")
+
+# Predict on original (imbalanced) test set
+test_pred_lda <- predict(lda_fit, newdata = test_data)$class
+confusionMatrix(test_pred_lda, test_data$y, positive = "yes")
+
+```
+
+#### QDA
+
+```{r}
+
+# Fit QDA model
+qda_fit <- qda(y ~ ., data = train_data_down)
+
+# View model summary
+qda_fit
+
+```
+
+```{r}
+
+# Predict on downsampled training set
+train_pred_qda <- predict(qda_fit, newdata = train_data_down)$class
+confusionMatrix(train_pred_qda, train_data_down$y, positive = "yes")
+
+# Predict on original test set
+test_pred_qda <- predict(qda_fit, newdata = test_data)$class
+confusionMatrix(test_pred_qda, test_data$y, positive = "yes")
+
+```
+
+**QDA shows the most improvement from downsampling**. It strikes a much better balance between detecting positives and avoiding false alarms — and maintains the highest balanced accuracy of any model so far.
+
+**After Downsampling**:
+
+Sensitivity more than **tripled** (from \~0.18 → \~0.66).
+
+Balanced Accuracy increased on both training (0.563 → 0.660) and test (0.553 → 0.599).
+
+Overall accuracy dropped, but that’s expected — and worthwhile when our goal is to detect rare events.
+
+#### GAM
+
+```{r}
+
+
+# Load mgcv package
+library(mgcv)
+
+# Fit GAM with smoothing splines on numeric variables
+gam_fit <- gam(
+  y ~ s(age) + s(log_balance) + job + marital + education +
+      default + housing + loan,
+  data = train_data_down,
+  family = binomial(link = "logit")
+)
+
+# Plot smooth terms with confidence bands
+plot(gam_fit, se = TRUE)
+
+```
+
+```{r}
+# Predict on training data
+train_prob_gam <- predict(gam_fit, newdata = train_data_down, type = "response")
+train_pred_gam <- ifelse(train_prob_gam > 0.5, "yes", "no") |> factor(levels = c("no", "yes"))
+
+# Predict on test data
+test_prob_gam <- predict(gam_fit, newdata = test_data, type = "response")
+test_pred_gam <- ifelse(test_prob_gam > 0.5, "yes", "no") |> factor(levels = c("no", "yes"))
+
+# Confusion matrices
+cat("Training Set:\n")
+confusionMatrix(train_pred_gam, train_data_down$y, positive = "yes")
+
+cat("\nTest Set:\n")
+confusionMatrix(test_pred_gam, test_data$y, positive = "yes")
+
+```
+
+Downsampling dramatically improves **GAM's ability to detect "yes" outcomes**, with a 64.7% sensitivity vs 0% previously. Balanced accuracy also improves from 0.5 (similar to random guess) to **0.60**, making the model far more useful for classification under imbalance.
+
+#### CART
+
+```{r}
+library(rpart)
+library(rpart.plot)
+
+# Fit a full classification tree using downsampled training data
+cart_full_down <- rpart(
+  y ~ ., 
+  data = train_data_down,
+  method = "class",
+  parms = list(split = "gini"),
+  control = rpart.control(cp = 0.001, xval = 10)  # small cp to grow a large tree
+)
+
+# Plot cross-validated error vs. complexity
+plotcp(cart_full_down)
+```
+
+```{r}
+# Use the 1-SE rule to choose best cp
+cp_table_down <- cart_full_down$cptable
+min_xerror_down <- min(cp_table_down[, "xerror"])
+se_threshold_down <- min_xerror_down + cp_table_down[which.min(cp_table_down[, "xerror"]), "xstd"]
+best_cp_down <- cp_table_down[cp_table_down[, "xerror"] <= se_threshold_down, ][1, "CP"]
+
+# Prune the tree using selected cp
+cart_pruned_down <- prune(cart_full_down, cp = best_cp_down)
+
+# Plot final pruned tree
+rpart.plot(cart_pruned_down, type = 2, extra = 104, fallen.leaves = TRUE)
+
+```
+
+This indicates the model finally learned from the **balanced training set** and didn’t collapse into always predicting the majority class.
+
+```{r}
+# Predictions and evaluation
+cart_train_pred <- predict(cart_pruned_down, newdata = train_data_down, type = "class")
+cart_test_pred  <- predict(cart_pruned_down, newdata = test_data, type = "class")
+
+confusionMatrix(cart_train_pred, train_data_down$y, positive = "yes")
+confusionMatrix(cart_test_pred, test_data$y, positive = "yes")
+
+```
+
+Downsampling worked. CART is now making meaningful predictions and is identifying **more than 70% of actual “yes” responses**, which it completely missed before. While overall accuracy dropped (expected due to class imbalance), **balanced accuracy and sensitivity improved significantly**, which is **what we care about most** in imbalanced classification problems.
+
+#### Random Forest
+
+```{r}
+# Load required package
+library(randomForest)
+
+# Set up tuning grid for mtry (e.g., 2 to 6)
+rf_grid <- expand.grid(mtry = 2:6)
+
+# Train the random forest on the DOWNSAMPLED training data
+set.seed(563)
+rf_fit_down <- train(
+  y ~ .,
+  data = train_data_down,   # ✅ downsampled data
+  method = "rf",
+  metric = "Accuracy",
+  tuneGrid = rf_grid,
+  trControl = trainControl(method = "repeatedcv", number = 5, repeats = 3)
+)
+
+# Plot CV accuracy vs. mtry
+plot(rf_fit_down)
+rf_fit_down$bestTune
+
+```
+
+```{r}
+# Predict on downsampled training set
+train_pred_rf_down <- predict(rf_fit_down, newdata = train_data_down)
+
+# Confusion matrix
+confusionMatrix(train_pred_rf_down, train_data_down$y, positive = "yes")
+
+
+# Predict on original test set
+test_pred_rf_down <- predict(rf_fit_down, newdata = test_data)
+
+# Confusion matrix
+confusionMatrix(test_pred_rf_down, test_data$y, positive = "yes")
+
+```
+
+**Random Forest with downsampling** ran successfully and performed notably better in terms of sensitivity and balanced accuracy compared to the non-downsampled version.
+
+With Downsampling, RF learned to detect both classes, where on the previous run it could only predict the majority class.
+
+#### SVM
+
+```{r}
+# Load required package
+library(e1071)
+
+# Set up repeated CV
+ctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 3)
+
+# Train SVM on downsampled data
+set.seed(563)
+svm_down_fit <- train(
+  y ~ .,
+  data = train_data_down,
+  method = "svmRadial",
+  metric = "Accuracy",
+  preProcess = c("center", "scale"),
+  tuneLength = 10,
+  trControl = ctrl
+)
+
+# Plot cross-validation accuracy vs. tuning parameters
+plot(svm_down_fit)
+
+# View best tuning parameters
+svm_down_fit$bestTune
+
+```
+
+```{r}
+# Predict on downsampled training data
+svm_train_pred <- predict(svm_down_fit, newdata = train_data_down)
+
+# Predict on original test data
+svm_test_pred <- predict(svm_down_fit, newdata = test_data)
+
+# Confusion matrices
+confusionMatrix(svm_train_pred, train_data_down$y, positive = "yes")
+confusionMatrix(svm_test_pred, test_data$y, positive = "yes")
+
+```
+
+Significant improvement in sensitivity and balanced accuracy. The model can now detect the minority class effectively.\
+\
+
+# Final Model Comparison Summary
+
+After re-running the classification analysis with downsampling on the training data, the following performance metrics (computed on the original, imbalanced test set) were observed across different models:
+
+| **Model** | **Accuracy** | **Sensitivity** | **Specificity** | **Balanced Accuracy** | **Kappa** | **Notes** |
+|----------|----------|----------|----------|----------|----------|---------------|
+| **KNN** | 0.520 | 0.679 | 0.499 | 0.589 | 0.070 | Decent sensitivity but overall low accuracy |
+| **Lasso** | 0.507 | 0.654 | 0.488 | 0.571 | 0.055 | Similar performance to KNN |
+| **LDA** | 0.547 | 0.622 | 0.537 | 0.579 | 0.066 | Balanced but not strong in detecting positives |
+| **QDA** | 0.552 | 0.660 | 0.538 | 0.599 | 0.083 | Best among the linear-type models |
+| **GAM** | 0.566 | 0.647 | 0.556 | 0.602 | 0.087 | Offers non-linear modeling with modest gains |
+| **CART** | 0.438 | 0.718 | 0.402 | 0.560 | 0.042 | Overpredicts positives; lower specificity |
+| **RF** | 0.555 | 0.660 | 0.542 | 0.601 | 0.085 | Good sensitivity; robust ensemble performance |
+| **SVM** | 0.547 | 0.718 | 0.525 | 0.621 | 0.099 | Highest balanced accuracy; best trade-off overall |
+
+## Key Takeaways
+
+-   **Downsampling Impact**:\
+    Downsampling the majority class in the training set dramatically improved the models' ability to detect the minority class ("yes"), as evidenced by the substantial increase in sensitivity and balanced accuracy compared to models trained on the original imbalanced data.
+
+-   **Model Comparison**:
+
+    -   **SVM** (using a radial kernel) achieved the best overall balance, with a balanced accuracy of 0.621 and sensitivity of 0.718, making it the most effective model for minority class detection.
+    -   **QDA** also performed well with a balanced accuracy of 0.599, indicating that allowing for class-specific covariances helps capture the non-linear separation between classes.
+    -   **GAM** and **RF** showed competitive performance, each with balanced accuracies around 0.60, demonstrating the benefits of non-linear modeling and ensemble learning.
+    -   **KNN**, **Lasso**, and **LDA** lagged behind in balanced performance, while **CART** produced a lower overall accuracy despite high sensitivity on the training set.
+
+-   **Practical Considerations**:\
+    For imbalanced classification problems, overall accuracy can be misleading. Focusing on metrics such as **sensitivity**, **balanced accuracy**, and **Kappa** provides a better picture of a model’s effectiveness in detecting the minority class.
+
+# Fitting the final model to the entire Dataset
+
+```{r Final Model}
+# Load required package
+library(e1071)
+
+# Set best parameters from previous tuning
+final_sigma <- 0.03944387
+final_C     <- 4
+
+# Fit final SVM model on full original dataset
+set.seed(563)
+final_svm_model <- svm(
+  y ~ ., 
+  data = bank_data,
+  kernel = "radial",
+  cost = final_C,
+  gamma = final_sigma,  # gamma = 1 / (2 * sigma^2) for e1071, but sigma from caret maps directly
+  probability = TRUE,
+  scale = TRUE
+)
+
+print(final_svm_model)
+
+
+```
+
+### Conclusion
+
+SVM is not an inference model. it does **not provide coefficients**, p-values, or confidence intervals.
+
+final model is a **Support Vector Machine** with a **radial basis kernel** (RBF), trained using the `svm()` function from the `e1071` package with the following parameters:
+
+**Kernel:** Radial Basis Function (nonlinear)\
+**Cost (C):** 4
+**Gamma (σ):** \~0.039
+**Number of Support Vectors:** 1,649
+
+#### 1. **Nonlinear Decision Boundary**
+
+The RBF kernel allows the model to **map data to an infinite-dimensional feature space** without explicitly computing transformations (via the "kernel trick").
+
+This enables the SVM to **separate classes using complex, curved decision boundaries**, making it much more flexible than linear classifiers like logistic regression or LDA​
+
+#### 2. **Support Vectors**
+
+Out of all training samples, 1,649 points are **support vectors**. These are the critical observations that define the decision boundary.
+
+A high number of support vectors can indicate a complex boundary and/or overlapping classes.
+
+These are the only observations the classifier directly relies on during prediction.
+
+#### 3. **Model Parameters**
+
+**Cost (C = 4):** Controls the tradeoff between margin width and classification error.
+
+Larger C ⇒ narrower margin, fewer misclassifications allowed.
+
+In your case, C = 4 is moderately large, indicating preference for **low bias** even at the cost of some **overfitting**
+
+**Gamma (σ ≈ 0.039):** Controls the influence of each support vector.
+
+Low γ ⇒ smooth boundaries (each point has wider influence).
+
+High γ ⇒ tighter, more localized decision regions.
+
+Your value allows moderate flexibility in the boundary curvature.​
+
+```{r}
+head(final_svm_model$SV)
+
+```
+
+This gives us a look at which observations directly impact the model.
+
+```{r}
+library(pdp)
+partial(final_svm_model, pred.var = "age") |> plot()
+partial(final_svm_model, pred.var = "log_balance") |> plot()
+
+```
+
+```{r}
+new_input <- data.frame(
+  age = 45,
+  job = factor("technician", levels = levels(bank_data$job)),
+  marital = factor("married", levels = levels(bank_data$marital)),
+  education = factor("tertiary", levels = levels(bank_data$education)),
+  default = factor("no", levels = levels(bank_data$default)),
+  housing = factor("yes", levels = levels(bank_data$housing)),
+  loan = factor("no", levels = levels(bank_data$loan)),
+  log_balance = 6.5
+)
+
+predict(final_svm_model, newdata = new_input, probability = TRUE)
+
+```
+
+**Final Model Behavior:**
+After training a support vector machine on the entire dataset, we found that predictions for new clients were heavily biased toward the majority class ("no"). For instance, a realistic test input returned a predicted probability of 88.7% for "no", nearly identical to the base rate in the data. This confirms that the model reproduces the class imbalance rather than learning meaningful patterns. In the real usage, the firm probably want to incorporate the direct marketing features or address the extreme imbalance if classification of “yes” truly matters.\
+\
+If the business objective is truly to identify the “yes” class at scale, you might encourage further work using Weighted class learning or cost-sensitive classification,
+Or reintroducing certain carefully selected marketing features (beyond `duration`).
+
+In this analysis we mainly focused on the client side of the data. by fitting the full model, or deployment of various variable selection methods and compare different models, we could obtain more meaningful predictive model.

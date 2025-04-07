@@ -1,0 +1,219 @@
+---
+title: "ST563 Project"
+author: "Henry van Eijk"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+#### Read in the Data:
+My data is based off 900 images of two different types of raisins. The Kecimen and the Besni. There are 900 observations in the dataset with exactly 450 for each type. The target variable is the type of raisin, either Kecimen or Besni. The goal of the project is to classify whether an observation is a Kecimen or Besni raisin conditioned on the given seven features: Area, Perimeter, MajorAxisLength, MinorAxisLength, Eccentricity, ConvexArea, and Extent. This task is important in biological applications.
+
+```{r}
+library(openxlsx)
+data <- read.xlsx("/Users/henryvaneijk/Desktop/Raisin_Dataset.xlsx")
+head(data)
+```
+
+#### Data Cleaning & Transformations:
+```{r}
+str(data)
+summary(data)
+missing_summary <- colSums(is.na(data))
+print(missing_summary)
+data$Class <- ifelse(data$Class == "Kecimen", 1, 0)
+```
+There are no issues with the data, no missing values, etc. I did one transformation where I created a binary indicator for the target variable so we can use it correctly for modeling.
+
+#### Split the Data into a Train and Test Set:
+```{r}
+set.seed(123)
+n <- nrow(data)
+# Create the training indicies then define train and test set
+train_idx <- sample(seq_len(n), size = round(0.8 * n))
+train_data <- data[train_idx, ]
+test_data <- data[-train_idx, ]
+# Need to treat as a factor so R does not do regression
+train_data$Class <- factor(train_data$Class, levels = c(0, 1),
+                           labels = c("No", "Yes"))
+test_data$Class  <- factor(test_data$Class,  levels = c(0, 1),
+                           labels = c("No", "Yes"))
+# Create y_train, y_test, x_train, and x_test
+x_train <- subset(train_data, select = -Class)
+y_train <- train_data$Class
+x_test <- subset(test_data, select = -Class)
+y_test <- test_data$Class
+# I will go ahead and scale the predictors once
+x_train <- scale(x_train)
+x_test  <- scale(x_test,
+                 center = attr(x_train, "scaled:center"),
+                 scale  = attr(x_train, "scaled:scale"))
+# I use the package 'caret' thus I define the control once for CV
+library(caret)
+ctrl <- trainControl(
+  method = "cv",
+  number = 5
+)
+```
+
+Next, I will go ahead and use Caret for all the following models. It automatically does the hyperparameter tuning since I specified the trainControl above. I am going to save all of these models, then once done training, I will show the testing results. This training step is basically identical for each model. I set class as the target variable, use the training data, specify which model, set accuracy as the metric, set the ctrl to what I defined above (i.e, 5 fold CV), and set the number of hyperparameters to try if needed. I also describe the model below using the 5 bullet points from the project description.
+
+For CV, instead of specifying a grid of hyperparameters to use, I use caret's build in tuneLength parameter. It uses some built-in heuristics to pick values of the hyperparameter, essentially creating tuneGrid for you.
+
+#### kNN:
+```{r}
+set.seed(123)
+knn_fit <- train(Class ~ .,
+                 data       = train_data,
+                 method     = "knn",
+                 metric     = "Accuracy",
+                 trControl  = ctrl,
+                 tuneLength = 10)
+
+```
+1) Non-parametric 2) Yes k is the tuning parameter which represents the how many neighbors to consider 3) No, it's difficult since its non-parametric 4) No 5) Yes because this algorithm measures distances so it could be smart to do so
+
+#### Penalized Logistic Regression:
+```{r}
+library(glmnet)
+set.seed(123)
+glm_fit <- train(
+  Class ~ .,
+  data      = train_data,
+  method    = "glmnet",
+  trControl = ctrl,
+  metric    = "Accuracy",
+  tuneLength = 10
+)
+```
+1) Parametric 2) Yes alpha controls the Lasso vs. ridge (e.g., alpha=1 indicates LASSO) while lambda is the strength of the penalty 3) Yes, you can look at p-values etc 4) If LASSO, then yes 5) Penalized regression does require standarization
+
+#### GAMs:
+```{r}
+set.seed(123)
+gam_fit <- train(
+  Class ~ .,
+  data      = train_data,
+  method    = "gam",
+  trControl = ctrl,
+  metric    = "Accuracy"
+)
+```
+1) Parametric 2) Yes the degree of each basis function 3) Yes, you can look at p-values etc 4) No 5) Not required
+
+#### Single tree:
+```{r}
+set.seed(123)
+tree_fit <- train(
+  Class ~ .,
+  data      = train_data,
+  method    = "rpart",
+  trControl = ctrl,
+  metric    = "Accuracy",
+  tuneLength = 10
+)
+```
+1) Non-parametric 2) Yes the tree depth which controls how many nodes in the TREE 3) They are interpretable but no ways to get p-values like linear regression 4) Technically yes since the tree picks what feature to split on and features could be left out 5) Not required
+
+#### Random forest:
+```{r}
+library(randomForest)
+set.seed(123)
+rf_fit <- train(
+  Class ~ .,
+  data      = train_data,
+  method    = "rf",
+  trControl = ctrl,
+  metric    = "Accuracy",
+  tuneLength = 5 
+)
+```
+1) Non-parametric 2) Yes a tuning parameter that controls how many predictors to consider when splitting 3) No more black-box due to many trees 4) Similar to the tree case 5) Not required
+
+#### SVM:
+```{r}
+library("kernlab")
+set.seed(123)
+svm_fit <- train(
+  Class ~ .,
+  data      = train_data,
+  method    = "svmRadial",
+  trControl = ctrl,
+  metric    = "Accuracy",
+  tuneLength = 5
+)
+```
+1) Non-parametric 2) Yes the margin violation hyperparameter  3) No 4) No 5) Yes
+
+Below, I produce all the confusion matrices. Then I display the test set accuracy across all models. As you can see, the GAM model produced the highest out-of-sample accuracy of 87.7%. I chose accuracy for simplicity. In certain settings such as medicine, preventing false negatives are crucial. Here, we are just classifying which type of raisin so no need to overcomplicate things. 
+
+#### Testing:
+```{r}
+# kNN predictions on test
+knn_preds  <- predict(knn_fit,  newdata = test_data)
+cm_knn     <- confusionMatrix(knn_preds, test_data$Class)
+
+# Logistic predictions on test
+glm_preds  <- predict(glm_fit,  newdata = test_data)
+cm_glm     <- confusionMatrix(glm_preds, test_data$Class)
+
+# GAM predictions on test
+gam_preds  <- predict(gam_fit,  newdata = test_data)
+cm_gam     <- confusionMatrix(gam_preds, test_data$Class)
+
+# Tree predictions on test
+tree_preds <- predict(tree_fit, newdata = test_data)
+cm_tree    <- confusionMatrix(tree_preds, test_data$Class)
+
+# RF predictions on test
+rf_preds   <- predict(rf_fit,   newdata = test_data)
+cm_rf      <- confusionMatrix(rf_preds, test_data$Class)
+
+# SVM predictions on test
+svm_preds  <- predict(svm_fit,  newdata = test_data)
+cm_svm     <- confusionMatrix(svm_preds, test_data$Class)
+
+# Compare final accuracy
+acc_knn  <- cm_knn$overall["Accuracy"]
+acc_glm  <- cm_glm$overall["Accuracy"]
+acc_gam  <- cm_gam$overall["Accuracy"]
+acc_tree <- cm_tree$overall["Accuracy"]
+acc_rf   <- cm_rf$overall["Accuracy"]
+acc_svm  <- cm_svm$overall["Accuracy"]
+
+# Show the results in a single table
+results <- data.frame(
+  Model    = c("kNN","Logistic","GAM","Tree","RF","SVM"),
+  Accuracy = c(acc_knn, acc_glm, acc_gam, acc_tree, acc_rf, acc_svm)
+)
+print(results)
+```
+
+#### Fit entire model to dataset:
+```{r}
+# Combine test and train sets so I can fit across all data
+combined_x <- rbind(x_train, x_test)
+combined_y <- c(y_train, y_test)
+all_data <- data.frame(Class = combined_y, combined_x)
+all_data$Class <- factor(all_data$Class, levels = c("No", "Yes"))
+# Refit across all data
+final_gam <- train(
+  Class ~ .,
+  data      = all_data,
+  method    = "gam",
+  trControl = trainControl(method = "none")
+)
+# Summarize for inference
+summary(final_gam$finalModel)
+```
+In terms of inference, it looks like the p-values for s(MajorAxisLength), s(MinorAxisLength), and s(Extent) are > alpha=0.05. Thus these features are not significant to the model. 
+
+
+
+
+
+
+
+
+
+
+

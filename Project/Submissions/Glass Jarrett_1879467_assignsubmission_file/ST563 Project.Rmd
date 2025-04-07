@@ -1,0 +1,367 @@
+---
+title: "ST563 Project"
+author: "Jarrett Glass"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE)
+```
+
+# Analysis of Bike Sharing Data of Casual Riders
+
+There has been a new-found development toward biking as an enthusiastic hobby of the author, who recently acquired an e-bike and has found using it to be an enjoyable form of exercise. He has an interest in examining how other bicyclists may approach this activity as well - namely, if there are specific times or conditions for other riders (including casual riders versus less-casual riders) that data indicate other riders would be most likely to participate.
+
+This project will include an analysis of the Bike Sharing data set from the UCI Machine Learning Repository. It is readily available to load into R through the `ISLR2` package.
+
+```{r}
+# Load the requisite libraries and dataframe into R
+library(dplyr)
+library(ISLR2)
+data(Bikeshare)
+```
+
+According to the R documentation, the columns in this data set are:
+
+| Variable name | Content | Expected type |
+|------------------|-------------------------------------|------------------|
+| `season` | Season of the year. Winter, Spring, Summer, Fall equals 1, 2, 3, 4, respectively. | Factor |
+| `mnth` | Month of the year | Factor |
+| `day` | Day of the year, 1-365 | Factor |
+| `hr` | Hour of the day, factor from 0 to 23 | Factor |
+| `holiday` | Whether the day in question is a holiday (0 or 1 for False or True) | Factor |
+| `weekday` | Day of the week, coded Sunday through Saturday as 0 through 6 respectively. | Factor |
+| `workingday` | Whether this is a working day (Yes=1, No=0) | Factor |
+| `weathersit` | The weather situation. Contains four levels: `clear`, `cloudy/misty`, `light rain/snow`, `heavy rain/snow`. | Factor |
+| `temp` | Temperature (normalized) in Celsius, where values are derived $(t-t_{min})/(t_{max}-t_{min})$, with $t_{min}=-8$ and $t_{max}=+39$. | Numeric |
+| `atemp` | Normalized "feeling" temperature in Celsius - same derivation as above, with $t_{min}=-16, t_{max}=+50$. | Numeric |
+| `hum` | Normalized humidity, with values divided to 100. | Numeric |
+| `windspeed` | Normalized wind speed, with all values divided by the max value of 67. | Numeric |
+| `casual` | The number of casual bikers | Numeric |
+| `registered` | The number of registered bikers | Numeric |
+| `bikers` | Total number of bikers (`casual + registered`) | Numeric |
+
+The response variable with this analysis will be the `casual` variable, as the primary interest is analyzing the habits of other biker hobbyists.
+
+## Data Cleaning
+
+The numbers of casual riders are not strictly needed here, instead an approximation of the magnitude is appropriate. The interest is in knowing if a specific set of conditions would have lesser, moderate, or a large amount of casual riders. The variable `casual` will be transformed into a categorical variable based on the numerical entries falling into the bottom, middle, or top third of the values.
+
+```{r}
+# Transform `casual` into a three-level factor (levels 1, 2, 3)
+Bikeshare$casual <- factor(cut(Bikeshare$casual, 
+                        breaks=quantile(Bikeshare$casual, c(0, 1/3, 2/3, 1)),
+                        labels=1:3, include.lowest=TRUE))
+```
+
+The variable for total `bikers` can be removed, however the variable for `registered` bikers will remain - just in case the number of these less-casual bikers may have an influence on the number of casual bikers in attendance. Similarly, the variables `mnth` and `day` will be removed, since the specific day or month of the year is not of concern here.
+
+```{r}
+Bikeshare <- Bikeshare[, !(names(Bikeshare) %in% c("bikers","day","mnth"))]
+```
+
+Most of the factor variables indicated above are presently identified as numeric variables, and these will need to be corrected.
+
+```{r}
+# The current list of variables and their type
+data.frame(Type=sapply(Bikeshare, class)) |> kable()
+
+# Transform the indicated columns into factors
+Bikeshare <- Bikeshare %>%
+  mutate(across(c(season, holiday, weekday, workingday), factor))
+
+# Confirm columns and class types
+str(Bikeshare)
+
+# Confirming that there are no NA values in the data set
+colSums(is.na(Bikeshare))
+```
+
+## Split the Data into a Train and Test Set
+
+```{r}
+library(caret)
+datasplit <- createDataPartition(Bikeshare$casual, p=0.7, times=1, list=FALSE)
+train <- Bikeshare[datasplit, ]
+test <- Bikeshare[-datasplit, ]
+
+accuracies <- as.data.frame(matrix(NA, ncol=2)) # For tracking the accuracy of each model
+colnames(accuracies) <- c("Model","Accuracy")
+```
+
+## Training the models
+
+```{r}
+set.seed(0218) # For reproducibility
+```
+
+The next several sections will involve training the data on different models, and comparing to see which produces the most accurate predictions against the test set.
+
+\newpage
+
+# k-Nearest Neighbors
+
+The k-Nearest Neighbors model is a non-parametric learning algorithm with tuning parameter `k` to denote how many "closest neighbors" to a value should be evaluated to make a prediction for a new data point. The prediction is based on the majority class or average value of these `k` neighbors. This model is typically used to make predictions and is not well-suited to inference, nor does it perform variable selection. It also does not have any specific need to standardize its predictors, but that could be performed.
+
+```{r}
+# The library `caret` will be used for this (previously loaded)
+
+# Set up the KNN for 5-fold cross-validation.
+# This will tune to find the optimum value of `k` (evaluating possibilities 1:15)
+knn <- train(casual ~ ., data=train, method="knn",
+             tuneGrid=expand.grid(k=1:15),
+             trControl=trainControl(method="cv", number=5))
+
+# The optimum value of `k` is:
+knn$bestTune$k
+
+# Repeat this exercise, using the best value of K provided.
+knn_tuned <- train(casual ~ ., data=train, method="knn",
+                   tuneGrid=knn$bestTune,
+                   trControl=trainControl(method="cv", number=5))
+
+# Make predictions using the test set, based on this tuned model.
+preds <- predict(knn_tuned, newdata=test)
+conf <- confusionMatrix(preds, reference=test$casual)
+conf
+accuracies <- rbind(accuracies, c("K-Nearest Neighbors", conf$overall[[1]]))
+```
+
+\newpage
+
+# Regularized Logistic Regression
+
+This model, regularized logistic regression, is a *parametric* model with two tuning parameters, $\alpha$ and $\lambda$. The $\alpha$ parameter can dictate the type of regularization that is performed - in other words, if $\alpha=0$ corresponds to Ridge Regression, $\alpha=1$ to LASSO, and anything $0 < \alpha < 1$ to Elastic Net. The $\lambda$ parameter dictates the strength of the regularization. This model can be used for inference with Ridge Regression, and LASSO enables variable selection. Standardization of the predictors is completed by the `glmnet` function.
+
+```{r}
+# Load the necessary library
+library(glmnet)
+
+# Multinomial logistic regression with L1 regularization.
+# Transform `casual` in train, test sets to (0,1,2) to work with glmnet.
+train.glmnet <- train |> mutate(casual=as.numeric(casual)-1)
+test.glmnet <- test |> mutate(casual=as.numeric(casual)-1)
+
+# Set up data matrices
+train.matrix.glmnet <- model.matrix(casual ~ ., data=train.glmnet)
+test.matrix.glmnet <- model.matrix(casual ~ ., data=test.glmnet)
+
+# Perform 5-fold CV to determine optimal lambda value
+cv_glmnet <- cv.glmnet(x=train.matrix.glmnet,
+                       y=train.glmnet$casual,
+                       family="multinomial",
+                       alpha=1, # For LASSO
+                       nfolds=5)
+
+# The optimal lambda was calculated to be
+cv_glmnet$lambda.min
+
+# The training model, using optimized lambda, is
+logist <- glmnet(x=train.matrix.glmnet,
+                 y=train.glmnet$casual,
+                 family="multinomial",
+                 alpha=1, # LASSO
+                 lambda=cv_glmnet$lambda.min)
+
+# Make predictions on test set using this tuned model
+preds <- predict(logist, newx=test.matrix.glmnet, type="class")
+
+# Convert these predictions to be comparable to original `test` dataframe
+preds <- factor(preds, levels=c(0,1,2), labels=1:3)
+
+# Generate confusion matrix
+conf <- confusionMatrix(preds, reference=test$casual)
+conf
+accuracies <- rbind(accuracies, c("Regularized Logistic Regression", conf$overall[[1]]))
+```
+
+\newpage
+
+# General Additive Model
+
+GAM models are *semi*-parametric, with tuning parameters that may be used to control the smoothness of the splines (but are not necessary). These models extend linear models by allowing for non-linear relationships through the use of basis functions and splines. This model can be used for inference and may be used for variable selection with appropriate basis functions or techniques like penalizing splines. The predictors in a GAM model do not need to be standardized, but some transformation techniques could greatly assist with smoothing predictions or estimations.
+
+```{r}
+# Load the requisite library
+library(gam)
+
+# The GAM in logistic regression requires binary response variables.
+# This response has 3 levels, but it's necessary to convert each to a binary response.
+
+train.gam <- train
+train.gam$casual_low <- ifelse(train$casual == 1, 1, 0)
+train.gam$casual_mid <- ifelse(train$casual == 2, 1, 0)
+train.gam$casual_hig <- ifelse(train$casual == 3, 1, 0)
+
+test.gam <- test
+test.gam$casual_low <- ifelse(test$casual == 1, 1, 0)
+test.gam$casual_mid <- ifelse(test$casual == 2, 1, 0)
+test.gam$casual_hig <- ifelse(test$casual == 3, 1, 0)
+
+# Separate GAM models are created for each binary outcome.
+gam_low <- gam(casual_low ~ s(temp) + s(atemp) + s(hum) + s(windspeed) + s(registered) + 
+                 season + hr + holiday + weekday + workingday + weathersit,
+               data=train.gam,
+               family=binomial())
+gam_mid <- gam(casual_mid ~ s(temp) + s(atemp) + s(hum) + s(windspeed) + s(registered) + 
+                 season + hr + holiday + weekday + workingday + weathersit,
+               data=train.gam,
+               family=binomial())
+gam_hig <- gam(casual_hig ~ s(temp) + s(atemp) + s(hum) + s(windspeed) + s(registered) + 
+                 season + hr + holiday + weekday + workingday + weathersit,
+               data=train.gam,
+               family=binomial())
+
+# Predict the probabilities for each class, then combine into one matrix
+preds <- cbind(predict(gam_low, newdata=test.gam, type="response"),
+               predict(gam_mid, newdata=test.gam, type="response"),
+               predict(gam_hig, newdata=test.gam, type="response"))
+preds <- apply(preds, 1, which.max)
+preds <- as.factor(preds)
+
+# Generate confusion matrix
+conf <- confusionMatrix(preds, reference=test$casual)
+conf
+accuracies <- rbind(accuracies, c("Generalized Additive Model", conf$overall[[1]]))
+```
+
+\newpage
+
+# Single tree model
+
+Single tree models are non-parametric models that partition the predictor space into rectangular regions, opposed to linear ones. These models can be used for inference and inference, and can perform variable selection during the tree-building process by identifying the variables that are most influential on the response. These can be tuned by controlling for tree depth or node size, and by pruning them down after initial growth to reduce complexity and prevent overfitting. Standardization of trees is generally not required.
+
+```{r}
+# Use the package `rpart` for Classification Trees
+library(rpart)
+
+# Generate the tree model
+tree_mod <- rpart(casual ~ ., data=train,
+                  method="class",
+                  parms=list(split="information"),
+                  control=rpart.control(xval=10,
+                                        minsplit=15,
+                                        minbucket=15))
+
+# Summary of the tree
+cp_table <- printcp(tree_mod)
+cp_table
+
+# The number of splits producing the lowest cross-validation error is
+min_index <- which.min(cp_table[,"xerror"])
+cp_table[min_index, "nsplit"]
+
+# The lowest number of splits that is within 1SE of this is
+oneSE_threshold <- sum(cp_table[min_index, c("xerror","xstd")])
+opt_cp <- cp_table[which(cp_table[,"xerror"] <= oneSE_threshold)[1], "CP"]
+opt_cp
+
+# Using this tuned CP, update the model with some pruning.
+pruned_mod <- prune(tree_mod, cp=opt_cp)
+
+# Generate predictions using the test set
+preds <- predict(pruned_mod, newdata=test, type="class")
+
+# Generate confusion matrix
+conf <- confusionMatrix(preds, reference=test$casual)
+conf
+accuracies <- rbind(accuracies, c("Single Tree Model", conf$overall[[1]]))
+```
+
+\newpage
+
+# Ensemble tree models
+
+These models, including Random Forest, Gradient Boosting Machines, and others, are non-parametric models that do combine multiple trees to improve prediction accuracy. These are not well developed for inference, but can give insight into feature performance, and through this can perform variable selection. Similar to the single tree models, these can be tuned by the number of trees in the model, the number of predictors analyzed at each split, learning rate, tree depth, and other regularization factors. These are generally not sensitive to transformations and don't require standardization of the predictors.
+
+```{r}
+# The library `caret` will be used here, first findind the best tuning value
+
+bagged_mod <- train(casual ~ ., method="rf", data=train,
+                    tuneGrid=expand.grid(mtry=1:(ncol(train)-1)),
+                    trControl=trainControl(method="oob", number=3000))
+bagged_mod$results |> round(4) |> kable()
+
+# Best number of predictors at each split (produces highest accuracy) is
+bagged_mod$bestTune
+
+# Regenerating this model with the tuned number of parameters,
+bagged_tuned <- train(casual ~ ., method="rf", data=train,
+                      tuneGrid=bagged_mod$bestTune,
+                      trControl=trainControl(method="oob", number=3000))
+
+# And making predictions based on the test set, and comparing with confusion matrix
+preds <- predict(bagged_tuned, newdata=test)
+conf <- confusionMatrix(preds, reference=test$casual)
+conf
+accuracies <- rbind(accuracies, c("Ensemble Tree Model", conf$overall[[1]]))
+```
+
+\newpage
+
+# Support vector machines
+
+SVMs are non-parametric models that aim to find an optimal hyperplane to separate data into specific classes. These do not explicitly perform variable selection, but the process of generating these does implicitly highlight some variables as more 'important' to the process than others. These are primarily used for prediction, and are not generally used for inference. These models are sensitive to scaling and do require standardization of the predictors. They have two tuning parameters, *cost* (the penalty for misclassified data points) and *gamma* (influences the shape of the hyperplane, where a higher *gamma* results in more complex boundaries and more potential for overfitting).
+
+```{r}
+# Load the requisite library
+library(e1071)
+
+# Fit an SVM model for tuning to 10-fold CV
+svm_mod <- tune(svm, casual~., data=train, kernel="radial",
+                ranges=list(cost=c(10, 15, 20, 25),
+                            gamma=c(0.001, 0.01, 0.1)),
+                tunecontrol=tune.control(cross=10))
+
+# This tunes the cost and gamma parameters simultaneously.
+opt_cost <- svm_mod$best.parameters$cost
+opt_gamma <- svm_mod$best.parameters$gamma
+data.frame(var=c("Optimal Cost", "Optimal Gamma"), opts=c(opt_cost, opt_gamma)) |> 
+  kable(col.names=NULL)
+
+# Use optimal cost and gamma parameters to generate tuned model
+svm_tuned <- svm(casual ~ ., data=train, kernel="radial",
+                 cost=opt_cost, gamma=opt_gamma)
+
+# Generate predictions on the test set and confirm with confusion matrix
+preds <- predict(svm_tuned, newdata=test)
+conf <- confusionMatrix(preds, reference=test$casual)
+conf
+accuracies <- rbind(accuracies, c("Support Vector Machine", conf$overall[[1]]))
+```
+
+\newpage
+
+# Comparing the results
+
+Each model has been generated, tuned, re-generated, and used to make predictions that have been compared to actual data values. The below table is a record of the recorded accuracy of each model:
+
+```{r}
+accuracies[-1, ] |> kable(row.names=FALSE)
+```
+
+The data indicate that, of all possible models analyzed here, the Support Vector Machine does produce the highest accuracy. This model will be extended to the entire `Bikeshare` data set with an eye still toward analyzing the `casual` response variable -
+
+```{r}
+final_model <- train(casual ~ .,
+                     data=Bikeshare,
+                     method="svmRadial",
+                     tuneGrid=data.frame(C=opt_cost, sigma=opt_gamma))
+varImp(final_model)
+```
+
+The **Variable Importance** (varImp) function from the `{caret}` package provides scores of relative importance for each variable (by row), and its relation to each level of the response (`X1, X2, X3` correspond to levels `1, 2, 3` respectively). There is some fluctuation in the score that's given, but the scores indicate the same order of importance for the rows (excepting `atemp` and `temp` by an extremely slim amount in `X2`).
+
+These indicate that the number of `registered` riders present at any given time does have the most influence on the number of casual riders. To look further into the relationship of these two variables,
+
+```{r}
+# Refer to the raw numbers in the original dataset
+plot(ISLR2::Bikeshare[,c("registered","casual")], xlab="Registered", ylab="Casual",
+     main="Casual vs. Registered Riders")
+```
+
+The data do seem to indicate that when there are more registered riders, there are fewer casual riders; and more casual riders for fewer registered ones. It would be interesting to further compare other factors.
+
+Moving further down this list, temperature (experienced and actual), the hour of the day, and the humidity do also play a stronger role in determining whether there are few, moderate, or many riders. The other factors - the specific season or weather situation, or whether or not it is a working day or a weekday, are not important factors in determining the number of casual riders.

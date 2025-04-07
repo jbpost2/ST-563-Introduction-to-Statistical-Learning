@@ -1,0 +1,815 @@
+---
+title: "ST563_PROJECT"
+author: "Lilian Ngonadi"
+date: "2025-03-26"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+## Loading the necessary Libraries
+
+```{r}
+library(tidyverse)
+library(rsample)
+library(caret)
+library(kknn)
+library(glmnet)
+library(e1071)
+library(tree)
+library(randomForest)
+library(MASS)
+library(klaR)
+library(ISLR2)
+library(knitr)
+library(AppliedPredictiveModeling)
+library(kableExtra)
+library(nnet)
+library(dplyr)
+library(gam)
+library(rpart)
+library(rpart.plot)
+library(knitr)
+library(DMwR2)
+library(pROC)
+library(doParallel)
+```
+
+## Loading the dataset(data preparation)
+
+```{r}
+churn_data <- read_csv("C:\\Users\\Longonad\\Downloads\\Churn_Modelling 2.csv")
+
+# Drop ID columns
+churn_data <- dplyr::select(churn_data, -RowNumber, -CustomerId, -Surname)
+# Convert categorical variables
+churn_data <- churn_data |> mutate(
+  Geography = factor(Geography),
+  Gender = factor(Gender),
+  Gender = factor(Gender),
+  HasCrCard = factor(HasCrCard),
+  IsActiveMember = factor(IsActiveMember),
+  Exited = factor(Exited) # target
+)
+
+print(churn_data)
+```
+
+## Identify Missing Data
+
+```{r}
+colSums(is.na(churn_data))
+```
+
+## Identifying Outliers
+
+```{r}
+par(mfrow = c(2,3))
+boxplot(churn_data$CreditScore, main = "CreditScore", col = "violet",outpch = 17, outcol = "red4")
+boxplot(churn_data$Age, main = "Age", col = "coral",outpch = 17, outcol = "red4")
+boxplot(churn_data$Tenure, main = "Tenure", col = "slateblue1",outpch = 17, outcol = "red4")
+boxplot(churn_data$ Balance, main = " Balance ", col = "goldenrod2",outpch = 17, outcol = "red4")
+boxplot(churn_data$NumOfProducts, main = "NumOfProducts", col = "lavender", outpch = 17, outcol = "red4")
+boxplot(churn_data$EstimatedSalary, main = "EstimatedSalary", col = "lemonchiffon1",outpch = 17, outcol = "red4")
+mtext("BOXPLOTS", side = 3, line = - 1.5, outer = TRUE, col= "cadetblue4", font = 3)
+```
+
+## Data exploration
+## i) Check  summary Statistics of variables
+
+```{r}
+summary(churn_data)
+```
+
+## ii) Check counts for categorical variables
+
+```{r}
+# Summary counts for categorical variables
+table(churn_data$Gender)
+table(churn_data$Geography)
+table(churn_data$HasCrCard)
+table(churn_data$IsActiveMember)
+table(churn_data$Exited)
+```
+
+## Distribution of churn
+
+```{r}
+table(churn_data$Exited)
+churn_counts <- table(churn_data$Exited)
+barplot(churn_counts,
+        main = "Distribution of churn",
+        xlab = "Churn Status",
+        ylab = "Count",ylim = c(0, 10000),
+        col = "slateblue1")
+```
+
+## iii) Scatterplot showing the distribution of the the different fetures colored by churn status
+
+```{r}
+par(mfrow = c(2,2))
+ggplot(churn_data, aes(x = Balance, y = Age, color = Exited)) +
+  geom_point()
+ggplot(churn_data, aes(x = CreditScore, y = EstimatedSalary, color = Exited)) +
+  geom_point()
+ggplot(churn_data, aes(x = Age, y = EstimatedSalary, color = Exited)) +
+  geom_point()
+ggplot(churn_data, aes(x = CreditScore, y = Age, color = Exited)) +
+  geom_point()
+ggplot(churn_data, aes(x = Balance, y = EstimatedSalary, color = Exited)) +
+  geom_point()
+```
+
+## iv) Boxplot of different features with churn status
+
+```{r}
+par(mfrow = c(2,3))
+boxplot(CreditScore ~ Exited, data = churn_data, main = "CreditScore", col = "violet",outpch = 17, outcol = "red4")
+boxplot(Age ~ Exited, data = churn_data, main = "Age", col = "coral",outpch = 17, outcol = "red4")
+boxplot(Tenure ~ Exited, data = churn_data, main = "Tenure", col = "slateblue1",outpch = 17, outcol = "red4")
+boxplot(Balance ~ Exited, data = churn_data, main = " Balance ", col = "goldenrod2",outpch = 17, outcol = "red4")
+boxplot(NumOfProducts ~ Exited, data = churn_data, main = "NumOfProducts", col = "lavender", outpch = 17, outcol = "red4")
+boxplot(EstimatedSalary ~ Exited, data = churn_data, main = "EstimatedSalary", col = "lemonchiffon1",outpch = 17, outcol = "red4")
+mtext("BOXPLOTS", side = 3, line = - 1.5, outer = TRUE, col= "cadetblue4", font = 3)
+```
+
+
+##Train-Test Split
+
+```{r}
+set.seed(1001)
+index <- createDataPartition(churn_data$Exited, p = 0.7, list = FALSE)
+train <- churn_data[index, ]
+test <- churn_data[-index, ]
+# Check class distribution before SMOTE
+table(train$Exited)
+table(test$Exited)
+```
+
+## Distribution of Train-Test Split
+
+```{r}
+table(train$Exited)
+churn_counts <- table(train$Exited)
+barplot(churn_counts,
+        main = "Distribution of train churn",
+        xlab = "Churn Status",
+        ylab = "Count",ylim = c(0, 6000),
+        col = "slateblue1")
+table(test$Exited)
+churn_counts <- table(test$Exited)
+barplot(churn_counts,
+        main = "Distribution of test churn",
+        xlab = "Churn Status",
+        ylab = "Count",ylim = c(0, 3000),
+        col = "green")
+```
+
+## k-Nearest Neighbors (KNN)
+
+## KNN model 1
+
+```{r}
+set.seed(1001)
+
+## K values for tuning
+kgrid <- expand.grid(k = seq(1, 51, by = 2))
+
+## 5-fold CV tuning
+tr <- trainControl(method = "cv", number = 5)
+
+# Train the KNN classifier
+knn_model <- train(Exited ~ .,
+                   data = train,
+                   method = "knn",
+                   tuneGrid = kgrid,
+                   trControl = tr,
+                   preProcess = c("center", "scale"))  # Standardize predictors
+# Best value of k
+knn_model$bestTune$k
+
+# Plot CV accuracy vs k
+plot(knn_model)
+
+## Refit the model with best K
+tuned_knn_churn  <- train(Exited ~ .,
+                   data = train,
+                   method = "knn",
+                   tuneGrid = expand.grid(k = knn_model$bestTune$k),
+                   trControl = trainControl(method = "none"),
+                   preProcess = c("center", "scale"))
+# Predict on test data
+knn_preds <- predict(tuned_knn_churn, test)
+
+# error matrix
+klaR::errormatrix(true = test$Exited, predicted = knn_preds, relative = TRUE) |> 
+  round(3) |> 
+  knitr::kable()
+confusionMatrix(test$Exited, knn_preds)
+```
+
+
+## KNN model 2
+
+```{r}
+set.seed(1001)
+
+## K values for tuning
+kgrid <- expand.grid(k = seq(1, 51, by = 2))
+
+## 5-fold CV tuning
+tr <- trainControl(method = "cv", number = 5)
+
+# Train the KNN classifier
+knn_model <- train(Exited ~ Age + Balance,
+                   data = train,
+                   method = "knn",
+                   tuneGrid = kgrid,
+                   trControl = tr,
+                   preProcess = c("center", "scale"))  # Standardize predictors
+# Best value of k
+knn_model$bestTune$k
+
+# Plot CV accuracy vs k
+plot(knn_model)
+
+## Refit the model with best K
+tuned_knn_churn  <- train(Exited ~ Age + Balance,
+                   data = train,
+                   method = "knn",
+                   tuneGrid = expand.grid(k = knn_model$bestTune$k),
+                   trControl = trainControl(method = "none"),
+                   preProcess = c("center", "scale"))
+# Predict on test data
+knn_preds <- predict(tuned_knn_churn, test)
+
+# error matrix
+klaR::errormatrix(true = test$Exited, predicted = knn_preds, relative = TRUE) |> 
+  round(3) |> 
+  knitr::kable()
+confusionMatrix(test$Exited, knn_preds)
+```
+
+
+## KNN model 3
+
+```{r}
+set.seed(1001)
+
+## K values for tuning
+kgrid <- expand.grid(k = seq(1, 51, by = 2))
+
+## 5-fold CV tuning
+tr <- trainControl(method = "cv", number = 5)
+
+# Train the KNN classifier
+knn_model <- train(Exited ~ Age + Balance + Age*Balance,
+                   data = train,
+                   method = "knn",
+                   tuneGrid = kgrid,
+                   trControl = tr,
+                   preProcess = c("center", "scale"))  # Standardize predictors
+# Best value of k
+knn_model$bestTune$k
+
+# Plot CV accuracy vs k
+plot(knn_model)
+
+## Refit the model with best K
+tuned_knn_churn  <- train(Exited ~ Age + Balance + Age*Balance,
+                   data = train,
+                   method = "knn",
+                   tuneGrid = expand.grid(k = knn_model$bestTune$k),
+                   trControl = trainControl(method = "none"),
+                   preProcess = c("center", "scale"))
+# Predict on test data
+knn_preds <- predict(tuned_knn_churn, test)
+
+# error matrix
+klaR::errormatrix(true = test$Exited, predicted = knn_preds, relative = TRUE) |> 
+  round(3) |> 
+  knitr::kable()
+confusionMatrix(test$Exited, knn_preds)
+```
+
+## KNN model 4
+
+```{r}
+set.seed(1001)
+
+## K values for tuning
+kgrid <- expand.grid(k = seq(1, 51, by = 2))
+
+## 5-fold CV tuning
+tr <- trainControl(method = "cv", number = 5)
+
+# Train the KNN classifier
+knn_model <- train(Exited ~ Geography + Gender + IsActiveMember + Age + Balance + NumOfProducts,
+                   data = train,
+                   method = "knn",
+                   tuneGrid = kgrid,
+                   trControl = tr,
+                   preProcess = c("center", "scale"))  # Standardize predictors
+# Best value of k
+knn_model$bestTune$k
+
+# Plot CV accuracy vs k
+plot(knn_model)
+
+## Refit the model with best K
+tuned_knn_churn  <- train(Exited ~ Geography + Gender + IsActiveMember + Age + Balance + NumOfProducts,
+                   data = train,
+                   method = "knn",
+                   tuneGrid = expand.grid(k = knn_model$bestTune$k),
+                   trControl = trainControl(method = "none"),
+                   preProcess = c("center", "scale"))
+# Predict on test data
+knn_preds <- predict(tuned_knn_churn, test)
+
+# Predict probabilities  on test data
+knn_predsprob <- predict(tuned_knn_churn, test, type = "prob")
+knn_predsprob 
+
+# error matrix
+klaR::errormatrix(true = test$Exited, predicted = knn_preds, relative = TRUE) |> 
+  round(3) |> 
+  knitr::kable()
+confusionMatrix(test$Exited, knn_preds)
+```
+
+
+## Logistic Regression (Regularized)model1
+
+```{r}
+set.seed(1102)
+
+# Create matrix inputs for glmnet
+x_train <- model.matrix(Exited ~ . -1, data = train)
+y_train <- as.numeric(train$Exited) - 1
+
+# CV to choose lambda (alpha = 1 for LASSO)
+logit_cv <- cv.glmnet(x = x_train,
+                      y = y_train,
+                      family = "binomial",
+                      alpha = 1)
+# Generate the plot but suppress default axis labels
+plot(logit_cv, ylab = "", xlab = "")
+
+# Add custom axis labels
+title(ylab = "GLM Deviance", xlab = expression(log(lambda)))
+
+# Final LASSO model with lambda chosen by 1-SE rule
+lasso_final <- glmnet(x = x_train,
+                      y = y_train,
+                      family = "binomial",
+                      alpha = 1,
+                      lambda = logit_cv$lambda.1se)
+
+
+# Coefficients from the final LASSO model
+coef(lasso_final)
+
+# Prepare test data
+x_test <- model.matrix(Exited ~ . -1, data = test)
+
+# Predict probabilities and classes (threshold = 0.5)
+lasso_probs <- predict(lasso_final, newx = x_test, type = "response")
+lasso_pred <- ifelse(lasso_probs >= 0.5, 1, 0)
+
+# 5. Evaluate model
+confusionMatrix(factor(lasso_pred, levels = c(0,1)),
+                test$Exited)
+# Error matrix
+klaR::errormatrix(true = test$Exited, predicted = lasso_pred, relative = TRUE) |>
+  round(3) |>
+  knitr::kable()
+
+```
+```{r}
+# Print the lambda values
+logit_cv$lambda.min      # Lambda that gives minimum deviance
+logit_cv$lambda.1se      # Lambda chosen using the 1-SE rule
+
+```
+
+## Logistic Regression (Regularized)model2
+
+```{r}
+set.seed(1102)
+
+# Define selected predictors
+selected_vars <- c("Age", "Balance", "EstimatedSalary", "CreditScore", "NumOfProducts", "IsActiveMember")
+
+# Create matrix inputs for glmnet (train)
+x_train <- train |> 
+  dplyr::select(all_of(selected_vars)) |> 
+  as.matrix()
+
+y_train <- train$Exited
+
+# CV to choose lambda (alpha = 1 for LASSO)
+logit_cv <- cv.glmnet(x = x_train,
+                      y = y_train,
+                      family = "binomial",
+                      alpha = 1)
+
+# Plot cross-validation curve without default labels
+plot(logit_cv, ylab = "", xlab = "")
+title(ylab = "GLM Deviance", xlab = expression(log(lambda)))
+
+# Final LASSO model using lambda from 1-SE rule
+lasso_final <- glmnet(x = x_train,
+                      y = y_train,
+                      family = "binomial",
+                      alpha = 1,
+                      lambda = logit_cv$lambda.1se)
+
+# Coefficients from the final LASSO model
+coef(lasso_final)
+
+# Prepare test data
+x_test <- test |> 
+  dplyr::select(all_of(selected_vars)) |> 
+  as.matrix()
+
+# Predict probabilities and classes (threshold = 0.5)
+lasso_probs <- predict(lasso_final, newx = x_test, type = "response")
+lasso_pred <- ifelse(lasso_probs >= 0.5, 1, 0)
+
+# 5. Evaluate model
+confusionMatrix(factor(lasso_pred, levels = c(0,1)),
+                test$Exited)
+
+# Error matrix
+klaR::errormatrix(true = test$Exited, predicted = lasso_pred, relative = TRUE) |>
+  round(3) |>
+  knitr::kable()
+```
+```{r}
+logit_cv$lambda.1se
+```
+
+## Logistic Regression model3
+
+```{r}
+churn_data |>
+  group_by(Exited) |> 
+  summarize(prop = n()/nrow(churn_data))
+
+
+# 1. Fit models on training data
+# Model 1: main effects only
+logistic_reg <- glm(Exited ~ Geography + Gender + Age + IsActiveMember + Balance,
+               data = train,
+               family = "binomial")
+
+# 2. Model Summary
+logistic_coef <- logistic_reg$coefficients
+logistic_coef
+
+
+# 4. Predict on test set
+test_probs <- predict(logistic_reg, newdata = test, type = "response")
+
+# Convert probabilities to binary predictions using threshold = 0.5
+test_preds <- ifelse(test_probs > 0.5, 1, 0)
+
+# 5. Evaluate model
+confusionMatrix(factor(test_preds, levels = c(0,1)),
+                test$Exited)
+```
+
+
+## Logistic Regression model4
+
+```{r}
+churn_data |>
+  group_by(Exited) |> 
+  summarize(prop = n()/nrow(churn_data))
+
+# 1. Fit models on training data
+
+# Model 2: with interaction
+logistic_reg_int <- glm(Exited ~Geography + Gender + Age + IsActiveMember + Balance + Age:Gender,
+                   data = train,
+                   family = "binomial")
+
+# 2. Model Summary
+
+logistic_int_coef <- logistic_reg_int$coefficients
+logistic_int_coef
+
+
+# 4. Predict on test set
+test_probs <- predict(logistic_reg_int, newdata = test, type = "response")
+
+# Convert probabilities to binary predictions using threshold = 0.5
+test_preds <- ifelse(test_probs > 0.5, 1, 0)
+
+# 5. Evaluate model
+confusionMatrix(factor(test_preds, levels = c(0,1)),
+                test$Exited)
+summary(logistic_reg_int)
+```
+
+
+## Generalized Additive Model (GAM) using smoothing splines
+
+```{r}
+# Fit GAM using smoothing splines
+gam_model <- gam(
+  Exited ~ Geography + Gender + IsActiveMember +
+    s(Age, df = 3) +
+    s(Balance, df = 3) +
+    s(NumOfProducts, df = 3),
+  data =train,
+  family = binomial()
+)
+# Step 2: View model summary and plot smooth terms
+summary(gam_model)
+par(mfrow = c(2, 3))
+plot(gam_model, se = TRUE, col = "darkorange")
+
+# Step 3: Predict on the test set
+# Predict probabilities
+gam_probs <- predict(gam_model, newdata = test, type = "response")
+
+# Convert probabilities to class predictions (threshold = 0.5)
+gam_preds <- ifelse(gam_probs > 0.5, 1, 0)
+
+# Step 4: Evaluate model performance on test set
+
+# Confusion matrix
+confusionMatrix(factor(gam_preds), factor(test$Exited))
+
+# AUC (Area Under the Curve)
+gam_roc <- roc(response = test$Exited, predictor = gam_probs)
+auc(gam_roc)
+```
+
+## Generalized Additive Model2 (GAM)
+
+```{r}
+# Fit GAM using smoothing splines
+gam_model <- gam(
+  Exited ~ Geography + Gender + IsActiveMember +
+    s(Age, df = 4) +
+    s(Balance, df = 4) +
+    s(NumOfProducts, df = 4),
+  data =train,
+  family = binomial()
+)
+# Step 2: View model summary and plot smooth terms
+summary(gam_model)
+par(mfrow = c(2, 3))
+plot(gam_model, se = TRUE, col = "darkorange")
+
+# Step 3: Predict on the test set
+# Predict probabilities
+gam_probs <- predict(gam_model, newdata = test, type = "response")
+
+# Convert probabilities to class predictions (threshold = 0.5)
+gam_preds <- ifelse(gam_probs > 0.5, 1, 0)
+
+# Step 4: Evaluate model performance on test set
+
+# Confusion matrix
+confusionMatrix(factor(gam_preds), factor(test$Exited))
+
+# AUC (Area Under the Curve)
+gam_roc <- roc(response = test$Exited, predictor = gam_probs)
+auc(gam_roc)
+```
+
+## Generalized Additive Model3 (GAM)
+
+```{r}
+# Fit GAM using smoothing splines
+gam_model <- gam(
+  Exited ~ Geography + Gender + IsActiveMember +
+    s(Age, df = 5) +
+    s(Balance, df = 5) +
+    s(NumOfProducts, df = 5),
+  data =train,
+  family = binomial()
+)
+# Step 2: View model summary and plot smooth terms
+summary(gam_model)
+par(mfrow = c(2, 3))
+plot(gam_model, se = TRUE, col = "darkorange")
+
+# Step 3: Predict on the test set
+# Predict probabilities
+gam_probs <- predict(gam_model, newdata = test, type = "response")
+
+# Convert probabilities to class predictions (threshold = 0.5)
+gam_preds <- ifelse(gam_probs > 0.5, 1, 0)
+
+# Step 4: Evaluate model performance on test set
+
+# Confusion matrix
+confusionMatrix(factor(gam_preds), factor(test$Exited))
+
+# AUC (Area Under the Curve)
+gam_roc <- roc(response = test$Exited, predictor = gam_probs)
+auc(gam_roc)
+```
+ 
+
+## Single tree models
+
+```{r}
+# Fit a full tree with classification method
+tree_model <- rpart(Exited ~ ., 
+                    data = train, 
+                    method = "class",
+                    control = rpart.control(cp = 0, xval = 10))
+
+# Plot cross-validated error
+printcp(tree_model)
+plotcp(tree_model)
+
+table(churn_data$Exited)/nrow(churn_data)
+# Choose cp using 1-SE rule
+cp_table <- tree_model$cptable
+best_cp <- cp_table[which.min(cp_table[,"xerror"]), "CP"]
+
+
+# Prune the tree
+pruned_tree <- prune(tree_model, cp = best_cp)
+
+# Plot final tree
+rpart.plot(pruned_tree)
+
+# Predict class labels on the test set
+pred <- predict(pruned_tree, newdata = test, type = "class")
+
+# Instructor-style error matrix: rows = true, cols = predicted
+klaR::errormatrix(true = test$Exited, predicted = pred, 
+                  relative = TRUE) |>
+  kable()
+
+# Accuracy
+mean(pred == test$Exited)
+best_cp
+## confusion matrix
+confusionMatrix(pred, test$Exited)
+```
+
+## for plot of variable importance
+
+```{r}
+pruned_tree$variable.importance
+# Load tidyverse for plotting
+library(ggplot2)
+
+# Create a data frame from the importance
+var_importance <- data.frame(
+  Variable = names(pruned_tree$variable.importance),
+  Importance = pruned_tree$variable.importance
+)
+
+# Plot
+ggplot(var_importance, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Variable Importance from Pruned Classification Tree",
+    x = "Variable",
+    y = "Importance"
+  ) +
+  theme_minimal()
+```
+```{r}
+table(churn_data$Exited)/nrow(churn_data)
+```
+
+
+## Random Forest (Ensemble Tree)
+
+```{r}
+set.seed(1001)
+
+# Fit Random Forest to churn training data
+churn_rf <- train(
+  Exited ~ ., 
+  data = train,
+  method = "rf",
+  tuneGrid = data.frame(mtry = 1:(ncol(train) - 1)),  # exclude response
+  trControl = trainControl(method = "oob", number = 3000)
+)
+
+# View results from cross-validation
+churn_rf$results |> 
+  round(4) |>
+  kable()
+
+# Best tuning parameter (mtry)
+churn_rf$bestTune
+
+# Predict for a single new observation
+rf_pred <- predict(churn_rf, newdata = test)
+
+# Variable importance (table + plot)
+varImp(churn_rf)$importance |>
+  round(3) |>
+  kable()
+
+plot(varImp(churn_rf))
+```
+
+## Support Vector Machine (SVM)
+
+```{r}
+# Enable parallel processing
+cl <- makePSOCKcluster(parallel::detectCores() - 1)
+registerDoParallel(cl)
+
+set.seed(1001)
+
+# Set up 5-fold cross-validation
+tr <- trainControl(method = "cv", number = 5)
+
+# Define a reduced grid for tuning
+tune_grid <- expand.grid(
+  sigma = exp(seq(-4, 0, length.out = 5)),  
+  C = exp(seq(-2, 2, length.out = 5))      
+)
+
+# Fit and tune the radial SVM
+svm_radial <- train(
+  Exited ~ .,
+  data = train,
+  method = "svmRadial",
+  tuneGrid = tune_grid,
+  trControl = tr
+)
+
+# Refit final SVM model on the full training set using best parameters
+svm_final <- svm(
+  Exited ~ .,
+  data = train,
+  type = "C-classification",
+  kernel = "radial",
+  gamma = svm_radial$bestTune$sigma,  
+  
+  cost = svm_radial$bestTune$C
+)
+
+# Predict on test set
+svm_pred <- predict(svm_final, newdata = test)
+
+# Instructor-style confusion matrix (relative)
+klaR::errormatrix(true = test$Exited, predicted = svm_pred, relative = TRUE) |>
+  knitr::kable()
+
+# Accuracy
+mean(svm_pred == test$Exited)
+
+# Best tuning values
+svm_radial$bestTune
+```
+```{r}
+err <- klaR::errormatrix(true = test$Exited, 
+                   predicted = svm_pred)
+#rows are true values and columns predicted
+round(err, 3) |>
+  kable()
+```
+```{r}
+# Confusion matrix
+confusionMatrix(factor(svm_pred), factor(test$Exited))
+```
+
+
+## Final Model Fit on the entire dataset using Random Forest (Ensemble Tree)
+
+```{r}
+set.seed(1001)
+
+# Fit Random Forest to churn training data
+final_rf <- train(
+  Exited ~ ., 
+  data = churn_data,
+  method = "rf",
+  tuneGrid = data.frame(mtry = 1:(ncol(churn_data) - 1)),  # exclude response
+  trControl = trainControl(method = "oob", number = 3000)
+)
+
+# View results from cross-validation
+churn_rf$results |> 
+  round(4) |>
+  kable()
+
+# Best tuning parameter (mtry)
+final_rf$bestTune
+
+# Variable importance (table + plot)
+varImp(final_rf)$importance |>
+  round(3) |>
+  kable()
+
+plot(varImp(final_rf))
+```

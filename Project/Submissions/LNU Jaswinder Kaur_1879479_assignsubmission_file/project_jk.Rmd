@@ -1,0 +1,419 @@
+---
+title: "Project_563"
+author: "Jaswinder Kaur"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this project I’m planning to use a genomic and phenomic dataset from the following paper:
+https://pmc.ncbi.nlm.nih.gov/articles/PMC6829122/
+
+I accessed the dataset from Dryad:
+https://datadryad.org/dataset/doi:10.5061/dryad.xksn02vb9
+
+The data is an Maize genotypic and phenotypic data, where they were doing genomic prediction and selections using traditional tools like Asreml. In my research I mostly deal with data like this, which led me to choose this data for this project. The goal for this project would be predicton of yield using the genotypic and phenotypic information from the training set to build a predictive model, and then predict yield for the testing set based on its genomic data only.
+
+The phenotypic file has three phenotypes, instead of doing multivariate model predicting ( which I am not much aware about) I restricted myself to just doing univariate model and I decided to predict yield(YLD) and consider that as a response variable, because that is the most common response variable used in plant breeding so it was relatable and the information is easily applied to my own research directly.
+
+### Data cleaning and transformation 
+
+Also ~40000 markers were present in the genotypic file, working with such big data is computationally challenging. So for this project, I did do dimentionality reduction using PCA and relatined the first 10 PCs and use those as genotypic data. 
+
+
+Lets Start!
+```{r}
+options(repos = c(CRAN = "https://cran.rstudio.com/"))
+library(dplyr)
+library(caret)
+library(ISLR2)
+library(tidyverse)
+library(ggplot2)
+
+## Read and preprocess data
+pheno <- read_csv("~/Downloads/maize_pheno.csv")
+head(pheno)
+summary(pheno)
+##instead of using all the phenotype I will use yield as the response and as our main phenotype
+pheno_data <- pheno %>% 
+  select(ID, YLD)
+
+##read the genotypic file
+geno <- read_csv("~/Downloads/maize_gene.csv")
+
+##check for the missing values 
+missing <- sapply(pheno, function(x) sum(is.na(x)))
+missing
+##check for the missing values 
+missing <- sapply(geno, function(x) sum(is.na(x)))
+
+
+# Remove the 'ID' column
+gene_data <- geno[, -1]  
+
+## Scale the data
+gene_data_scaled <- scale(gene_data)  
+
+## Apply PCA on the scaled genotype data
+pca_result <- prcomp(gene_data, center = TRUE, scale. = TRUE)
+
+## Select the top 10 principal components 
+pca <- data.frame(pca_result$x[, 1:10]) 
+
+# Check the variance explained by these top PCs
+explained_variance <- summary(pca_result)$importance[2, 1:10]
+print(explained_variance)
+
+merge_data <- cbind(pheno_data, pca)
+head(merge_data)
+
+##lets split the data in 70/30 proportion, we will use genotype and we will use YLD = yeild as phenotype 
+set.seed(123) 
+index <- createDataPartition(merge_data$YLD,
+                             p = 0.7,
+                             list = FALSE,
+                             times = 1
+                             )
+
+##create trainign and test dataset 
+train <- merge_data[index, ]
+test <- merge_data[-index, ]
+
+##remove the ID so that ID is not used as a predictor
+train_no_id <- train[, !names(train) %in% c("ID")]
+test_no_id <- test[, !names(test) %in% c("ID")]
+```
+
+## Lets start with KNN models
+We will use genotype data as the predictors and phenotype as respone 
+Also, we will compare these models based on 10 fold CV and RMSE as our metric 
+
+Model Description:
+
+Type: Non-parametric model
+Tuning Parameters: k (number of neighbors)
+Inference: This model is not suitable for inference, as it doesn't produce a direct model equation; instead, it works by comparing individual data points
+Variable Selection: kNN does not explicitly perform variable selection, though irrelevant features may have less impact if they don’t influence the nearest neighbors.
+Standardization: Yes, kNN is sensitive to the scale of the features since it relies on distance metrics (Euclidean or others)
+
+```{r}
+
+
+tc <- trainControl(method = "cv",
+                   number = 10)
+
+
+Knn <- train( YLD ~ .,
+              data = train_no_id,
+              method = "knn",
+              trControl = tc,
+              tuneGrid = data.frame(k = 1:60))
+
+
+##leys find the best k 
+Knn$results |> 
+  filter(k == Knn$bestTune$k)
+
+## lets fit the model again wth the best tuning parameter
+knn_best <- train( YLD ~ .,
+              data = train_no_id,
+              method = "knn",
+              trControl = trainControl(method = "none"),
+              tuneGrid = Knn$bestTune)
+knn_best$finalModel
+##predict on our test set and comute the RMSE
+predict_knn <- predict(knn_best, newdata = test_no_id)
+knn_rmse <- sqrt(mean((test$YLD - predict_knn)^2))
+print(paste("KNN RMSE:", knn_rmse))
+##merge the predicting ID 
+Predict_knn_id <- data.frame(ID = test$ID, predict_yld = predict_knn)
+head(Predict_knn_id)
+```
+ 
+## Regularised Linear Regression 
+
+Type: Parametric model (assumes a linear relationship between the predictors and target).
+Tuning Parameters: Regularization strength (alpha for Lasso, lambda for Ridge).
+Inference: Yes, linear regression can be used for inference, as it provides estimates for the coefficients and hypothesis testing.
+Variable Selection: Yes, Lasso (L1) regularization performs implicit variable selection by shrinking some coefficients to zero.
+Standardization: Yes, especially when regularization is used, to ensure that all features contribute equally.
+
+```{r}
+library(glmnet)
+
+##lets do a qucik fit to check the values for alpha and lamda
+tuning_grid <- expand.grid(alpha = seq(from = 0, to = 1, length = 15),
+                           lambda = seq(from = 0, to = 0.5, length = 15))
+
+##train the model
+lr <- train( YLD ~ .,
+              data = train_no_id,
+              method = "glmnet",
+             preProcess = c("center", "scale"),
+              trControl = tc,
+              tuneGrid = tuning_grid)
+##best paraeters
+lr$bestTune
+lr$bestTune |>
+  knitr::kable()
+
+## lets fit the model again wth the best tuning parameter
+lr_best <- train( YLD ~ .,
+              data = train_no_id,
+              method = "glmnet",
+             preProcess = c("center", "scale"),
+              trControl = trainControl(method = "none"),
+              tuneGrid = lr$bestTune)
+
+##predict on our test set and comute the RMSE
+predict_lr <- predict(lr_best, newdata = test_no_id)
+lr_rmse <- sqrt(mean((test$YLD - predict_lr)^2))
+print(paste("LR RMSE:", knn_rmse))
+
+
+##merge the predicting ID 
+Predict_LR_id <- data.frame(ID = test$ID, predict_yld = predict_lr)
+head(Predict_LR_id)
+
+```
+
+## Generalized Additive Models
+Type: Non-parametric model (allows for non-linear relationships by using smooth functions of the predictors).
+Tuning Parameters: Smoothing parameter (s), number of basis functions.
+Inference: Yes, the smooth functions can be interpreted to understand the relationships between predictors and the target variable.
+Variable Selection: Implicitly performed through the use of smooth terms.
+Standardization: Not strictly necessary, though it may help with numerical stability.
+
+```{r}
+library(gam)
+# Combine the train and test datasets for the entire dataset 
+final_gam_data <- rbind(train_no_id, test_no_id)
+
+# Fit the GAM model using the combined PCA data
+GAM <- gam(YLD ~ ., data = final_gam_data)
+summary(GAM)
+
+# Predict on the entire dataset 
+gam_pred_final <- predict(GAM, newdata = final_gam_data)
+
+# Calculate RMSE on the entire dataset 
+gam_rmse_final <- sqrt(mean((final_gam_data$YLD - gam_pred_final)^2))
+print(paste("Final GAM RMSE on entire dataset: ", gam_rmse_final))
+
+# Merge the predicted values with the IDs from the original dataset
+final_predictions <- data.frame(ID = c(train$ID, test$ID), predict_yld = gam_pred_final)
+head(final_predictions)
+
+```
+## Decision tree 
+
+Type: Non-parametric model (uses decision rules based on splitting features to predict the target).
+Tuning Parameters: Maximum depth of the tree, minimum samples required to split a node.
+Inference: Yes, decision trees can be interpreted through the tree structure and decision rules.
+Variable Selection: Implicitly performed as the tree splits on the most important features.
+Standardization: No, decision trees do not require standardization as they are not sensitive to feature scaling.
+
+```{r}
+# Example for Decision Tree
+Decison_tree <- train(YLD ~ .,  
+                   data = train_no_id,
+                   method = "rpart",  
+                   trControl = tc,  
+                   tuneGrid = expand.grid(cp = seq(0.01, 0.1, by = 0.01)))  
+Decison_tree
+# View the best tuning parameters 
+print(Decison_tree$bestTune)
+
+Decison_tree_best <- train(YLD ~ .,  
+                   data = train_no_id,
+                   method = "rpart",  
+                   trControl = trainControl(method = "none"),
+                   tuneGrid = Decison_tree$bestTune) 
+
+print(Decison_tree_best)
+
+# Make predictions on the test set
+dt_pred <- predict(Decison_tree_best, newdata = test_no_id)
+
+# Calculate RMSE 
+dt_rmse <- sqrt(mean((dt_pred - test_no_id$YLD)^2))
+print(paste("decision tree RMSE: ", dt_rmse))
+```
+
+## Random forest model
+
+Type: Non-parametric model (combines multiple decision trees to improve predictive performance).
+Tuning Parameters: Number of trees (ntree), number of variables to consider at each split (mtry).
+Inference: Yes, random forests can provide variable importance measures but are less interpretable than individual trees.
+Variable Selection: Implicitly performed by the algorithm (variable importance measures can be extracted).
+Standardization: No, random forests do not require feature scaling.
+
+```{r}
+install.packages("randomForest")
+library(randomForest)
+
+set.seed(12)
+# Define the tuning grid for Random Forest parameters
+tuning_grid <- expand.grid(
+  mtry = c(2, 3, 4, 5, 6)    
+)
+
+# Train the model with cross-validation
+rf_tuned <- train(
+  YLD ~ .,                
+  data = train_no_id,            
+  method = "rf",                
+  trControl = tc,               
+  tuneGrid = tuning_grid        
+)
+
+print(rf_tuned$bestTune)
+
+# Re-fit the model with the best mtry value
+rf_best <- randomForest(
+  YLD ~ .,                      
+  data = train_no_id,            
+  mtry = rf_tuned$bestTune$mtry  
+)
+print(rf_best)
+
+# Make predictions on the test set
+rf_pred <- predict(rf_best, newdata = test_no_id)
+
+# Calculate RMSE 
+rf_rmse <- sqrt(mean((rf_pred - test_no_id$YLD)^2))
+print(paste("Random Forest RMSE: ", rf_rmse))
+
+
+```
+
+## SVM
+
+Type: Parametric/non-parametric model (depends on the kernel; linear is parametric, radial is non-parametric).
+Tuning Parameters: Regularization parameter (C), kernel type (linear, radial), kernel parameters (gamma).
+Inference: No, SVMs are generally not interpretable, but you can report margins and support vectors.
+Variable Selection: Implicitly performed by the support vectors.
+Standardization: Yes, SVMs are sensitive to the scale of features.
+
+```{r}
+library(kernlab)
+mod_svm <- train(YLD ~ ., 
+                 data = train_no_id, 
+                 method = "svmRadial",
+                 trControl = tc, 
+                 tuneGrid = expand.grid(sigma = seq(0.01, 0.1, by = 0.01), 
+                                        C = 1:5))  
+
+mod_svm
+# View the best tuning parameters 
+print(mod_svm$bestTune)
+
+best_svm <- train(YLD ~ ., 
+                 data = train_no_id, 
+                 method = "svmRadial",
+                 trControl = trainControl(method = "none"),
+                   tuneGrid = mod_svm$bestTune)
+                 
+                  
+print(best_svm)
+
+# Make predictions on the test set
+svm_pred <- predict(best_svm, newdata = test_no_id)
+
+# Calculate RMSE 
+svm_rmse <- sqrt(mean((svm_pred - test_no_id$YLD)^2))
+print(paste("SVM RMSE: ", svm_rmse))
+
+```
+
+
+## Model comparison 
+
+```{r}
+# Compare the RMSE values and select the best model
+models_rmse <- c(knn_rmse, lr_rmse, gam_rmse_final, dt_rmse, rf_rmse, svm_rmse)
+names(models_rmse) <- c("kNN", "LinearReg", "GAM", "Decision Tree", "Random Forest", "SVM")
+
+# Print the RMSE for each model
+print(models_rmse)
+
+# Select the model with the lowest RMSE
+best_model_name <- names(models_rmse)[which.min(models_rmse)]
+best_model_rmse <- min(models_rmse)
+
+# Print the best model
+print(paste("Best Model: ", best_model_name))
+print(paste("Best Model RMSE: ", best_model_rmse))
+
+```
+Overall, Random forest model is the one performing best, based ont he lowerst RMSE present in this model, So I hope this would be predicting better than other models tested. Lets fit the best model to entire datset 
+
+```{r}
+# Combine the data
+final_data <- rbind(train_no_id, test_no_id)
+
+# Train the Random Forest model using the best 'mtry' from cross-validation
+rf_best <- randomForest(
+  YLD ~ .,                      
+  data = final_data,            
+  mtry = rf_tuned$bestTune$mtry  
+)
+
+# View the Random Forest model
+print(rf_best)
+
+# Make predictions on the entire dataset
+rf_pred_final <- predict(rf_best, newdata = final_data)
+
+# Calculate RMSE for the entire dataset
+rf_rmse_final <- sqrt(mean((final_data$YLD - rf_pred_final)^2))
+print(paste("Final Random Forest RMSE on entire dataset: ", rf_rmse_final))
+
+# Merge the predicted values with the IDs from the original dataset
+final_predictions <- data.frame(ID = c(train$ID, test$ID), predict_yld = rf_pred_final)
+head(final_predictions)
+```
+
+#### Interpretting the final best RF model
+
+```{r}
+
+# Create a data frame with Actual and Predicted values for comparsion
+comparison_df <- data.frame(
+  Actual = final_data$YLD,          
+  Predicted = rf_pred_final        
+)
+
+
+ggplot(comparison_df, aes(x = Actual, y = Predicted)) +
+  geom_point(color = "blue", alpha = 0.6) +   
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") + 
+  theme_minimal() + 
+  labs(
+    title = "Actual vs Predicted Yield (Random Forest Model)",
+    x = "Actual Yield",
+    y = "Predicted Yield"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))  
+
+# Plot variable importance
+importance_rf <- importance(rf_best)  
+var_imp <- data.frame(Variable = rownames(importance_rf), Importance = importance_rf[,1])
+var_imp <- var_imp[order(var_imp$Importance, decreasing = TRUE), ]
+
+# Plot variable importance
+ggplot(var_imp, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_bar(stat = "identity") +
+  coord_flip() + 
+  theme_minimal() +
+  labs(title = "Variable Importance for Random Forest Model", x = "Variable", y = "Importance")
+
+
+```
+
+Interpretation: looking at the plots, it looks like the models is performaing well. Variables with higher importance values(PC2 and PC8) are more influential in predicting maize yield as they encapsulate the majority of variation in the genotype data.
+
+
