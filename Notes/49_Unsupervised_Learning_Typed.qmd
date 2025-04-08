@@ -39,12 +39,12 @@ This makes unsupervised learning an inherently more difficult task than supervis
 
 Now we'll look at two common unsupervised techniques in more detail:
 
-- Clustering  
+- Clustering
 
-     + K Means  
-     + Heirarchical  
+     + KMeans
+     + Heirarchical
 
-- Principal Components Analysis (PCA)  
+- Principal Components Analysis (PCA)
 
 ## Clustering
 
@@ -69,29 +69,28 @@ ggpairs(GvHD_cluster,
          upper = list(continuous = wrap("density", alpha = 0.5), combo = "box"),
         lower = list(continuous = wrap("points", alpha = 0.3,    size=0.1), 
                      combo = wrap("dot", alpha = 0.4, size=0.2),
-                     mapping = ggplot2::aes(colour = cluster))
+                     mapping = aes(colour = cluster))
 )
 ```
 
 Again, we note that without a response variable we do not have a great way to *check* results of our model.
 
-- There is no correct answer to look at with test data  
+- There is no correct answer to look at with test data
 
-    + Groups should have members that are "similar" to one another  
+    + Groups should have members that are "similar" to one another
     
-    + \# of subgroups subjective most of the time  
+    + \# of subgroups subjective most of the time 
     
-- We hope that patterns detected extend to future data but checking that is difficult  
+- We hope that patterns detected extend to future data but checking that is difficult 
 
-- Overall, unsupervised learning is pretty subjective and generally considered exploratory  
+- Overall, unsupervised learning is pretty subjective and generally considered exploratory
 
 Let's look at how we form the clusters in more detail.
 
 - Two major clustering methods (with a lot of variants)
 
-    + K-Means clustering  
-    
-    + Hierarchical clustering  
+    + KMeans clustering
+    + Hierarchical clustering 
 
 
 ### K Means Clustering
@@ -115,12 +114,11 @@ As you might guess, it is a reasonably difficult problem to find the 'optimal' c
 1. Set the number of clusters to $K$.
 
 2. Randomly assign a number, from 1 to K, to each of the observations.
-(These serve as initial cluster assignments for the observations.)  
+(These serve as initial cluster assignments for the observations.)
 
-3. Iterate the following until the cluster assignments stop changing:  
+3. Iterate the following until the cluster assignments stop changing: 
     
-    * For each of the K clusters, compute the mean for each variable across the values in that cluster (called a centroid).   
-    
+    * For each of the K clusters, compute the mean for each variable across the values in that cluster (called a centroid).
     * Assign each observation to the cluster whose centroid is closest (where closest is defined using Euclidean distance or using some other metric).
 
 Since we are not likely to find a global min, we are (probably) finding a local min when we run this algorithm. That means if we run the algorithm again we may not get the same clusters!
@@ -157,6 +155,7 @@ my_iris <- my_iris |>
   mutate(cluster = iris_clusters$cluster)
 my_iris[1:5, c(1:2, 5)] |>
   knitr::kable()
+table(my_iris$cluster)
 ```
 
 The **centroids** are given by
@@ -168,7 +167,7 @@ iris_clusters$centers |>
 
 Let's plot these cluster assignments!
 
-```{r}
+```{r, echo = FALSE, fig.cap = "A scatter plot between Sepal Length (x) and Sepal Width (y) is shown. The points shown are in one of three groups. The first group contains most of the points in the top left of the graph. The second group contains most of the points in the middle bottom of the graph. The third group contains most of the points on the right side of the graph.", out.width="450px"}
 palette(c("#E41A1C", "#377EB8", "#4DAF4A"))
 plot(my_iris[, 1:2],
          col = my_iris[,5],
@@ -178,7 +177,7 @@ points(iris_clusters$centers, pch = 4, cex = 4, lwd = 4)
 
 Note, if we run this again we may get slightly different clusters!
 
-```{r}
+```{r, echo = FALSE, fig.cap = "A very similar scatterplot to the previous one is shown. A few points have switched cluster assignments.", out.width="450px"}
 set.seed(511)
 iris_clusters <- kmeans(my_iris[, 1:2], centers = 3, algorithm = "MacQueen")
 my_iris <- my_iris |> 
@@ -193,8 +192,7 @@ The point at (4.8, 2.5) or so differs in terms of its cluster assignment!
 
 We can run the algorithm with multiple starting values by modifying the `nstart` argument. We then should get more stable results.
 
-
-```{r}
+```{r, fig.cap = "A very similar scatterplot to the previous one is shown identifying points into different clusters. This graph represents the best (minimum of our loss) across the 11 runs of the algorithm.", out.width="450px"}
 set.seed(511)
 iris_clusters <- kmeans(my_iris[, 1:2], 
                         centers = 3, 
@@ -214,26 +212,24 @@ points(iris_clusters$centers, pch = 4, cex = 4, lwd = 4)
 
 One potential drawback of kmeans clustering is that a structure across the number of clusters is not imposed. We'll explain this idea through the alternative clustering method called hierarchical clustering.
 
-In this type of clustering we use a *bottom up* approach. Here we do not need to specify a \# of clusters. The idea is as follows:
+We'll look at hierarchical clustering using a *bottom up* approach. Here we do not need to specify a \# of clusters. The idea is as follows:
 
-- Start with all observations in their own cluster  
-
-- Join the 'closest' observations (lessening the number of clusters each time), until we get down to 1 cluster.  
-
+- Start with all observations in their own cluster
+- Join the 'closest' observations (lessening the number of clusters each time), until we get down to 1 cluster. 
 - We can visualize the clusters with a dendrogram
 
-Let's look at an example to get us started. Here we use the `hclust()` function from the `stats` library.
+Let's look at an example to get us started. Here we use the `hclust()` function from the `stats` library. The `dist()` function calculates the Euclidean distance between points.
 
-```{r, fig.height = 6, fig.align='center'}
+```{r, fig.height = 6, fig.align='center', fig.cap = "A dendrogram or tree diagram grown from the top down is shown displaying the clusters created. The bottom of the graph shows all points in their own cluster. As we move up the graph all possible clusters of size n, n-1, to 1 are shown."}
 iris_hier_clust <- hclust(dist(data.frame(iris$Sepal.Length, iris$Sepal.Width)))
 plot(iris_hier_clust, xlab = "Sepal Width & Height clusters")
 ```
 
 We can see at the bottom of the dendrogram that each observation is in its own cluster. 
 
-We can determine cluster membership Using 'Horizontal Line'
+We can determine cluster membership using a 'Horizontal Line'.
 
-```{r, fig.height = 6, fig.align='center', echo = FALSE}
+```{r, fig.height = 6, fig.align='center', echo = FALSE, fig.cap = "A dendrogram or tree diagram is shown displaying the clusters created. A horizontal line is displayed across the tree diagram at a height of 2.4. This crosses the dendrogram in a way that shows three clusters of points."}
 plot(iris_hier_clust, xlab = "Sepal Width & Height clusters")
 abline(h = 2.4, lwd = 2, col = "Blue")
 ```
@@ -242,9 +238,9 @@ As we move up the dendrogram, we have fewer clusters and observations grouped to
 
 This implies that the five group cluster can be rolled up into the four group cluster. This is not the case in kmeans clustering!
 
-We can pull out a given cluster assignment
+We can pull out a given cluster assignment with `cutree()`.
 
-```{r}
+```{r, fig.cap = "A scatterplot of Sepal Length (x) and Sepal Width (y) is shown. Three clusters are displayed. One cluster includes most of the points in the bottom left of the graph. A second includes most of the points in the center of the graph. The third includes just a handful of points on the right side of the graph.", out.width="450px"}
 head(cutree(iris_hier_clust, 3))
 my_iris <- my_iris |> 
   mutate(cluster = cutree(iris_hier_clust, 3))
@@ -255,8 +251,8 @@ plot(my_iris[, 1:2],
 
 The four group cluster splits one of these clusters into two!
 
-```{r}
-palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3"))
+```{r, fig.cap = "A similar scatterplot to the previous one is shown. This graph has four clusters displayed. As compared to the previous graph, the middle cluster is split into two clusters with the other two clusters unchanged.", out.width="450px"}
+palette(c("#E41A1C", "#377EB8", "#984EA3", "#4DAF4A"))
 my_iris <- my_iris |> 
   mutate(cluster = cutree(iris_hier_clust, 4))
 plot(my_iris[, 1:2],
@@ -267,9 +263,9 @@ plot(my_iris[, 1:2],
 
 #### Linkage in Agglomerative Clustering
 
-When doing **agglomeration** different methods can be used to *join* clusters/groups. These methods are based on a **linkage**. 
+When doing **agglomeration** (bottom up clustering) different methods can be used to *join* clusters/groups. These methods are based on a **linkage**. 
 
-Linkage is a measure of dissimilarity between two groups. Define the linkage between two groups, $G_1$ and $G_2$ as $d(G_1, G_2)$. The algorithm for determing the clusters is:
+Linkage is a measure of dissimilarity between two groups. Define the linkage between two groups, $G_1$ and $G_2$ as $d(G_1, G_2)$. The algorithm for determining the clusters is:
 
 1. Start with all points in their own groups
 2. Until there is only one cluster, repeatedly: merge the two groups $G_i$ and $G_j$ such that $d(G_i, G_j)$ is smallest
@@ -306,7 +302,7 @@ knitr::include_graphics("img/average.jpg")
 
 Let's implement these and see the clusters formed.
 
-```{r}
+```{r, fig.cap = "Three scatterplots of Sepal Length (x) and Sepal Width (y) are shown. The first graph shows the three cluster result using the complete linkage, the second using signle linkage, and the third using average linkage. In this case the complete and average linkage give roughly the same cluster memberships but the single linkage has two very small clusters and one very large cluster."}
 iris_hier_clust_single <- hclust(dist(data.frame(iris$Sepal.Length,
                                           iris$Sepal.Width)),
                           method = "single")
@@ -334,13 +330,12 @@ plot(my_iris[, 1:2],
      main = "Average")
 ```
 
-From <https://www.stat.cmu.edu/~ryantibs/datamining/lectures/05-clus2.pdf> 
 
-Single and complete linkage can have some practical problems:
+[Single and complete linkage can have some practical problems](https://www.stat.cmu.edu/~ryantibs/datamining/lectures/05-clus2.pdf):
 
 - Single linkage suffers from *chaining*. 
 
-    + In order to merge two groups, only need one pair of points to be close, irrespective of all others. Therefore clusters can be too spread out, and not compact enough
+    + In order to merge two groups, we only need one pair of points to be close, irrespective of all others. Therefore clusters can be too spread out, and not compact enough
 
 - Complete linkage avoids chaining, but suffers from *crowding*.
 
@@ -349,7 +344,7 @@ Single and complete linkage can have some practical problems:
 - Average linkage tries to strike a balance. It uses average pairwise dissimilarity, so clusters tend to be relatively compact and relatively
 far apart
 
-Note: We could also do a *top-down* approach to hierarchical clustering (called *divisive*). 
+Note: We could also do a *top-down* approach to hierarchical clustering (called *divisive* clustering). 
 
 ### Clustering Recap  
 
@@ -361,26 +356,20 @@ Kmeans clustering requires us to specify the number of clusters and we iterative
 Hierarchical clustering can be done (bottom up is easiest). We start with each observation in its own cluster and join them one at a time.
 
 - Specify a *dissimilarity* measure called the linkage
-- Dendrogram provides a nice visualization  
+- Dendrogram provides a nice visualization
 
 
 ## Principal Components  
 
 Principal Components Analysis (PCA) is a dimension reduction technique. This tries to find patterns in the data in a very different way from clustering. Idea:
 
-- If you have $p$ variables, they contain some joint variability/correlation  
-
-- PCA looks for *linear combinations* of those $p$ variables that account for most of the variability  
-
+- If you have $p$ variables, they contain some joint variability/correlation
+- PCA looks for *linear combinations* of those $p$ variables that account for most of the variability 
 - Each subsequent linear combination is independent of the previous linear combinations
-
-- Usually can represent most of the variability of the $p$ variables by $m<p$ PCs  
-
-- Reduces \# of variables from $p$ to $m$  
-
-- Can be useful for visualizations  
-
-- Can use PCs as predictors in a regression model (PC Regression)  
+- Usually can represent most of the variability of the $p$ variables by $m<p$ PCs
+- Reduces \# of variables from $p$ to $m$
+- Can be useful for visualizations
+- Can use PCs as predictors in a regression model (PC Regression)
 
 Let's visualize the idea in two dimensions.  
 
@@ -388,26 +377,40 @@ Let's visualize the idea in two dimensions.
 par(mfrow = c(1,1))
 ```
 
-```{r}
+```{r, out.width = "550px", fig.cap = "A scatterplot between the first PC and the second PC is shown. The weights given to Sepal Length and Sepal Width are displayed using arrows. The arrow for Sepal Length goes to the point (0.71, 0.71), indicating a positive relationship with both PC1 and PC2. The arrow for Sepal Width goes to the point (-0.71, 0.71), indicating a negative relationship with PC1 and a positive relationship with PC2."}
 PCs <- prcomp(iris |> select(starts_with("Sepal")),
               scale = TRUE)
-biplot(PCs, xlabs = rep(".", nrow(iris)), cex = 2)
+row.names(PCs$rotation) <- c("Length", "Width")
+biplot(PCs, xlabs = rep(".", nrow(iris)), cex = 1.5)
 ```
 
 We can see the linear combinations found and the amount of variation as well.
 
 ```{r}
-PCs
+#linear combination weights
+PCs$rotation |> 
+  round(3) |>
+  knitr::kable()
+#variation attributed to each PC
+round(PCs$sdev, 3)
 ```
 
 Of course this is more useful with more variables. Let's consider all four numeric variables from the `iris` data set. How could we represent this in two dimensions?
 
 ```{r}
 PCs <- prcomp(iris[, -5], center = TRUE, scale = TRUE)
-PCs
+#linear combination weights
+PCs$rotation |> 
+  round(3) |>
+  knitr::kable()
+#variation attributed to each PC
+round(PCs$sdev, 3)
 ```
 
-```{r}
+We can again display the first two PCs using a biplot.
+
+```{r, out.width = "550px", fig.cap = "A scatterplot between the first PC and the second PC is shown. The weights given to the four original variables are displayed using arrows. The first PC is positive and roughly equal with on Sepal Length, Petal Length, and Petal Width with a negative weight given to Sepal Width. The second PC mostly gives strong negative weight to Sepal Width and slightly positive weight to Sepal Length."}
+row.names(PCs$rotation) <- c("S.Length", "S.Width", "P.Length", "P.Width")
 biplot(PCs, xlabs = rep(".", nrow(iris)), cex = 2)
 ```
 
@@ -423,13 +426,13 @@ We often look at the proportion of variation given by the first $m$ PCs to obtai
 
 A *scree plot* is usually created and we look for an 'elbow'. 
 
-```{r, fig.align = "center"} 
+```{r, fig.align = "center", out.width = "550px", fig.cap = "A line plot displaying the variances (y) associated wtih each PC (x). The first PC has a variance of roughly 3, the second a variance of roughly 1, and the third and fourth very close to 0. This implies that the variation in the original data can mostly be accounted for by the first two PCs."} 
 screeplot(PCs, type = "lines") #scree plot used for visual
 ```
 
 Alternatively, we can plot these ourselves and give the cumulative variation explained. 
 
-```{r, fig.align = "center"} 
+```{r, fig.align = "center", out.width = "650px", fig.cap = "Two plots are displayed. The first plot is a line plot displaying the proportion of variance explained (y) associated wtih each PC (x). The first PC accounts for roughly 0.75 of the variance, the second roughly 0.2, and the third and fourth near zero. The second plot is a line plot displaying the cumulative proportion of variance explained (y) against the principle components (x). The line plot starts at about 0.75 for PC1, goes to near 1 for PC2, and stays near 1 for PC3 and PC 4. Both of these plots again show that most of the variation can be accounted for using just two PCs."} 
 par(mfrow = c(1, 2))
 plot(PCs$sdev^2/sum(PCs$sdev^2), 
      xlab = "Principal Component", 
@@ -458,14 +461,13 @@ Consider a linear combination of our $X$ variables:
 
 $$Z_{1} = \phi_{11}X_{1} + \phi_{21}X_{2} + ... + \phi_{p1}X_{p}$$
 
-- Here the $\phi_$ are constants we need to determine
+- Here the $\phi$ are constants we need to determine
 - We must constrain $\phi$ values, otherwise our variance could get arbitrarily large  
 - Our constraint
 
-$$\sum_{j=1}^{p}\phi_{j1}^2 = 1$$  
-is called *normalizing* the components.
+$$\sum_{j=1}^{p}\phi_{j1}^2 = 1$$ is called *normalizing* the components.
 
-These $\phi$ terms are called the **loadings** and help us understand how much each predictor plays a role in the particular principle component. 
+These $\phi$ terms are called the **loadings** and help us understand how much each predictor plays a role in the particular principle component.
 
 As the variation doesn't depend on the center, we can assume that each predictor has mean 0 (we generally standardize anyway!). This gives us
 
@@ -477,8 +479,8 @@ $$z_{i1} = \phi_{11}x_{i1} + \phi_{21}x_{i2} + ... + \phi_{p1}x_{ip}, i= 1, ...,
 
 We try to maximize the sample variance of this linear combination (we divide by $n$ since the means are known to be 0), subject to the normalizing constraint:
 
-$$\underset{\phi_{11},...,\phi_{p1}}{max}\frac{1}{n}\sum_{i=1}^{n}z_{i1}^2\mbox{   subject to  } \sum_{j=1}^{p}\phi_{j1}^2 = 1$$  
-$$\underset{\phi_{11},...,\phi_{p1}}{max}\frac{1}{n}\sum_{i=1}^{n}\left(\phi_{11}x_{i1} + \phi_{21}x_{i2} + ... + \phi_{p1}x_{ip}\right)^2\mbox{   subject to  } \sum_{j=1}^{p}\phi_{j1}^2 = 1$$ 
+$$\underset{\phi_{11},...,\phi_{p1}}{max}\frac{1}{n}\sum_{i=1}^{n}z_{i1}^2\mbox{   subject to  } \sum_{j=1}^{p}\phi_{j1}^2 = 1$$
+$$\underset{\phi_{11},...,\phi_{p1}}{max}\frac{1}{n}\sum_{i=1}^{n}\left(\phi_{11}x_{i1} + \phi_{21}x_{i2} + ... + \phi_{p1}x_{ip}\right)^2\mbox{   subject to  } \sum_{j=1}^{p}\phi_{j1}^2 = 1$$
 
 Once first PC is found, we now find next most variable linear combination where this linear combination is uncorrelated with the first PC.
 
@@ -487,18 +489,17 @@ Once first PC is found, we now find next most variable linear combination where 
 
 #### Relation to Eigendecomposition
 
-Solving for the PCs is equivalent to doing an eigenvalue decomposition on the covariance or correlation (if we scale our predictors) matrix!  
+Solving for the PCs is equivalent to doing an eigenvalue decomposition on the covariance or correlation (if we scale our predictors) matrix!
 
-- Eigenvectors represent the "loadings" $\phi's$  
+- Eigenvectors represent the "loadings" $\phi's$
    
-     + Weight for each variable's "importance" in the PC  
-     + Can be used to create interpretations of PCs if we'd like 
+     + Weight for each variable's "importance" in the PC
+     + Can be used to create interpretations of PCs if we'd like
      
-- Eigenvalues represent how much of the variation exists on that PC   
+- Eigenvalues represent how much of the variation exists on that PC
+- Largest eigenvalue (with corresponding eigenvector) corresponds to first PC
 
-- Largest eigenvalue (with corresponding eigenvector) corresponds to first PC  
-
-The SDs given in output represent the square roots of the eigenvalues of the covariance/correlation matrix  
+The SDs given in output represent the square roots of the eigenvalues of the covariance/correlation matrix
 
 
 ### PCA Example
@@ -515,7 +516,7 @@ swissTib[1:4, ] |>
 
 A pairs plot of the data set is shown below. 
 
-```{r}
+```{r, fig.align = "center", out.width = "550px", fig.cap = "A large matrix of plots is shown displaying scatterplots and correlations between each numeric variable. Making sense of many graphs like this is very difficult.", message = FALSE, warning = FALSE} 
 GGally::ggpairs(swissTib)
 ```
 
@@ -525,12 +526,17 @@ After performing PCA, we can find two new features, engineered from the original
 
 ```{r}
 PCs <- prcomp(swissTib, center = TRUE, scale = TRUE)
-PCs
+#linear combination weights
+PCs$rotation |> 
+  round(3) |>
+  knitr::kable()
+#variation attributed to each PC
+round(PCs$sdev, 3)
 ```
 
 We can view the proportion of variation accounted for with each PC:
 
-```{r, fig.align = "center"} 
+```{r, fig.align = "center", out.width = "650px", fig.cap = "Two plots are displayed. The first plot is a line plot displaying the proportion of variance explained (y) associated wtih each PC (x). The first PC accounts for roughly 0.5 of the variance, the second roughly 0.2, and the rest decrease roughly linearly toward 0. The second plot is a line plot displaying the cumulative proportion of variance explained (y) against the principle components (x). The line plot starts at about 0.5 for PC1, goes to near 0.7 for PC2, and continues roughly linearly towards 1 until PC6. Both of these plots show that most of the variation can be accounted for using three or four PCs."} 
 par(mfrow = c(1, 2))
 plot(PCs$sdev^2/sum(PCs$sdev^2), 
      xlab = "Principal Component", 
@@ -550,23 +556,28 @@ par(mfrow = c(1,1))
 
 Let's visualize our data with just the first two PCs.
 
-```{r}
-biplot(PCs, cex = 1)
+```{r, fig.align = "center", out.width = "650px", fig.cap = "A biplot showing the relationship between PC1 and PC2 is shown along with arrows representing the weights given to each original variable. The first PC is strongly positive on the diagonal measurement and negative on the bottom, top, right, and left variables. The second is strongly negative on length, somewhat neagative on left, right, and diagonal. It is slightly positive on the bottom measurement."} 
+biplot(PCs, cex = 1, xlabs = rep(".", nrow(swissTib)))
 ```
 
 We could interpret the first PC as representing the diagonal measurement against the top, left, right, and bottom measurements.
 
-The second PC then seems to represent the length in relation to the bottom, right, left, and diagonal measruements.
+The second PC then seems to represent the length in relation to the bottom, right, left, and diagonal measurements.
 
 ```{r}
-PCs
+#linear combination weights
+PCs$rotation |> 
+  round(3) |>
+  knitr::kable()
+#variation attributed to each PC
+round(PCs$sdev, 3)
 ```
 
 We have effectively mapped the six variables in the dataset into two new features, and thus reduced the dimension by 4. Each observation (a six dimensional vector) is mapped to a two dimensional point in the new plot, this making visualization much easier.
 
-Note: We could look at the first and third as well.
+Note: We could look at the first and third as well by adding the `choices = c(1, 3)` argument.
 
-```{r}
+```{r, fig.align = "center", out.width = "650px", fig.cap = "A biplot showing the relationship between PC1 and PC3 is shown along with arrows representing the weights given to each original variable. The third PC seems to mostly be a comparison between the top and bottom variables."} 
 biplot(PCs, choices = c(1,3))
 ```
 
@@ -574,17 +585,11 @@ The third PC seems to be a top vs bottom comparison.
 
 ### PCA Recap  
 
-- Principal Components Analysis (PCA) is a dimension reduction technique 
-
-- PCA looks for *linear combinations* of $p$ variables that accounts for as much variability as possible  
-
-- Reduces dimension of data from $p$ to $m$  
-
-- Choosing $m$ is subjective! 
-
-- Interpretation is subjective!  
-
-- Scaling is needed (most of the time) since units will vastly change results  
-
-- Can use as predictors in a regression (or other) model (PC Regression)  
+- Principal Components Analysis (PCA) is a dimension reduction technique
+- PCA looks for *linear combinations* of $p$ variables that accounts for as much variability as possible
+- Reduces dimension of data from $p$ to $m$
+- Choosing $m$ is subjective!
+- Interpretation is subjective!
+- Scaling is needed (most of the time) since units will vastly change results
+- Can use as predictors in a regression (or other) model (PC Regression)
 
