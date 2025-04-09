@@ -1,0 +1,142 @@
+---
+title: "Homework 5"
+always_allow_html: yes
+format: docx
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+#for nicer table output
+library(knitr)
+library(tidyverse)
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+I'm going to give instructions for completing this homework in R. If you want to use python, that's fine but you'll have to set everything up!
+
+For starters, you'll need to install `keras` and `tensorflow`. **Note: We are going to use `keras` not `keras3`!** You can find basic instructions on installing keras and tensofrlow at [this site website](https://tensorflow.rstudio.com/install/).
+
+Now I was unable to get this to install on my desktop or laptop, likely due to my machines having weird Windows profiles required by our department. 
+
+As an alternative, we can use a docker container to run `keras` and `RStudio`. If you can't the installation to Work, I'm posting a video on starting up a docker container where you can fit the models. Check that out on the Moodle site. It isn't actually very painful :)
+
+
+# Implementation Problems 
+
+We'll fit two basic models from the notes in this section! This is essentially a proof of concept homework. Just see that you can get the code below to run and save the graphs and things that come out (see below for details).
+
+Let's fit models to the digits data (`dataset_mnist()`).
+
+1. Load in the library and prep the data. Run the following code:
+
+```{r}
+library(keras)
+mnist <- dataset_mnist()
+
+set.seed(1001)
+# Prep training set
+train_images <- mnist$train$x %>%
+  array_reshape(c(60000, 28 * 28))
+train_images <- train_images / 255
+train_labels <- mnist$train$y %>%
+  to_categorical(10)
+# Prep test set
+test_images <- mnist$test$x %>%
+  array_reshape(c(10000, 28 * 28))
+test_images <- test_images / 255
+test_labels <- mnist$test$y %>%
+  to_categorical(10)
+```
+
+## First Model
+
+2. Great, now let's set up a basic two layer model as done in the notes. Run the following code:
+
+```{r}
+network <- keras_model_sequential() %>%
+  layer_dense(units = 512, activation = "relu", 
+              input_shape = c(28*28)) %>%
+  layer_dense(units = 10, activation = "softmax")
+
+network
+```
+
+Either copy the output from `network` or have it print out (if you are using R Markdown or quarto).
+
+3. Let's compile and train the model. Run the following code!
+
+```{r}
+network %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "categorical_crossentropy",
+  metrics = c("accuracy")
+)
+## training
+history <- network %>% 
+  fit(train_images, train_labels, 
+      epochs = 15, batch_size = 128,
+      validation_split = 0.2)
+
+plot(history)
+```
+
+Include these plots in your final document. If you are using python, I'm not sure how to create the plots so you'll need to figure that out.
+
+4. Lastly, let's get a confusion matrix and overall accuracy. Run the following code:
+
+```{r}
+pred <- predict_classes(network, test_images)
+conf_mat <- table(as.factor(pred), as.factor(mnist$test$y))
+conf_mat
+sum(diag(conf_mat))/sum(conf_mat)
+```
+
+The output should be included in your final document.
+
+## Second Model
+
+5. Now let's fit the multinomial logistic regression model from the notes. Run the following code:
+
+```{r}
+set.seed(1001)
+## Multinomial logit regression
+mlogit <- keras_model_sequential() %>%
+  layer_dense(input_shape = 28*28, 
+              units = 10, activation = "softmax")
+
+## compile network
+mlogit %>% compile(
+  optimizer = optimizer_rmsprop(),
+  loss = "categorical_crossentropy",
+  metrics = c("accuracy")
+)
+## training
+history <- mlogit %>% 
+  fit(train_images, train_labels, 
+      epochs = 15, batch_size = 128,
+      validation_split = 0.2)
+
+plot(history)
+```
+
+Save the plots into your final document.
+
+6. Now let's produce our confusion matrix and overall accuracy on the test set.
+
+```{r}
+## prediction
+pred <- predict_classes(mlogit, test_images)
+conf_mat_mlogit <- table(as.factor(pred), as.factor(mnist$test$y))
+conf_mat_mlogit
+sum(diag(conf_mat_mlogit))/sum(conf_mat_mlogit)
+```
+
+Show this output in your final document as well.
+
+That's it! Good luck and let me know if you run into issues.
+
+
+
+
+
